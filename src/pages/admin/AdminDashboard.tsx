@@ -1,6 +1,7 @@
 import { Link } from "react-router-dom";
 import { motion } from "framer-motion";
 import { BedDouble, PartyPopper, Waves, Tag, Image, Users, Settings, LayoutDashboard, UtensilsCrossed, PanelLeft } from "lucide-react";
+import hotelLogo from "@/assets/hotel-sb-logo.png";
 
 const adminModules = [
   { icon: BedDouble, label: "Quartos", href: "/admin/quartos", description: "Gerenciar quartos e acomodações" },
