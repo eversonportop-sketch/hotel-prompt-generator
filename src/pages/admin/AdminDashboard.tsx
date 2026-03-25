@@ -19,9 +19,8 @@ const AdminDashboard = () => {
       {/* Sidebar header */}
       <header className="bg-charcoal-light border-b border-gold/10 px-6 py-4 flex items-center justify-between">
         <div className="flex items-center gap-3">
-          <PanelLeft className="w-5 h-5 text-primary" />
-          <span className="font-display text-xl font-bold text-gradient-gold">SB Hotel</span>
-          <span className="text-cream/40 text-xs font-body ml-2">Admin</span>
+          <img src={hotelLogo} alt="Hotel SB" className="h-10 w-auto object-contain" />
+          <span className="text-cream/40 text-xs font-body">Admin</span>
         </div>
         <Link to="/" className="text-cream/50 text-sm font-body hover:text-primary transition-colors">
           Ver Site →

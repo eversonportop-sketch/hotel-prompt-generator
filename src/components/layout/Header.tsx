@@ -3,6 +3,7 @@ import { Link, useLocation } from "react-router-dom";
 import { Menu, X, User } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { motion, AnimatePresence } from "framer-motion";
+import hotelLogo from "@/assets/hotel-sb-logo.png";
 
 const navLinks = [
   { href: "/", label: "Início" },
@@ -21,9 +22,14 @@ const Header = () => {
   return (
     <header className="fixed top-0 left-0 right-0 z-50 bg-charcoal/95 backdrop-blur-md border-b border-gold/10">
       <div className="container-hotel flex items-center justify-between h-16 md:h-20">
-        <Link to="/" className="flex items-center gap-2">
-          <span className="font-display text-2xl md:text-3xl font-bold text-gradient-gold tracking-wider">
-            SB Hotel
+        <Link to="/" className="flex items-center gap-3">
+          <img
+            src={hotelLogo}
+            alt="Hotel SB - Sleep Better"
+            className="h-10 md:h-12 w-auto object-contain"
+          />
+          <span className="font-body text-xs text-cream/40 tracking-widest uppercase hidden sm:block">
+            Sleep Better
           </span>
         </Link>
 
