@@ -3,8 +3,17 @@ import { BrowserRouter, Route, Routes } from "react-router-dom";
 import { Toaster as Sonner } from "@/components/ui/sonner";
 import { Toaster } from "@/components/ui/toaster";
 import { TooltipProvider } from "@/components/ui/tooltip";
-import Index from "./pages/Index.tsx";
-import NotFound from "./pages/NotFound.tsx";
+import Index from "./pages/Index";
+import Quartos from "./pages/Quartos";
+import Salao from "./pages/Salao";
+import Piscina from "./pages/Piscina";
+import Promocoes from "./pages/Promocoes";
+import Galeria from "./pages/Galeria";
+import Contato from "./pages/Contato";
+import Login from "./pages/Login";
+import Cadastro from "./pages/Cadastro";
+import AdminDashboard from "./pages/admin/AdminDashboard";
+import NotFound from "./pages/NotFound";
 
 const queryClient = new QueryClient();
 
@@ -16,7 +25,15 @@ const App = () => (
       <BrowserRouter>
         <Routes>
           <Route path="/" element={<Index />} />
-          {/* ADD ALL CUSTOM ROUTES ABOVE THE CATCH-ALL "*" ROUTE */}
+          <Route path="/quartos" element={<Quartos />} />
+          <Route path="/salao" element={<Salao />} />
+          <Route path="/piscina" element={<Piscina />} />
+          <Route path="/promocoes" element={<Promocoes />} />
+          <Route path="/galeria" element={<Galeria />} />
+          <Route path="/contato" element={<Contato />} />
+          <Route path="/login" element={<Login />} />
+          <Route path="/cadastro" element={<Cadastro />} />
+          <Route path="/admin" element={<AdminDashboard />} />
           <Route path="*" element={<NotFound />} />
         </Routes>
       </BrowserRouter>
