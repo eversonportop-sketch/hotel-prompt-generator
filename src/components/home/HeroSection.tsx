@@ -1,19 +1,39 @@
 import { motion } from "framer-motion";
 import { Button } from "@/components/ui/button";
 import { Link } from "react-router-dom";
-import heroImage from "@/assets/hero-hotel.jpg";
+import { useState, useEffect } from "react";
 
 const HeroSection = () => {
+  const [heroImage, setHeroImage] = useState<string | null>(null);
+
+  // Future: load hero image from admin config / Supabase
+  // useEffect(() => { fetchHeroImage().then(setHeroImage); }, []);
+
   return (
-    <section className="relative h-[90vh] min-h-[600px] flex items-center justify-center overflow-hidden">
-      <img
-        src={heroImage}
-        alt="SB Hotel - Fachada premium"
-        className="absolute inset-0 w-full h-full object-cover"
-        width={1920}
-        height={1080}
-      />
-      <div className="absolute inset-0 bg-gradient-to-t from-charcoal via-charcoal/60 to-charcoal/30" />
+    <section
+      className="relative h-[90vh] min-h-[600px] flex items-center justify-center overflow-hidden"
+      style={{
+        border: '1px solid rgba(201, 168, 76, 0.15)',
+      }}
+    >
+      {/* Background: image or gradient */}
+      {heroImage ? (
+        <>
+          <img
+            src={heroImage}
+            alt="SB Hotel"
+            className="absolute inset-0 w-full h-full object-cover"
+          />
+          <div className="absolute inset-0 bg-gradient-to-t from-[#0A0A0A] via-[#0A0A0A]/70 to-[#0A0A0A]/40" />
+        </>
+      ) : (
+        <div
+          className="absolute inset-0"
+          style={{
+            background: 'radial-gradient(ellipse at center, #0A0A0A 0%, #1a1500 100%)',
+          }}
+        />
+      )}
 
       <div className="relative z-10 text-center container-hotel">
         <motion.div
