@@ -1,10 +1,11 @@
 import { Link } from "react-router-dom";
 import { motion } from "framer-motion";
-import { BedDouble, PartyPopper, Waves, Tag, Image, Users, Settings, LayoutDashboard, UtensilsCrossed, PanelLeft } from "lucide-react";
+import { BedDouble, PartyPopper, Waves, Tag, Image, Users, Settings, LayoutDashboard, UtensilsCrossed, CalendarDays } from "lucide-react";
 import hotelLogo from "@/assets/hotel-sb-logo.png";
 
 const adminModules = [
   { icon: BedDouble, label: "Quartos", href: "/admin/quartos", description: "Gerenciar quartos e acomodações" },
+  { icon: CalendarDays, label: "Reservas", href: "/admin/reservas", description: "Gestão de reservas" },
   { icon: PartyPopper, label: "Salão de Festas", href: "/admin/salao", description: "Gerenciar salão de eventos" },
   { icon: Waves, label: "Piscina", href: "/admin/piscina", description: "Configurações da piscina" },
   { icon: UtensilsCrossed, label: "Consumo", href: "/admin/consumo", description: "Frigobar e alimentos" },
