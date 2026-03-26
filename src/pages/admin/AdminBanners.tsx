@@ -64,7 +64,7 @@ const AdminBanners = () => {
     queryFn: async () => {
       const { data, error } = await supabase.from("banners" as any).select("*").order("display_order", { ascending: true });
       if (error) throw error;
-      return data as Banner[];
+      return data as unknown as Banner[];
     },
   });
 
