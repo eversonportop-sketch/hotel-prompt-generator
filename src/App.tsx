@@ -16,6 +16,7 @@ import Login from "./pages/Login";
 import Cadastro from "./pages/Cadastro";
 import AdminDashboard from "./pages/admin/AdminDashboard";
 import AdminReservas from "./pages/admin/AdminReservas";
+import AdminCheckin from "./pages/admin/AdminCheckin";
 import NotFound from "./pages/NotFound";
 
 const queryClient = new QueryClient();
@@ -40,6 +41,7 @@ const App = () => (
             <Route path="/cadastro" element={<Cadastro />} />
             <Route path="/admin" element={<AdminDashboard />} />
             <Route path="/admin/reservas" element={<AdminReservas />} />
+            <Route path="/admin/checkin" element={<AdminCheckin />} />
             <Route path="*" element={<NotFound />} />
           </Routes>
         </BrowserRouter>
