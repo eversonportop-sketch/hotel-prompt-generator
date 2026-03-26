@@ -66,7 +66,14 @@ export type Database = {
             columns: ["reservation_id"]
             isOneToOne: false
             referencedRelation: "daily_operations"
-            referencedColumns: ["reservation_id"]
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "checkin_logs_reservation_id_fkey"
+            columns: ["reservation_id"]
+            isOneToOne: false
+            referencedRelation: "operations"
+            referencedColumns: ["id"]
           },
           {
             foreignKeyName: "checkin_logs_reservation_id_fkey"
@@ -117,7 +124,14 @@ export type Database = {
             columns: ["reservation_id"]
             isOneToOne: false
             referencedRelation: "daily_operations"
-            referencedColumns: ["reservation_id"]
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "consumptions_reservation_id_fkey"
+            columns: ["reservation_id"]
+            isOneToOne: false
+            referencedRelation: "operations"
+            referencedColumns: ["id"]
           },
           {
             foreignKeyName: "consumptions_reservation_id_fkey"
@@ -206,6 +220,7 @@ export type Database = {
           guests_count: number
           id: string
           notes: string | null
+          profile_id: string | null
           room_id: string
           status: string
           total_price: number
@@ -219,6 +234,7 @@ export type Database = {
           guests_count?: number
           id?: string
           notes?: string | null
+          profile_id?: string | null
           room_id: string
           status?: string
           total_price?: number
@@ -232,6 +248,7 @@ export type Database = {
           guests_count?: number
           id?: string
           notes?: string | null
+          profile_id?: string | null
           room_id?: string
           status?: string
           total_price?: number
@@ -239,11 +256,11 @@ export type Database = {
         }
         Relationships: [
           {
-            foreignKeyName: "reservations_room_id_fkey"
-            columns: ["room_id"]
+            foreignKeyName: "reservations_profile_id_fkey"
+            columns: ["profile_id"]
             isOneToOne: false
-            referencedRelation: "daily_operations"
-            referencedColumns: ["room_id"]
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
           },
           {
             foreignKeyName: "reservations_room_id_fkey"
@@ -291,7 +308,14 @@ export type Database = {
             columns: ["current_reservation_id"]
             isOneToOne: false
             referencedRelation: "daily_operations"
-            referencedColumns: ["reservation_id"]
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "room_status_current_reservation_id_fkey"
+            columns: ["current_reservation_id"]
+            isOneToOne: false
+            referencedRelation: "operations"
+            referencedColumns: ["id"]
           },
           {
             foreignKeyName: "room_status_current_reservation_id_fkey"
@@ -299,13 +323,6 @@ export type Database = {
             isOneToOne: false
             referencedRelation: "reservations"
             referencedColumns: ["id"]
-          },
-          {
-            foreignKeyName: "room_status_room_id_fkey"
-            columns: ["room_id"]
-            isOneToOne: true
-            referencedRelation: "daily_operations"
-            referencedColumns: ["room_id"]
           },
           {
             foreignKeyName: "room_status_room_id_fkey"
@@ -374,30 +391,123 @@ export type Database = {
     Views: {
       daily_operations: {
         Row: {
-          actual_guests: number | null
           check_in: string | null
           check_out: string | null
-          checked_in_at: string | null
-          checked_out_at: string | null
-          checkin_notes: string | null
-          checkout_notes: string | null
-          extra_charges: number | null
-          guest_name: string | null
-          guest_phone: string | null
+          client_id: string | null
+          created_at: string | null
           guests_count: number | null
-          housekeeping_status: string | null
-          id_document: string | null
+          id: string | null
           notes: string | null
-          occupancy_status: string | null
-          operation_status: string | null
-          reservation_id: string | null
-          room_category: string | null
+          profile_id: string | null
           room_id: string | null
-          room_name: string | null
           status: string | null
           total_price: number | null
+          updated_at: string | null
         }
-        Relationships: []
+        Insert: {
+          check_in?: string | null
+          check_out?: string | null
+          client_id?: string | null
+          created_at?: string | null
+          guests_count?: number | null
+          id?: string | null
+          notes?: string | null
+          profile_id?: string | null
+          room_id?: string | null
+          status?: string | null
+          total_price?: number | null
+          updated_at?: string | null
+        }
+        Update: {
+          check_in?: string | null
+          check_out?: string | null
+          client_id?: string | null
+          created_at?: string | null
+          guests_count?: number | null
+          id?: string | null
+          notes?: string | null
+          profile_id?: string | null
+          room_id?: string | null
+          status?: string | null
+          total_price?: number | null
+          updated_at?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "reservations_profile_id_fkey"
+            columns: ["profile_id"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "reservations_room_id_fkey"
+            columns: ["room_id"]
+            isOneToOne: false
+            referencedRelation: "rooms"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      operations: {
+        Row: {
+          check_in: string | null
+          check_out: string | null
+          client_id: string | null
+          created_at: string | null
+          guests_count: number | null
+          id: string | null
+          notes: string | null
+          profile_id: string | null
+          room_id: string | null
+          status: string | null
+          total_price: number | null
+          updated_at: string | null
+        }
+        Insert: {
+          check_in?: string | null
+          check_out?: string | null
+          client_id?: string | null
+          created_at?: string | null
+          guests_count?: number | null
+          id?: string | null
+          notes?: string | null
+          profile_id?: string | null
+          room_id?: string | null
+          status?: string | null
+          total_price?: number | null
+          updated_at?: string | null
+        }
+        Update: {
+          check_in?: string | null
+          check_out?: string | null
+          client_id?: string | null
+          created_at?: string | null
+          guests_count?: number | null
+          id?: string | null
+          notes?: string | null
+          profile_id?: string | null
+          room_id?: string | null
+          status?: string | null
+          total_price?: number | null
+          updated_at?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "reservations_profile_id_fkey"
+            columns: ["profile_id"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "reservations_room_id_fkey"
+            columns: ["room_id"]
+            isOneToOne: false
+            referencedRelation: "rooms"
+            referencedColumns: ["id"]
+          },
+        ]
       }
     }
     Functions: {
