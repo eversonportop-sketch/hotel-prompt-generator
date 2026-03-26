@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useRef, useState } from "react";
 import { Link } from "react-router-dom";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
@@ -18,6 +18,8 @@ import {
   ChevronLeft,
   ChevronRight,
   Images,
+  Upload,
+  Loader2,
 } from "lucide-react";
 import { toast } from "sonner";
 import hotelLogo from "@/assets/hotel-sb-logo.png";
@@ -54,6 +56,18 @@ const EMPTY_FORM = {
 };
 
 const CATEGORIES = ["Standard", "Luxo", "Super Luxo", "Suite", "Suite Master"];
+
+// ── Utilitário de upload para Supabase Storage ─────────────────────────────────
+async function uploadRoomImage(file: File): Promise<string> {
+  const ext = file.name.split(".").pop() || "jpg";
+  const path = `rooms/${Date.now()}-${Math.random().toString(36).slice(2)}.${ext}`;
+  const { error } = await supabase.storage
+    .from("hotel-images")
+    .upload(path, file, { upsert: false, contentType: file.type });
+  if (error) throw new Error(`Upload falhou: ${error.message}`);
+  const { data } = supabase.storage.from("hotel-images").getPublicUrl(path);
+  return data.publicUrl;
+}
 
 const GalleryViewer = ({ images, name }: { images: string[]; name: string }) => {
   const [idx, setIdx] = useState(0);
@@ -107,6 +121,11 @@ const AdminQuartos = () => {
   const [editingRoom, setEditingRoom] = useState<Room | null>(null);
   const [form, setForm] = useState(EMPTY_FORM);
   const [deleteConfirm, setDeleteConfirm] = useState<string | null>(null);
+
+  // ── Estado para upload de arquivo ────────────────────────────────────────────
+  const [uploadingFile, setUploadingFile] = useState(false);
+  const [filePreviewUrl, setFilePreviewUrl] = useState<string | null>(null);
+  const fileInputRef = useRef<HTMLInputElement>(null);
 
   const { data: rooms = [], isLoading } = useQuery({
     queryKey: ["admin-rooms"],
@@ -193,6 +212,7 @@ const AdminQuartos = () => {
   const openCreate = () => {
     setEditingRoom(null);
     setForm(EMPTY_FORM);
+    setFilePreviewUrl(null);
     setModalOpen(true);
   };
   const openEdit = (room: Room) => {
@@ -212,14 +232,17 @@ const AdminQuartos = () => {
       amenities: (room.amenities ?? []).join(", "),
       display_order: room.display_order,
     });
+    setFilePreviewUrl(null);
     setModalOpen(true);
   };
   const closeModal = () => {
     setModalOpen(false);
     setEditingRoom(null);
     setForm(EMPTY_FORM);
+    setFilePreviewUrl(null);
   };
 
+  // ── Adicionar imagem por URL ──────────────────────────────────────────────────
   const addGalleryImage = () => {
     const url = form.gallery_input.trim();
     if (!url) return;
@@ -230,6 +253,50 @@ const AdminQuartos = () => {
     const g = [...form.gallery, url];
     setForm({ ...form, gallery: g, gallery_input: "", image_url: form.image_url || url });
   };
+
+  // ── Upload de arquivo do PC → Supabase Storage → adiciona à galeria ───────────
+  const handleFileUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+
+    if (!file.type.startsWith("image/")) {
+      toast.error("Selecione um arquivo de imagem (JPG, PNG, WebP…)");
+      return;
+    }
+    if (file.size > 10 * 1024 * 1024) {
+      toast.error("Imagem muito grande. Máximo 10 MB.");
+      return;
+    }
+
+    // Mostra preview local imediatamente
+    const localUrl = URL.createObjectURL(file);
+    setFilePreviewUrl(localUrl);
+
+    setUploadingFile(true);
+    try {
+      const publicUrl = await uploadRoomImage(file);
+      if (form.gallery.includes(publicUrl)) {
+        toast.error("Imagem já adicionada.");
+        return;
+      }
+      const g = [...form.gallery, publicUrl];
+      setForm({
+        ...form,
+        gallery: g,
+        gallery_input: "",
+        image_url: form.image_url || publicUrl,
+      });
+      toast.success("Imagem adicionada à galeria!");
+    } catch (err: any) {
+      toast.error(err.message || "Erro ao fazer upload.");
+    } finally {
+      setUploadingFile(false);
+      setFilePreviewUrl(null);
+      // Limpa o input para permitir re-upload do mesmo arquivo
+      if (fileInputRef.current) fileInputRef.current.value = "";
+    }
+  };
+
   const removeGalleryImage = (url: string) => {
     const g = form.gallery.filter((u) => u !== url);
     setForm({ ...form, gallery: g, image_url: form.image_url === url ? (g[0] ?? "") : form.image_url });
@@ -360,18 +427,46 @@ const AdminQuartos = () => {
               />
             </div>
 
-            {/* GALERIA */}
+            {/* ── GALERIA DE FOTOS (upload + URL) ─────────────────────────── */}
             <div className="sm:col-span-2">
-              <label className="block text-xs uppercase tracking-widest text-primary/70 mb-1.5">
-                Galeria de fotos{" "}
-                <span className="normal-case text-cream/30">(cole uma URL e pressione + ou Enter)</span>
-              </label>
+              <label className="block text-xs uppercase tracking-widest text-primary/70 mb-1.5">Galeria de fotos</label>
+
+              {/* Área de upload do PC */}
+              <div
+                onClick={() => !uploadingFile && fileInputRef.current?.click()}
+                className={`relative cursor-pointer border-2 border-dashed rounded-xl transition-all mb-3 ${
+                  uploadingFile ? "border-primary/40 bg-primary/5" : "border-gold/20 hover:border-primary/40"
+                }`}
+              >
+                {filePreviewUrl && uploadingFile ? (
+                  <div className="relative h-24 overflow-hidden rounded-xl">
+                    <img src={filePreviewUrl} alt="" className="w-full h-full object-cover opacity-50" />
+                    <div className="absolute inset-0 flex items-center justify-center">
+                      <Loader2 className="w-6 h-6 text-primary animate-spin" />
+                      <span className="ml-2 text-cream text-sm font-body">Enviando...</span>
+                    </div>
+                  </div>
+                ) : (
+                  <div className="h-20 flex items-center justify-center gap-3">
+                    <div className="w-8 h-8 rounded-lg bg-primary/10 border border-primary/20 flex items-center justify-center">
+                      <Upload className="w-4 h-4 text-primary" />
+                    </div>
+                    <div>
+                      <p className="text-cream/60 text-sm font-body">Clique para enviar foto do PC</p>
+                      <p className="text-cream/30 text-xs font-body">JPG, PNG, WebP · Máx 10 MB</p>
+                    </div>
+                  </div>
+                )}
+              </div>
+              <input ref={fileInputRef} type="file" accept="image/*" className="hidden" onChange={handleFileUpload} />
+
+              {/* Ou cole URL */}
               <div className="flex gap-2">
                 <input
                   className="flex-1 bg-black/50 border border-gold/20 rounded-lg px-4 py-3 text-cream text-sm focus:border-primary focus:outline-none transition"
                   value={form.gallery_input}
                   onChange={(e) => setForm({ ...form, gallery_input: e.target.value })}
-                  placeholder="https://exemplo.com/foto.jpg"
+                  placeholder="Ou cole uma URL: https://exemplo.com/foto.jpg"
                   onKeyDown={(e) => {
                     if (e.key === "Enter") {
                       e.preventDefault();
@@ -387,12 +482,16 @@ const AdminQuartos = () => {
                   <Plus className="w-4 h-4" />
                 </button>
               </div>
+
+              {/* Thumbnails da galeria */}
               {form.gallery.length > 0 && (
                 <div className="mt-3 grid grid-cols-3 sm:grid-cols-5 gap-2">
                   {form.gallery.map((url, i) => (
                     <div
                       key={i}
-                      className={`relative group rounded-lg overflow-hidden border-2 transition ${url === form.image_url ? "border-primary" : "border-gold/20"}`}
+                      className={`relative group rounded-lg overflow-hidden border-2 transition ${
+                        url === form.image_url ? "border-primary" : "border-gold/20"
+                      }`}
                     >
                       <img src={url} alt="" className="w-full h-16 object-cover" />
                       <div className="absolute inset-0 bg-black/70 opacity-0 group-hover:opacity-100 transition-opacity flex flex-col items-center justify-center gap-1 p-1">
@@ -456,11 +555,19 @@ const AdminQuartos = () => {
             </button>
             <button
               type="submit"
-              disabled={saveMutation.isPending}
+              disabled={saveMutation.isPending || uploadingFile}
               className="flex-1 flex items-center justify-center gap-2 bg-gradient-to-r from-[#C9A84C] to-[#E5C97A] text-black font-semibold text-sm rounded-lg py-3 hover:scale-[1.01] transition-all disabled:opacity-50"
             >
-              <Save className="w-4 h-4" />
-              {saveMutation.isPending ? "Salvando..." : editingRoom ? "Salvar alterações" : "Criar quarto"}
+              {saveMutation.isPending ? (
+                <>
+                  <Loader2 className="w-4 h-4 animate-spin" /> Salvando...
+                </>
+              ) : (
+                <>
+                  <Save className="w-4 h-4" />
+                  {editingRoom ? "Salvar alterações" : "Criar quarto"}
+                </>
+              )}
             </button>
           </div>
         </form>
@@ -503,7 +610,7 @@ const AdminQuartos = () => {
     </motion.div>
   );
 
-  // ── Vista detalhe ──
+  // ── Vista detalhe ──────────────────────────────────────────────────────────────
   if (view === "detail" && selectedRoom) {
     const room = rooms.find((r) => r.id === selectedRoom.id) ?? selectedRoom;
     const images = room.gallery?.length ? room.gallery : room.image_url ? [room.image_url] : [];
@@ -543,7 +650,11 @@ const AdminQuartos = () => {
             <div>
               <div className="flex items-center gap-2 mb-2">
                 <span
-                  className={`text-xs px-2.5 py-1 rounded-full font-body ${room.status === "active" ? "bg-green-500/20 text-green-400 border border-green-500/30" : "bg-red-500/20 text-red-400 border border-red-500/30"}`}
+                  className={`text-xs px-2.5 py-1 rounded-full font-body ${
+                    room.status === "active"
+                      ? "bg-green-500/20 text-green-400 border border-green-500/30"
+                      : "bg-red-500/20 text-red-400 border border-red-500/30"
+                  }`}
                 >
                   {room.status === "active" ? "Ativo" : "Inativo"}
                 </span>
@@ -633,7 +744,7 @@ const AdminQuartos = () => {
     );
   }
 
-  // ── Vista lista ──
+  // ── Vista lista ────────────────────────────────────────────────────────────────
   return (
     <div className="min-h-screen bg-charcoal">
       <Header />
@@ -698,7 +809,9 @@ const AdminQuartos = () => {
                   initial={{ opacity: 0, y: 16 }}
                   animate={{ opacity: 1, y: 0 }}
                   transition={{ delay: i * 0.05 }}
-                  className={`bg-charcoal-light border rounded-xl overflow-hidden ${room.status === "active" ? "border-gold/15" : "border-red-900/30 opacity-60"}`}
+                  className={`bg-charcoal-light border rounded-xl overflow-hidden ${
+                    room.status === "active" ? "border-gold/15" : "border-red-900/30 opacity-60"
+                  }`}
                 >
                   <div
                     className="cursor-pointer"
@@ -720,7 +833,11 @@ const AdminQuartos = () => {
                         </div>
                       )}
                       <span
-                        className={`absolute top-3 right-3 text-xs font-body px-2 py-1 rounded-full ${room.status === "active" ? "bg-green-500/20 text-green-400 border border-green-500/30" : "bg-red-500/20 text-red-400 border border-red-500/30"}`}
+                        className={`absolute top-3 right-3 text-xs font-body px-2 py-1 rounded-full ${
+                          room.status === "active"
+                            ? "bg-green-500/20 text-green-400 border border-green-500/30"
+                            : "bg-red-500/20 text-red-400 border border-red-500/30"
+                        }`}
                       >
                         {room.status === "active" ? "Ativo" : "Inativo"}
                       </span>
