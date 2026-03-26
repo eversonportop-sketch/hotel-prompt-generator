@@ -1,36 +1,38 @@
 import { motion } from "framer-motion";
 import { Button } from "@/components/ui/button";
-import { Link } from "react-router-dom";
-import { useState, useEffect } from "react";
+import { Link, useNavigate } from "react-router-dom";
+import { useState } from "react";
 
 const HeroSection = () => {
   const [heroImage, setHeroImage] = useState<string | null>(null);
 
-  // Future: load hero image from admin config / Supabase
-  // useEffect(() => { fetchHeroImage().then(setHeroImage); }, []);
+  const [checkIn, setCheckIn] = useState("");
+  const [checkOut, setCheckOut] = useState("");
+  const [guests, setGuests] = useState(1);
+
+  const navigate = useNavigate();
+
+  const handleSearch = () => {
+    navigate(`/quartos?checkin=${checkIn}&checkout=${checkOut}&guests=${guests}`);
+  };
 
   return (
     <section
       className="relative h-[90vh] min-h-[600px] flex items-center justify-center overflow-hidden"
       style={{
-        border: '1px solid rgba(201, 168, 76, 0.15)',
+        border: "1px solid rgba(201, 168, 76, 0.15)",
       }}
     >
-      {/* Background: image or gradient */}
       {heroImage ? (
         <>
-          <img
-            src={heroImage}
-            alt="SB Hotel"
-            className="absolute inset-0 w-full h-full object-cover"
-          />
+          <img src={heroImage} alt="SB Hotel" className="absolute inset-0 w-full h-full object-cover" />
           <div className="absolute inset-0 bg-gradient-to-t from-[#0A0A0A] via-[#0A0A0A]/70 to-[#0A0A0A]/40" />
         </>
       ) : (
         <div
           className="absolute inset-0"
           style={{
-            background: 'radial-gradient(ellipse at center, #0A0A0A 0%, #1a1500 100%)',
+            background: "radial-gradient(ellipse at center, #0A0A0A 0%, #1a1500 100%)",
           }}
         />
       )}
@@ -41,15 +43,55 @@ const HeroSection = () => {
           animate={{ opacity: 1, y: 0 }}
           transition={{ duration: 0.8, ease: "easeOut" }}
         >
-          <p className="text-primary font-body text-sm tracking-[0.3em] uppercase mb-4">
-            Bem-vindo ao
-          </p>
+          <p className="text-primary font-body text-sm tracking-[0.3em] uppercase mb-4">Bem-vindo ao</p>
+
           <h1 className="font-display text-5xl md:text-7xl lg:text-8xl font-bold text-cream mb-6">
             SB <span className="text-gradient-gold">Hotel</span>
           </h1>
+
           <p className="text-cream/70 font-body text-lg md:text-xl max-w-2xl mx-auto mb-10 leading-relaxed">
             Experiência premium em hospedagem. Conforto, elegância e sofisticação em cada detalhe.
           </p>
+
+          {/* FORM RESERVA */}
+          <div className="bg-black/60 backdrop-blur-md border border-primary/20 rounded-xl p-4 md:p-6 mb-8 max-w-4xl mx-auto">
+            <div className="grid grid-cols-1 md:grid-cols-4 gap-4 items-end">
+              <div className="text-left">
+                <label className="text-xs text-cream/60">Check-in</label>
+                <input
+                  type="date"
+                  value={checkIn}
+                  onChange={(e) => setCheckIn(e.target.value)}
+                  className="w-full mt-1 bg-black border border-primary/20 rounded-md px-3 py-2 text-cream"
+                />
+              </div>
+
+              <div className="text-left">
+                <label className="text-xs text-cream/60">Check-out</label>
+                <input
+                  type="date"
+                  value={checkOut}
+                  onChange={(e) => setCheckOut(e.target.value)}
+                  className="w-full mt-1 bg-black border border-primary/20 rounded-md px-3 py-2 text-cream"
+                />
+              </div>
+
+              <div className="text-left">
+                <label className="text-xs text-cream/60">Hóspedes</label>
+                <input
+                  type="number"
+                  min={1}
+                  value={guests}
+                  onChange={(e) => setGuests(Number(e.target.value))}
+                  className="w-full mt-1 bg-black border border-primary/20 rounded-md px-3 py-2 text-cream"
+                />
+              </div>
+
+              <Button variant="hero" className="w-full h-[42px]" onClick={handleSearch}>
+                Buscar
+              </Button>
+            </div>
+          </div>
 
           <div className="flex flex-col sm:flex-row gap-4 justify-center">
             <Link to="/quartos">
@@ -57,6 +99,7 @@ const HeroSection = () => {
                 Ver Quartos
               </Button>
             </Link>
+
             <Link to="/contato">
               <Button variant="gold-outline" size="lg" className="px-10 py-6 text-base">
                 Fale Conosco
