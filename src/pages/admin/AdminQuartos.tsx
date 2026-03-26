@@ -140,7 +140,7 @@ const AdminQuartos = () => {
       beds: room.beds,
       capacity: room.capacity,
       price: room.price,
-      promotional_price: room.promotional_price ?? "",
+      promotional_price: room.promotional_price != null ? String(room.promotional_price) : "",
       description: room.description ?? "",
       image_url: room.image_url ?? "",
       amenities: (room.amenities ?? []).join(", "),
