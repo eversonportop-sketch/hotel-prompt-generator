@@ -53,43 +53,46 @@ const HeroSection = () => {
             Experiência premium em hospedagem. Conforto, elegância e sofisticação em cada detalhe.
           </p>
 
-          {/* FORM RESERVA */}
-          <div className="bg-black/60 backdrop-blur-md border border-primary/20 rounded-xl p-4 md:p-6 mb-8 max-w-4xl mx-auto">
-            <div className="grid grid-cols-1 md:grid-cols-4 gap-4 items-end">
+          {/* FORM RESERVA PREMIUM */}
+          <div className="bg-gradient-to-br from-[#0A0A0A]/90 to-[#1a1500]/80 backdrop-blur-xl border border-primary/20 rounded-2xl p-6 md:p-8 mb-10 max-w-5xl mx-auto shadow-[0_0_40px_rgba(201,168,76,0.08)]">
+            <div className="grid grid-cols-1 md:grid-cols-4 gap-6 items-end">
               <div className="text-left">
-                <label className="text-xs text-cream/60">Check-in</label>
+                <label className="text-xs uppercase tracking-widest text-primary/70 mb-2 block">Check-in</label>
                 <input
                   type="date"
                   value={checkIn}
                   onChange={(e) => setCheckIn(e.target.value)}
-                  className="w-full mt-1 bg-black border border-primary/20 rounded-md px-3 py-2 text-cream"
+                  className="w-full bg-black/70 border border-primary/20 rounded-lg px-4 py-3 text-cream focus:border-primary focus:outline-none transition"
                 />
               </div>
 
               <div className="text-left">
-                <label className="text-xs text-cream/60">Check-out</label>
+                <label className="text-xs uppercase tracking-widest text-primary/70 mb-2 block">Check-out</label>
                 <input
                   type="date"
                   value={checkOut}
                   onChange={(e) => setCheckOut(e.target.value)}
-                  className="w-full mt-1 bg-black border border-primary/20 rounded-md px-3 py-2 text-cream"
+                  className="w-full bg-black/70 border border-primary/20 rounded-lg px-4 py-3 text-cream focus:border-primary focus:outline-none transition"
                 />
               </div>
 
               <div className="text-left">
-                <label className="text-xs text-cream/60">Hóspedes</label>
+                <label className="text-xs uppercase tracking-widest text-primary/70 mb-2 block">Hóspedes</label>
                 <input
                   type="number"
                   min={1}
                   value={guests}
                   onChange={(e) => setGuests(Number(e.target.value))}
-                  className="w-full mt-1 bg-black border border-primary/20 rounded-md px-3 py-2 text-cream"
+                  className="w-full bg-black/70 border border-primary/20 rounded-lg px-4 py-3 text-cream focus:border-primary focus:outline-none transition"
                 />
               </div>
 
-              <Button variant="hero" className="w-full h-[42px]" onClick={handleSearch}>
+              <button
+                onClick={handleSearch}
+                className="h-[52px] rounded-lg bg-gradient-to-r from-[#C9A84C] to-[#E5C97A] text-black font-semibold tracking-wide hover:scale-[1.02] transition-all duration-200 shadow-lg"
+              >
                 Buscar
-              </Button>
+              </button>
             </div>
           </div>
 
