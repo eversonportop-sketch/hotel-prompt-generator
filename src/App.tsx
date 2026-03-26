@@ -17,10 +17,13 @@ import Cadastro from "./pages/Cadastro";
 import AdminDashboard from "./pages/admin/AdminDashboard";
 import AdminReservas from "./pages/admin/AdminReservas";
 import AdminCheckin from "./pages/admin/AdminCheckin";
-import NotFound from "./pages/NotFound";
-
-// Páginas admin inline (placeholders prontos para expandir)
+import AdminQuartos from "./pages/admin/AdminQuartos";
+import AdminClientes from "./pages/admin/AdminClientes";
+import AdminPromocoes from "./pages/admin/AdminPromocoes";
+import AdminConfiguracoes from "./pages/admin/AdminConfiguracoes";
+import AdminBanners from "./pages/admin/AdminBanners";
 import AdminPlaceholder from "./pages/admin/AdminPlaceholder";
+import NotFound from "./pages/NotFound";
 
 const queryClient = new QueryClient();
 
@@ -44,18 +47,20 @@ const App = () => (
             <Route path="/login" element={<Login />} />
             <Route path="/cadastro" element={<Cadastro />} />
 
-            {/* Admin */}
+            {/* Admin — módulos completos */}
             <Route path="/admin" element={<AdminDashboard />} />
             <Route path="/admin/reservas" element={<AdminReservas />} />
             <Route path="/admin/checkin" element={<AdminCheckin />} />
-            <Route path="/admin/quartos" element={<AdminPlaceholder title="Quartos" />} />
+            <Route path="/admin/quartos" element={<AdminQuartos />} />
+            <Route path="/admin/clientes" element={<AdminClientes />} />
+            <Route path="/admin/promocoes" element={<AdminPromocoes />} />
+            <Route path="/admin/configuracoes" element={<AdminConfiguracoes />} />
+            <Route path="/admin/banners" element={<AdminBanners />} />
+
+            {/* Admin — placeholders */}
             <Route path="/admin/salao" element={<AdminPlaceholder title="Salão de Festas" />} />
             <Route path="/admin/piscina" element={<AdminPlaceholder title="Piscina" />} />
             <Route path="/admin/consumo" element={<AdminPlaceholder title="Consumo" />} />
-            <Route path="/admin/promocoes" element={<AdminPlaceholder title="Promoções" />} />
-            <Route path="/admin/banners" element={<AdminPlaceholder title="Banners" />} />
-            <Route path="/admin/clientes" element={<AdminPlaceholder title="Clientes" />} />
-            <Route path="/admin/configuracoes" element={<AdminPlaceholder title="Configurações" />} />
 
             <Route path="*" element={<NotFound />} />
           </Routes>
