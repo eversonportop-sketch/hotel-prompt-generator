@@ -134,11 +134,11 @@ const AdminCheckin = () => {
     queryKey: ["daily-operations"],
     queryFn: async () => {
       const { data, error } = await supabase
-        .from("daily_operations" as any)
+        .from("daily_operations")
         .select("*")
         .order("check_in", { ascending: true });
       if (error) throw error;
-      return data as DailyOp[];
+      return (data as unknown) as DailyOp[];
     },
     refetchInterval: 60_000,
   });
