@@ -62,9 +62,9 @@ const AdminBanners = () => {
   const { data: banners = [], isLoading } = useQuery({
     queryKey: ["admin-banners"],
     queryFn: async () => {
-      const { data, error } = await supabase.from("banners").select("*").order("display_order", { ascending: true });
+      const { data, error } = await supabase.from("banners" as any).select("*").order("display_order", { ascending: true });
       if (error) throw error;
-      return data as Banner[];
+      return data as unknown as Banner[];
     },
   });
 
@@ -87,7 +87,7 @@ const AdminBanners = () => {
 
       const maxOrder = banners.length ? Math.max(...banners.map((b) => b.display_order)) : -1;
 
-      const { error } = await supabase.from("banners").insert({
+      const { error } = await supabase.from("banners" as any).insert({
         title: form.title || null,
         image_url: imageUrl,
         active: true,
@@ -106,7 +106,7 @@ const AdminBanners = () => {
   // ── Toggle ativo/inativo ─────────────────────────────────────────────────────
   const toggleMutation = useMutation({
     mutationFn: async ({ id, active }: { id: string; active: boolean }) => {
-      const { error } = await supabase.from("banners").update({ active: !active }).eq("id", id);
+      const { error } = await supabase.from("banners" as any).update({ active: !active }).eq("id", id);
       if (error) throw error;
     },
     onSuccess: () => queryClient.invalidateQueries({ queryKey: ["admin-banners"] }),
@@ -115,7 +115,7 @@ const AdminBanners = () => {
   // ── Deletar banner ───────────────────────────────────────────────────────────
   const deleteMutation = useMutation({
     mutationFn: async (id: string) => {
-      const { error } = await supabase.from("banners").delete().eq("id", id);
+      const { error } = await supabase.from("banners" as any).delete().eq("id", id);
       if (error) throw error;
     },
     onSuccess: () => {
