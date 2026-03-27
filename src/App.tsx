@@ -25,6 +25,7 @@ import AdminBanners from "./pages/admin/AdminBanners";
 import AdminSalao from "./pages/admin/AdminSalao";
 import AdminPiscina from "./pages/admin/AdminPiscina";
 import AdminConsumo from "./pages/admin/AdminConsumo";
+import AdminMidia from "./pages/admin/AdminMidia";
 import NotFound from "./pages/NotFound";
 
 const queryClient = new QueryClient();
@@ -62,6 +63,7 @@ const App = () => (
             <Route path="/admin/salao" element={<AdminSalao />} />
             <Route path="/admin/piscina" element={<AdminPiscina />} />
             <Route path="/admin/consumo" element={<AdminConsumo />} />
+            <Route path="/admin/midia" element={<AdminMidia />} />
 
             <Route path="*" element={<NotFound />} />
           </Routes>

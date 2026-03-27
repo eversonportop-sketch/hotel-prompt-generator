@@ -309,6 +309,33 @@ export type Database = {
         }
         Relationships: []
       }
+      hotel_media: {
+        Row: {
+          category: string
+          created_at: string
+          file_name: string
+          file_path: string
+          id: string
+          public_url: string
+        }
+        Insert: {
+          category: string
+          created_at?: string
+          file_name: string
+          file_path: string
+          id?: string
+          public_url: string
+        }
+        Update: {
+          category?: string
+          created_at?: string
+          file_name?: string
+          file_path?: string
+          id?: string
+          public_url?: string
+        }
+        Relationships: []
+      }
       pool_config: {
         Row: {
           close_time: string
