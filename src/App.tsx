@@ -22,7 +22,9 @@ import AdminClientes from "./pages/admin/AdminClientes";
 import AdminPromocoes from "./pages/admin/AdminPromocoes";
 import AdminConfiguracoes from "./pages/admin/AdminConfiguracoes";
 import AdminBanners from "./pages/admin/AdminBanners";
-import AdminPlaceholder from "./pages/admin/AdminPlaceholder";
+import AdminSalao from "./pages/admin/AdminSalao";
+import AdminPiscina from "./pages/admin/AdminPiscina";
+import AdminConsumo from "./pages/admin/AdminConsumo";
 import NotFound from "./pages/NotFound";
 
 const queryClient = new QueryClient();
@@ -57,10 +59,9 @@ const App = () => (
             <Route path="/admin/configuracoes" element={<AdminConfiguracoes />} />
             <Route path="/admin/banners" element={<AdminBanners />} />
 
-            {/* Admin — placeholders */}
-            <Route path="/admin/salao" element={<AdminPlaceholder title="Salão de Festas" />} />
-            <Route path="/admin/piscina" element={<AdminPlaceholder title="Piscina" />} />
-            <Route path="/admin/consumo" element={<AdminPlaceholder title="Consumo" />} />
+            <Route path="/admin/salao" element={<AdminSalao />} />
+            <Route path="/admin/piscina" element={<AdminPiscina />} />
+            <Route path="/admin/consumo" element={<AdminConsumo />} />
 
             <Route path="*" element={<NotFound />} />
           </Routes>
