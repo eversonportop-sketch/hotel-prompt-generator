@@ -83,27 +83,25 @@ const AdminPiscina = () => {
   const [deleteConfirm, setDeleteConfirm] = useState<string | null>(null);
 
   // ── Queries ───────────────────────────────────────────────────────────────────
-  const { data: config, isLoading: loadingConfig } = useQuery({
+  const { data: config, isLoading: loadingConfig } = useQuery<PoolConfig | null>({
     queryKey: ["pool-config"],
     queryFn: async () => {
       const { data, error } = await supabase.from("pool_config").select("*").limit(1).single();
       if (error && error.code !== "PGRST116") throw error;
-      return data as PoolConfig | null;
-    },
-    onSuccess: (data) => {
       if (data && !configForm) {
         setConfigForm({
           open_time: data.open_time,
           close_time: data.close_time,
           status: data.status,
           max_capacity: data.max_capacity,
-          rules: data.rules ?? DEFAULT_RULES,
+          rules: (data as any).rules ?? DEFAULT_RULES,
         });
       } else if (!data && !configForm) {
         setConfigForm({ open_time: "07:00", close_time: "22:00", status: "open", max_capacity: 30, rules: DEFAULT_RULES });
       }
+      return data as PoolConfig | null;
     },
-  } as any);
+  });
 
   const { data: incidents = [], isLoading: loadingIncidents } = useQuery({
     queryKey: ["pool-incidents"],
