@@ -79,6 +79,13 @@ const adminModules = [
     color: "from-teal-900/30 to-teal-800/10",
   },
   {
+    icon: Image,
+    label: "Mídia",
+    href: "/admin/midia",
+    description: "Galeria de imagens",
+    color: "from-pink-900/30 to-pink-800/10",
+  },
+  {
     icon: Settings,
     label: "Configurações",
     href: "/admin/configuracoes",
