@@ -114,6 +114,92 @@ export type Database = {
           },
         ]
       }
+      consumption_items: {
+        Row: {
+          available: boolean
+          category: string
+          created_at: string
+          description: string | null
+          display_order: number
+          id: string
+          name: string
+          price: number
+          updated_at: string
+        }
+        Insert: {
+          available?: boolean
+          category?: string
+          created_at?: string
+          description?: string | null
+          display_order?: number
+          id?: string
+          name: string
+          price?: number
+          updated_at?: string
+        }
+        Update: {
+          available?: boolean
+          category?: string
+          created_at?: string
+          description?: string | null
+          display_order?: number
+          id?: string
+          name?: string
+          price?: number
+          updated_at?: string
+        }
+        Relationships: []
+      }
+      consumption_orders: {
+        Row: {
+          created_at: string
+          id: string
+          item_id: string | null
+          item_name: string
+          notes: string | null
+          quantity: number
+          room_number: string
+          status: string
+          total: number
+          unit_price: number
+          updated_at: string
+        }
+        Insert: {
+          created_at?: string
+          id?: string
+          item_id?: string | null
+          item_name: string
+          notes?: string | null
+          quantity?: number
+          room_number: string
+          status?: string
+          total?: number
+          unit_price?: number
+          updated_at?: string
+        }
+        Update: {
+          created_at?: string
+          id?: string
+          item_id?: string | null
+          item_name?: string
+          notes?: string | null
+          quantity?: number
+          room_number?: string
+          status?: string
+          total?: number
+          unit_price?: number
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "consumption_orders_item_id_fkey"
+            columns: ["item_id"]
+            isOneToOne: false
+            referencedRelation: "consumption_items"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       consumptions: {
         Row: {
           cancelled: boolean
@@ -171,6 +257,120 @@ export type Database = {
             referencedColumns: ["id"]
           },
         ]
+      }
+      hall_bookings: {
+        Row: {
+          client_email: string | null
+          client_name: string
+          client_phone: string | null
+          created_at: string
+          end_time: string
+          event_date: string
+          event_type: string
+          guests_count: number
+          id: string
+          notes: string | null
+          start_time: string
+          status: string
+          total_price: number
+          updated_at: string
+        }
+        Insert: {
+          client_email?: string | null
+          client_name: string
+          client_phone?: string | null
+          created_at?: string
+          end_time?: string
+          event_date: string
+          event_type?: string
+          guests_count?: number
+          id?: string
+          notes?: string | null
+          start_time?: string
+          status?: string
+          total_price?: number
+          updated_at?: string
+        }
+        Update: {
+          client_email?: string | null
+          client_name?: string
+          client_phone?: string | null
+          created_at?: string
+          end_time?: string
+          event_date?: string
+          event_type?: string
+          guests_count?: number
+          id?: string
+          notes?: string | null
+          start_time?: string
+          status?: string
+          total_price?: number
+          updated_at?: string
+        }
+        Relationships: []
+      }
+      pool_config: {
+        Row: {
+          close_time: string
+          id: string
+          max_capacity: number
+          open_time: string
+          rules: string[]
+          status: string
+          updated_at: string
+        }
+        Insert: {
+          close_time?: string
+          id?: string
+          max_capacity?: number
+          open_time?: string
+          rules?: string[]
+          status?: string
+          updated_at?: string
+        }
+        Update: {
+          close_time?: string
+          id?: string
+          max_capacity?: number
+          open_time?: string
+          rules?: string[]
+          status?: string
+          updated_at?: string
+        }
+        Relationships: []
+      }
+      pool_incidents: {
+        Row: {
+          created_at: string
+          description: string
+          id: string
+          incident_date: string
+          incident_time: string
+          resolved: boolean
+          type: string
+          updated_at: string
+        }
+        Insert: {
+          created_at?: string
+          description: string
+          id?: string
+          incident_date?: string
+          incident_time?: string
+          resolved?: boolean
+          type?: string
+          updated_at?: string
+        }
+        Update: {
+          created_at?: string
+          description?: string
+          id?: string
+          incident_date?: string
+          incident_time?: string
+          resolved?: boolean
+          type?: string
+          updated_at?: string
+        }
+        Relationships: []
       }
       profiles: {
         Row: {
