@@ -48,7 +48,10 @@ const AdminConfiguracoes = () => {
   // Carregar do Supabase
   useEffect(() => {
     const load = async () => {
-      const { data, error } = await (supabase as any).from("hotel_settings").select("key, value").in("key", KEYS);
+      const { data, error } = await supabase
+        .from("hotel_settings" as any)
+        .select("key, value")
+        .in("key", KEYS);
 
       if (!error && data) {
         const merged = { ...DEFAULT_SETTINGS };
@@ -75,7 +78,7 @@ const AdminConfiguracoes = () => {
         updated_at: new Date().toISOString(),
       }));
 
-      const { error } = await (supabase as any).from("hotel_settings").upsert(upserts, { onConflict: "key" });
+      const { error } = await supabase.from("hotel_settings" as any).upsert(upserts, { onConflict: "key" });
 
       if (error) throw error;
       toast.success("Configurações salvas com sucesso!");
