@@ -1,7 +1,7 @@
 // ─── AdminConsumo ──────────────────────────────────────────────────────────────
 // Módulo completo: consumo do frigobar e room service
 // Tabelas Supabase: consumption_items (cardápio), consumption_orders (pedidos)
-import { useState } from "react";
+import { useState, useEffect, useRef, useCallback } from "react";
 import { Link } from "react-router-dom";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
@@ -23,6 +23,9 @@ import {
   CheckCircle2,
   Clock,
   BedDouble,
+  Bell,
+  TrendingUp,
+  Star,
 } from "lucide-react";
 import { format } from "date-fns";
 import { ptBR } from "date-fns/locale";
