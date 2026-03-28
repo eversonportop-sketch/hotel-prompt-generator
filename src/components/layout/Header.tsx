@@ -1,8 +1,9 @@
 import { useState } from "react";
-import { Link, useLocation } from "react-router-dom";
-import { Menu, X, User, ChevronDown } from "lucide-react";
+import { Link, useLocation, useNavigate } from "react-router-dom";
+import { Menu, X, User, ChevronDown, LogOut, UtensilsCrossed } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { motion, AnimatePresence } from "framer-motion";
+import { useAuth } from "@/hooks/useAuth";
 import hotelLogo from "@/assets/hotel-sb-logo.png";
 
 // ─── Traduções ────────────────────────────────────────────────────────────────
@@ -94,8 +95,15 @@ const Header = () => {
   const [isOpen, setIsOpen] = useState(false);
   const [lang, setLang] = useState<Lang>("pt");
   const location = useLocation();
+  const navigate = useNavigate();
+  const { user, signOut } = useAuth();
 
   const { nav, login } = translations[lang];
+
+  const handleSignOut = async () => {
+    await signOut();
+    navigate("/");
+  };
 
   return (
     <header className="fixed top-0 left-0 right-0 z-50 bg-charcoal/95 backdrop-blur-md border-b border-gold/10">
@@ -120,17 +128,35 @@ const Header = () => {
               {link.label}
             </Link>
           ))}
+          {user && (
+            <Link
+              to="/cardapio"
+              className={`px-3 py-2 text-sm font-body tracking-wide transition-colors duration-200 flex items-center gap-1.5 ${
+                location.pathname === "/cardapio" ? "text-primary" : "text-cream/70 hover:text-primary"
+              }`}
+            >
+              <UtensilsCrossed className="w-3.5 h-3.5" />
+              Cardápio
+            </Link>
+          )}
         </nav>
 
         {/* Desktop direita */}
         <div className="hidden lg:flex items-center gap-3">
           <LanguageSelector lang={lang} setLang={setLang} />
-          <Link to="/login">
-            <Button variant="gold-outline" size="sm" className="gap-2">
-              <User className="w-4 h-4" />
-              {login}
+          {user ? (
+            <Button variant="gold-outline" size="sm" className="gap-2" onClick={handleSignOut}>
+              <LogOut className="w-4 h-4" />
+              Sair
             </Button>
-          </Link>
+          ) : (
+            <Link to="/login">
+              <Button variant="gold-outline" size="sm" className="gap-2">
+                <User className="w-4 h-4" />
+                {login}
+              </Button>
+            </Link>
+          )}
         </div>
 
         {/* Mobile Toggle */}
@@ -166,12 +192,38 @@ const Header = () => {
                   {link.label}
                 </Link>
               ))}
-              <Link to="/login" onClick={() => setIsOpen(false)} className="mt-2">
-                <Button variant="gold" size="sm" className="w-full gap-2">
-                  <User className="w-4 h-4" />
-                  {login}
-                </Button>
-              </Link>
+              {user && (
+                <Link
+                  to="/cardapio"
+                  onClick={() => setIsOpen(false)}
+                  className={`px-4 py-3 text-sm font-body tracking-wide rounded transition-colors flex items-center gap-2 ${
+                    location.pathname === "/cardapio"
+                      ? "text-primary bg-charcoal-light"
+                      : "text-cream/70 hover:text-primary hover:bg-charcoal-light"
+                  }`}
+                >
+                  <UtensilsCrossed className="w-4 h-4" />
+                  Cardápio
+                </Link>
+              )}
+              {user ? (
+                <button
+                  onClick={() => { setIsOpen(false); handleSignOut(); }}
+                  className="mt-2"
+                >
+                  <Button variant="gold" size="sm" className="w-full gap-2">
+                    <LogOut className="w-4 h-4" />
+                    Sair
+                  </Button>
+                </button>
+              ) : (
+                <Link to="/login" onClick={() => setIsOpen(false)} className="mt-2">
+                  <Button variant="gold" size="sm" className="w-full gap-2">
+                    <User className="w-4 h-4" />
+                    {login}
+                  </Button>
+                </Link>
+              )}
             </nav>
           </motion.div>
         )}

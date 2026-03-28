@@ -14,6 +14,7 @@ import Galeria from "./pages/Galeria";
 import Contato from "./pages/Contato";
 import Login from "./pages/Login";
 import Cadastro from "./pages/Cadastro";
+import Cardapio from "./pages/Cardapio";
 import AdminDashboard from "./pages/admin/AdminDashboard";
 import AdminReservas from "./pages/admin/AdminReservas";
 import AdminCheckin from "./pages/admin/AdminCheckin";
@@ -49,6 +50,7 @@ const App = () => (
             <Route path="/contato" element={<Contato />} />
             <Route path="/login" element={<Login />} />
             <Route path="/cadastro" element={<Cadastro />} />
+            <Route path="/cardapio" element={<Cardapio />} />
 
             {/* Admin — módulos completos */}
             <Route path="/admin" element={<AdminDashboard />} />
