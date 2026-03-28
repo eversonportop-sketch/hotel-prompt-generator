@@ -28,6 +28,7 @@ import AdminConsumo from "./pages/admin/AdminConsumo";
 import AdminMidia from "./pages/admin/AdminMidia";
 import AdminInformacoes from "./pages/admin/AdminInformacoes";
 import Cardapio from "./pages/Cardapio";
+import Portal from "./pages/Portal";
 import NotFound from "./pages/NotFound";
 
 const queryClient = new QueryClient();
@@ -52,6 +53,7 @@ const App = () => (
             <Route path="/login" element={<Login />} />
             <Route path="/cadastro" element={<Cadastro />} />
             <Route path="/cardapio" element={<Cardapio />} />
+            <Route path="/portal" element={<Portal />} />
 
             {/* Admin — módulos completos */}
             <Route path="/admin" element={<AdminDashboard />} />

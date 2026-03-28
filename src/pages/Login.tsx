@@ -25,13 +25,22 @@ const Login = () => {
       return;
     }
     const {
-      data: { user },
+      data: { user: loggedUser },
     } = await supabase.auth.getUser();
+    // fetch role from profiles table
+    let role = "user";
+    if (loggedUser) {
+      const { data: prof } = await supabase
+        .from("profiles")
+        .select("role")
+        .eq("id", loggedUser.id)
+        .single();
+      role = prof?.role ?? "user";
+    }
     setLoading(false);
     toast.success("Login realizado com sucesso!");
-    const role = user?.user_metadata?.role;
     if (role === "admin") navigate("/admin");
-    else navigate("/");
+    else navigate("/portal");
   };
 
   return (
