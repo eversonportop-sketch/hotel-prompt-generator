@@ -16,6 +16,7 @@ import {
   ArrowRight,
   LogIn,
   LogOut,
+  Receipt,
   Info,
 } from "lucide-react";
 import { useQuery } from "@tanstack/react-query";
@@ -57,6 +58,13 @@ const adminModules = [
     href: "/admin/consumo",
     description: "Frigobar e alimentos",
     color: "from-rose-900/30 to-rose-800/10",
+  },
+  {
+    icon: Receipt,
+    label: "Checkout",
+    href: "/admin/checkout",
+    description: "Fechar conta do hóspede",
+    color: "from-emerald-900/30 to-emerald-800/10",
   },
   {
     icon: Tag,
