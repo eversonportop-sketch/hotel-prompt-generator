@@ -7,7 +7,7 @@ const useSettings = () => {
   return useQuery({
     queryKey: ["hotel_settings"],
     queryFn: async () => {
-      const { data } = await (supabase as any).from("hotel_settings").select("key, value");
+      const { data } = await supabase.from("hotel_settings" as any).select("key, value");
       const map: Record<string, string> = {};
       (data || []).forEach((row: any) => {
         map[row.key] = row.value ?? "";
