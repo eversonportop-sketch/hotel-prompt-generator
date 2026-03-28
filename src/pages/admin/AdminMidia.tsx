@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, useRef, useCallback } from "react";
 import { Link } from "react-router-dom";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
@@ -14,8 +14,10 @@ import {
   Tag,
   Loader2,
   X,
+  CheckCircle,
+  ZoomIn,
 } from "lucide-react";
-import { useToast } from "@/hooks/use-toast";
+import { toast } from "sonner";
 
 const CATEGORIES = [
   { key: "quartos", label: "Quartos", icon: BedDouble },
@@ -35,25 +37,40 @@ interface MediaItem {
   created_at: string;
 }
 
-async function uploadImage(file: File, category: string): Promise<{ path: string; url: string }> {
-  const ext = file.name.split(".").pop();
+interface UploadProgress {
+  name: string;
+  status: "uploading" | "done" | "error";
+}
+
+async function uploadSingle(file: File, category: string): Promise<string> {
+  const ext = file.name.split(".").pop() || "jpg";
   const path = `${category}/${Date.now()}-${Math.random().toString(36).slice(2)}.${ext}`;
-  const { error } = await supabase.storage.from("hotel-images").upload(path, file);
+  const { error } = await supabase.storage.from("hotel-images").upload(path, file, { contentType: file.type });
   if (error) throw error;
   const { data } = supabase.storage.from("hotel-images").getPublicUrl(path);
-  return { path, url: data.publicUrl };
+  // salvar no banco
+  await (supabase as any).from("hotel_media").insert({
+    file_name: file.name,
+    file_path: path,
+    public_url: data.publicUrl,
+    category,
+  });
+  return data.publicUrl;
 }
 
 const AdminMidia = () => {
   const qc = useQueryClient();
-  const { toast } = useToast();
-  const [uploading, setUploading] = useState<Category | null>(null);
+  const fileInputRef = useRef<HTMLInputElement>(null);
+  const [activeCategory, setActiveCategory] = useState<Category | null>(null);
+  const [progresses, setProgresses] = useState<UploadProgress[]>([]);
+  const [dragging, setDragging] = useState<Category | null>(null);
+  const [lightbox, setLightbox] = useState<string | null>(null);
   const [deleteConfirm, setDeleteConfirm] = useState<MediaItem | null>(null);
 
   const { data: media = [], isLoading } = useQuery<MediaItem[]>({
     queryKey: ["admin-media"],
     queryFn: async () => {
-      const { data, error } = await supabase
+      const { data, error } = await (supabase as any)
         .from("hotel_media")
         .select("*")
         .order("created_at", { ascending: false });
@@ -62,75 +79,139 @@ const AdminMidia = () => {
     },
   });
 
-  const uploadMutation = useMutation({
-    mutationFn: async ({ file, category }: { file: File; category: Category }) => {
-      const { path, url } = await uploadImage(file, category);
-      const { error } = await supabase.from("hotel_media").insert({
-        file_name: file.name,
-        file_path: path,
-        public_url: url,
-        category,
-      });
-      if (error) throw error;
-    },
-    onSuccess: () => {
-      qc.invalidateQueries({ queryKey: ["admin-media"] });
-      toast({ title: "Imagem enviada com sucesso" });
-      setUploading(null);
-    },
-    onError: () => toast({ title: "Erro ao enviar imagem", variant: "destructive" }),
-  });
-
   const deleteMutation = useMutation({
     mutationFn: async (item: MediaItem) => {
       await supabase.storage.from("hotel-images").remove([item.file_path]);
-      const { error } = await supabase.from("hotel_media").delete().eq("id", item.id);
+      const { error } = await (supabase as any).from("hotel_media").delete().eq("id", item.id);
       if (error) throw error;
     },
     onSuccess: () => {
       qc.invalidateQueries({ queryKey: ["admin-media"] });
-      toast({ title: "Imagem excluída" });
+      toast.success("Imagem excluída.");
       setDeleteConfirm(null);
     },
-    onError: () => toast({ title: "Erro ao excluir imagem", variant: "destructive" }),
+    onError: () => toast.error("Erro ao excluir imagem."),
   });
 
-  const handleFileSelect = (category: Category) => {
-    const input = document.createElement("input");
-    input.type = "file";
-    input.accept = "image/*";
-    input.onchange = (e) => {
-      const file = (e.target as HTMLInputElement).files?.[0];
-      if (!file) return;
-      if (file.size > 5 * 1024 * 1024) {
-        toast({ title: "Imagem muito grande (máx 5MB)", variant: "destructive" });
-        return;
+  // Upload de múltiplos arquivos
+  const handleFiles = useCallback(
+    async (files: FileList | File[], category: Category) => {
+      const arr = Array.from(files);
+      if (!arr.length) return;
+
+      // Validação
+      const invalid = arr.filter((f) => !f.type.startsWith("image/") || f.size > 10 * 1024 * 1024);
+      if (invalid.length) {
+        toast.error(`${invalid.length} arquivo(s) inválido(s) — apenas imagens até 10MB.`);
       }
-      setUploading(category);
-      uploadMutation.mutate({ file, category });
-    };
-    input.click();
+      const valid = arr.filter((f) => f.type.startsWith("image/") && f.size <= 10 * 1024 * 1024);
+      if (!valid.length) return;
+
+      // Inicializa progresso
+      setProgresses(valid.map((f) => ({ name: f.name, status: "uploading" })));
+
+      let successCount = 0;
+      for (let i = 0; i < valid.length; i++) {
+        const file = valid[i];
+        try {
+          await uploadSingle(file, category);
+          successCount++;
+          setProgresses((prev) => prev.map((p, idx) => (idx === i ? { ...p, status: "done" } : p)));
+        } catch {
+          setProgresses((prev) => prev.map((p, idx) => (idx === i ? { ...p, status: "error" } : p)));
+        }
+      }
+
+      qc.invalidateQueries({ queryKey: ["admin-media"] });
+      toast.success(`${successCount} de ${valid.length} imagem(ns) enviada(s)!`);
+      setTimeout(() => setProgresses([]), 2000);
+    },
+    [qc],
+  );
+
+  const openPicker = (category: Category) => {
+    setActiveCategory(category);
+    if (fileInputRef.current) {
+      fileInputRef.current.value = "";
+      fileInputRef.current.click();
+    }
+  };
+
+  const onFileInputChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    if (activeCategory && e.target.files?.length) {
+      handleFiles(e.target.files, activeCategory);
+    }
+  };
+
+  const onDrop = (e: React.DragEvent, category: Category) => {
+    e.preventDefault();
+    setDragging(null);
+    handleFiles(e.dataTransfer.files, category);
   };
 
   const mediaByCategory = (cat: string) => media.filter((m) => m.category === cat);
+  const isUploading = progresses.some((p) => p.status === "uploading");
 
   return (
     <div className="min-h-screen bg-charcoal text-cream">
       {/* Header */}
-      <header className="sticky top-0 z-30 backdrop-blur-md bg-charcoal/80 border-b border-white/5 px-6 py-3 flex items-center gap-4">
-        <Link
-          to="/admin"
-          className="flex items-center gap-1.5 text-xs text-white/40 hover:text-primary transition-colors font-body"
-        >
-          <ArrowLeft className="w-3.5 h-3.5" /> Dashboard
-        </Link>
-        <div className="flex items-center gap-2">
-          <div className="p-1.5 rounded-lg bg-primary/10">
-            <ImageIcon className="w-4 h-4 text-primary" />
+      <header className="sticky top-0 z-30 backdrop-blur-md bg-charcoal/90 border-b border-gold/10 px-6 py-3 flex items-center justify-between">
+        <div className="flex items-center gap-4">
+          <Link
+            to="/admin"
+            className="flex items-center gap-1.5 text-xs text-cream/40 hover:text-primary transition-colors font-body"
+          >
+            <ArrowLeft className="w-3.5 h-3.5" /> Dashboard
+          </Link>
+          <div className="flex items-center gap-2">
+            <div className="p-1.5 rounded-lg bg-primary/10">
+              <ImageIcon className="w-4 h-4 text-primary" />
+            </div>
+            <h1 className="font-display text-lg font-semibold text-cream">Galeria de Mídia</h1>
           </div>
-          <h1 className="font-display text-lg font-semibold text-cream">Galeria de Mídia</h1>
         </div>
+        <p className="text-xs text-cream/30 font-body hidden md:block">
+          Selecione várias fotos de uma vez · Arraste e solte nas categorias
+        </p>
       </header>
+
+      {/* Barra de progresso dos uploads */}
+      <AnimatePresence>
+        {progresses.length > 0 && (
+          <motion.div
+            initial={{ opacity: 0, y: -10 }}
+            animate={{ opacity: 1, y: 0 }}
+            exit={{ opacity: 0 }}
+            className="bg-charcoal-light border-b border-gold/10 px-6 py-3"
+          >
+            <p className="text-xs text-primary font-body mb-2 tracking-wider uppercase">
+              Enviando {progresses.length} imagem(ns)...
+            </p>
+            <div className="flex flex-wrap gap-2">
+              {progresses.map((p, i) => (
+                <div
+                  key={i}
+                  className={`flex items-center gap-1.5 text-xs font-body px-2.5 py-1 rounded-full border ${
+                    p.status === "done"
+                      ? "border-green-500/30 bg-green-500/10 text-green-400"
+                      : p.status === "error"
+                        ? "border-red-500/30 bg-red-500/10 text-red-400"
+                        : "border-gold/20 bg-gold/5 text-cream/60"
+                  }`}
+                >
+                  {p.status === "uploading" && <Loader2 className="w-3 h-3 animate-spin" />}
+                  {p.status === "done" && <CheckCircle className="w-3 h-3" />}
+                  {p.status === "error" && <X className="w-3 h-3" />}
+                  <span className="max-w-[120px] truncate">{p.name}</span>
+                </div>
+              ))}
+            </div>
+          </motion.div>
+        )}
+      </AnimatePresence>
+
+      {/* Input file oculto — múltiplo */}
+      <input ref={fileInputRef} type="file" accept="image/*" multiple className="hidden" onChange={onFileInputChange} />
 
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8 space-y-10">
         {isLoading ? (
@@ -141,6 +222,8 @@ const AdminMidia = () => {
           CATEGORIES.map((cat) => {
             const items = mediaByCategory(cat.key);
             const Icon = cat.icon;
+            const isDraggingHere = dragging === cat.key;
+
             return (
               <motion.section
                 key={cat.key}
@@ -148,76 +231,144 @@ const AdminMidia = () => {
                 animate={{ opacity: 1, y: 0 }}
                 transition={{ duration: 0.4 }}
               >
-                {/* Category header */}
+                {/* Cabeçalho da categoria */}
                 <div className="flex items-center justify-between mb-4">
                   <div className="flex items-center gap-2">
                     <div className="p-1.5 rounded-lg bg-primary/10">
                       <Icon className="w-4 h-4 text-primary" />
                     </div>
                     <h2 className="font-display text-base font-semibold text-cream">{cat.label}</h2>
-                    <span className="text-xs text-white/30 font-body">{items.length} imagens</span>
+                    <span className="text-xs text-cream/30 font-body">
+                      {items.length} {items.length === 1 ? "imagem" : "imagens"}
+                    </span>
                   </div>
                   <button
-                    onClick={() => handleFileSelect(cat.key)}
-                    disabled={uploading === cat.key}
-                    className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-primary/10 text-primary text-xs font-semibold hover:bg-primary/20 transition disabled:opacity-50 font-body"
+                    onClick={() => openPicker(cat.key)}
+                    disabled={isUploading}
+                    className="flex items-center gap-1.5 px-4 py-2 rounded-lg bg-gradient-to-r from-primary/20 to-primary/10 text-primary text-xs font-semibold hover:from-primary/30 hover:to-primary/20 transition border border-primary/20 disabled:opacity-50 font-body"
                   >
-                    {uploading === cat.key ? (
-                      <Loader2 className="w-3.5 h-3.5 animate-spin" />
-                    ) : (
-                      <Upload className="w-3.5 h-3.5" />
-                    )}
-                    {uploading === cat.key ? "Enviando..." : "Upload"}
+                    <Upload className="w-3.5 h-3.5" />
+                    Enviar fotos
                   </button>
                 </div>
 
-                {/* Image grid */}
-                {items.length === 0 ? (
-                  <div className="rounded-xl border border-dashed border-white/10 bg-charcoal-light p-8 text-center">
-                    <ImageIcon className="w-8 h-8 text-white/10 mx-auto mb-2" />
-                    <p className="text-sm text-white/25 font-body">Nenhuma imagem nesta categoria</p>
-                  </div>
-                ) : (
-                  <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 gap-3">
-                    <AnimatePresence>
-                      {items.map((item) => (
-                        <motion.div
-                          key={item.id}
-                          layout
-                          initial={{ opacity: 0, scale: 0.9 }}
-                          animate={{ opacity: 1, scale: 1 }}
-                          exit={{ opacity: 0, scale: 0.9 }}
-                          className="group relative rounded-xl overflow-hidden border border-white/5 bg-charcoal-light aspect-square"
-                        >
-                          <img
-                            src={item.public_url}
-                            alt={item.file_name}
-                            className="w-full h-full object-cover"
-                            loading="lazy"
-                          />
-                          <div className="absolute inset-0 bg-black/0 group-hover:bg-black/50 transition-colors flex items-center justify-center">
-                            <button
-                              onClick={() => setDeleteConfirm(item)}
-                              className="opacity-0 group-hover:opacity-100 transition-opacity p-2 rounded-full bg-red-600/80 hover:bg-red-500 text-white"
-                            >
-                              <Trash2 className="w-4 h-4" />
-                            </button>
-                          </div>
-                          <div className="absolute bottom-0 inset-x-0 bg-gradient-to-t from-black/70 to-transparent px-2 py-1.5">
-                            <p className="text-[10px] text-white/70 truncate font-body">{item.file_name}</p>
-                          </div>
-                        </motion.div>
-                      ))}
-                    </AnimatePresence>
-                  </div>
-                )}
+                {/* Zona de drop + grid */}
+                <div
+                  onDragOver={(e) => {
+                    e.preventDefault();
+                    setDragging(cat.key);
+                  }}
+                  onDragLeave={() => setDragging(null)}
+                  onDrop={(e) => onDrop(e, cat.key)}
+                  className={`rounded-xl border-2 transition-all duration-200 ${
+                    isDraggingHere
+                      ? "border-primary bg-primary/5 scale-[1.01]"
+                      : items.length === 0
+                        ? "border-dashed border-gold/15"
+                        : "border-transparent"
+                  }`}
+                >
+                  {items.length === 0 ? (
+                    <div
+                      onClick={() => openPicker(cat.key)}
+                      className="p-10 text-center cursor-pointer hover:bg-charcoal-light/50 transition-colors rounded-xl"
+                    >
+                      <Upload className="w-8 h-8 text-primary/30 mx-auto mb-3" />
+                      <p className="text-sm text-cream/30 font-body">
+                        {isDraggingHere ? "Solte para enviar!" : "Clique ou arraste fotos aqui"}
+                      </p>
+                      <p className="text-xs text-cream/15 font-body mt-1">
+                        JPG, PNG, WebP · Máx 10MB por foto · Múltiplas fotos permitidas
+                      </p>
+                    </div>
+                  ) : (
+                    <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 xl:grid-cols-6 gap-3 p-1">
+                      {/* Card de adicionar mais */}
+                      <div
+                        onClick={() => openPicker(cat.key)}
+                        className="aspect-square rounded-xl border-2 border-dashed border-gold/15 hover:border-primary/40 bg-charcoal-light cursor-pointer flex flex-col items-center justify-center gap-2 transition-all hover:bg-primary/5"
+                      >
+                        <Upload className="w-5 h-5 text-primary/50" />
+                        <span className="text-xs text-cream/30 font-body text-center px-2">Adicionar mais</span>
+                      </div>
+
+                      <AnimatePresence>
+                        {items.map((item) => (
+                          <motion.div
+                            key={item.id}
+                            layout
+                            initial={{ opacity: 0, scale: 0.9 }}
+                            animate={{ opacity: 1, scale: 1 }}
+                            exit={{ opacity: 0, scale: 0.9 }}
+                            className="group relative rounded-xl overflow-hidden border border-gold/10 bg-charcoal-light aspect-square"
+                          >
+                            <img
+                              src={item.public_url}
+                              alt={item.file_name}
+                              className="w-full h-full object-cover"
+                              loading="lazy"
+                            />
+                            {/* Hover overlay */}
+                            <div className="absolute inset-0 bg-black/0 group-hover:bg-black/60 transition-colors flex items-center justify-center gap-2">
+                              <button
+                                onClick={() => setLightbox(item.public_url)}
+                                className="opacity-0 group-hover:opacity-100 transition-opacity p-2 rounded-full bg-white/10 hover:bg-white/20 text-white"
+                              >
+                                <ZoomIn className="w-4 h-4" />
+                              </button>
+                              <button
+                                onClick={() => setDeleteConfirm(item)}
+                                className="opacity-0 group-hover:opacity-100 transition-opacity p-2 rounded-full bg-red-600/80 hover:bg-red-500 text-white"
+                              >
+                                <Trash2 className="w-4 h-4" />
+                              </button>
+                            </div>
+                            {/* Nome */}
+                            <div className="absolute bottom-0 inset-x-0 bg-gradient-to-t from-black/70 to-transparent px-2 py-1.5">
+                              <p className="text-[10px] text-white/60 truncate font-body">{item.file_name}</p>
+                            </div>
+                          </motion.div>
+                        ))}
+                      </AnimatePresence>
+                    </div>
+                  )}
+                </div>
               </motion.section>
             );
           })
         )}
       </div>
 
-      {/* Delete confirmation */}
+      {/* Lightbox */}
+      <AnimatePresence>
+        {lightbox && (
+          <motion.div
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            exit={{ opacity: 0 }}
+            className="fixed inset-0 z-50 bg-black/90 flex items-center justify-center p-4"
+            onClick={() => setLightbox(null)}
+          >
+            <motion.img
+              initial={{ scale: 0.9 }}
+              animate={{ scale: 1 }}
+              exit={{ scale: 0.9 }}
+              src={lightbox}
+              alt=""
+              className="max-h-[85vh] max-w-[90vw] object-contain rounded-lg shadow-2xl"
+              onClick={(e) => e.stopPropagation()}
+            />
+            <button
+              onClick={() => setLightbox(null)}
+              className="absolute top-4 right-4 w-10 h-10 rounded-full bg-white/10 hover:bg-white/20 flex items-center justify-center text-white transition"
+            >
+              <X className="w-5 h-5" />
+            </button>
+          </motion.div>
+        )}
+      </AnimatePresence>
+
+      {/* Confirmação de exclusão */}
       <AnimatePresence>
         {deleteConfirm && (
           <motion.div
@@ -228,25 +379,32 @@ const AdminMidia = () => {
             onClick={() => setDeleteConfirm(null)}
           >
             <motion.div
-              initial={{ scale: 0.95, opacity: 0 }}
-              animate={{ scale: 1, opacity: 1 }}
-              exit={{ scale: 0.95, opacity: 0 }}
+              initial={{ scale: 0.95 }}
+              animate={{ scale: 1 }}
+              exit={{ scale: 0.95 }}
               onClick={(e) => e.stopPropagation()}
-              className="bg-charcoal-light border border-white/10 rounded-2xl p-6 w-full max-w-sm space-y-4"
+              className="bg-charcoal-light border border-gold/10 rounded-2xl p-6 w-full max-w-sm space-y-4"
             >
               <div className="flex items-center justify-between">
                 <h3 className="font-display text-base font-semibold text-cream">Excluir imagem?</h3>
-                <button onClick={() => setDeleteConfirm(null)} className="text-white/30 hover:text-white/60">
+                <button onClick={() => setDeleteConfirm(null)} className="text-cream/30 hover:text-cream/60">
                   <X className="w-4 h-4" />
                 </button>
               </div>
-              <p className="text-sm text-white/50 font-body">
-                A imagem <strong className="text-cream">{deleteConfirm.file_name}</strong> será removida permanentemente.
+              <p className="text-sm text-cream/50 font-body">
+                <span className="text-cream font-medium">{deleteConfirm.file_name}</span> será removida permanentemente.
               </p>
+              {deleteConfirm.public_url && (
+                <img
+                  src={deleteConfirm.public_url}
+                  alt=""
+                  className="w-full h-32 object-cover rounded-lg border border-gold/10"
+                />
+              )}
               <div className="flex gap-3">
                 <button
                   onClick={() => setDeleteConfirm(null)}
-                  className="flex-1 border border-white/10 text-white/50 rounded-lg py-2.5 text-sm hover:bg-white/5 transition font-body"
+                  className="flex-1 border border-gold/10 text-cream/50 rounded-lg py-2.5 text-sm hover:bg-cream/5 transition font-body"
                 >
                   Cancelar
                 </button>
