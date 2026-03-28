@@ -15,9 +15,9 @@ import Contato from "./pages/Contato";
 import Login from "./pages/Login";
 import Cadastro from "./pages/Cadastro";
 import AdminDashboard from "./pages/admin/AdminDashboard";
-import AdminCheckout from "./pages/admin/AdminCheckout";
 import AdminReservas from "./pages/admin/AdminReservas";
 import AdminCheckin from "./pages/admin/AdminCheckin";
+import AdminCheckout from "./pages/admin/AdminCheckout";
 import AdminQuartos from "./pages/admin/AdminQuartos";
 import AdminClientes from "./pages/admin/AdminClientes";
 import AdminPromocoes from "./pages/admin/AdminPromocoes";
@@ -59,8 +59,8 @@ const App = () => (
             {/* Admin — módulos completos */}
             <Route path="/admin" element={<AdminDashboard />} />
             <Route path="/admin/reservas" element={<AdminReservas />} />
-            <Route path="/admin/checkout" element={<AdminCheckout />} />
             <Route path="/admin/checkin" element={<AdminCheckin />} />
+            <Route path="/admin/checkout" element={<AdminCheckout />}
             <Route path="/admin/quartos" element={<AdminQuartos />} />
             <Route path="/admin/clientes" element={<AdminClientes />} />
             <Route path="/admin/promocoes" element={<AdminPromocoes />} />
