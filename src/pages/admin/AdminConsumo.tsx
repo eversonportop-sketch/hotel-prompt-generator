@@ -108,7 +108,66 @@ const AdminConsumo = () => {
     },
   });
 
-  // ── Mutations: itens ──────────────────────────────────────────────────────────
+  // ── Realtime subscription ─────────────────────────────────────────────────────
+  const audioRef = useRef<HTMLAudioElement | null>(null);
+
+  const playNotificationSound = useCallback(() => {
+    try {
+      // Use Web Audio API for a simple notification beep
+      const ctx = new (window.AudioContext || (window as any).webkitAudioContext)();
+      const osc = ctx.createOscillator();
+      const gain = ctx.createGain();
+      osc.connect(gain);
+      gain.connect(ctx.destination);
+      osc.frequency.value = 880;
+      osc.type = "sine";
+      gain.gain.setValueAtTime(0.3, ctx.currentTime);
+      gain.gain.exponentialRampToValueAtTime(0.01, ctx.currentTime + 0.5);
+      osc.start(ctx.currentTime);
+      osc.stop(ctx.currentTime + 0.5);
+    } catch {}
+  }, []);
+
+  useEffect(() => {
+    const channel = supabase
+      .channel("orders-realtime")
+      .on(
+        "postgres_changes",
+        { event: "INSERT", schema: "public", table: "consumption_orders" },
+        (payload) => {
+          const newOrder = payload.new as ConsumptionOrder;
+          if (newOrder.status === "pending") {
+            playNotificationSound();
+            toast.success(
+              `🔔 Novo pedido! Quarto ${newOrder.room_number} — ${newOrder.item_name} (×${newOrder.quantity})`,
+              { duration: 8000 }
+            );
+          }
+          qc.invalidateQueries({ queryKey: ["consumption-orders"] });
+        },
+      )
+      .on(
+        "postgres_changes",
+        { event: "UPDATE", schema: "public", table: "consumption_orders" },
+        () => {
+          qc.invalidateQueries({ queryKey: ["consumption-orders"] });
+        },
+      )
+      .on(
+        "postgres_changes",
+        { event: "DELETE", schema: "public", table: "consumption_orders" },
+        () => {
+          qc.invalidateQueries({ queryKey: ["consumption-orders"] });
+        },
+      )
+      .subscribe();
+
+    return () => {
+      supabase.removeChannel(channel);
+    };
+  }, [qc, playNotificationSound]);
+
+
   const saveItemMutation = useMutation({
     mutationFn: async () => {
       const payload = {
