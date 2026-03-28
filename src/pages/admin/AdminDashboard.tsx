@@ -16,6 +16,7 @@ import {
   ArrowRight,
   LogIn,
   LogOut,
+  Info,
 } from "lucide-react";
 import { useQuery } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
@@ -84,6 +85,13 @@ const adminModules = [
     href: "/admin/midia",
     description: "Galeria de imagens",
     color: "from-pink-900/30 to-pink-800/10",
+  },
+  {
+    icon: Info,
+    label: "Informações",
+    href: "/admin/informacoes",
+    description: "Dados úteis para hóspedes",
+    color: "from-cyan-900/30 to-cyan-800/10",
   },
   {
     icon: Settings,

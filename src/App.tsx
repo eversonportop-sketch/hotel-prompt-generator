@@ -26,6 +26,7 @@ import AdminSalao from "./pages/admin/AdminSalao";
 import AdminPiscina from "./pages/admin/AdminPiscina";
 import AdminConsumo from "./pages/admin/AdminConsumo";
 import AdminMidia from "./pages/admin/AdminMidia";
+import AdminInformacoes from "./pages/admin/AdminInformacoes";
 import Cardapio from "./pages/Cardapio";
 import NotFound from "./pages/NotFound";
 
@@ -66,6 +67,7 @@ const App = () => (
             <Route path="/admin/piscina" element={<AdminPiscina />} />
             <Route path="/admin/consumo" element={<AdminConsumo />} />
             <Route path="/admin/midia" element={<AdminMidia />} />
+            <Route path="/admin/informacoes" element={<AdminInformacoes />} />
 
             <Route path="*" element={<NotFound />} />
           </Routes>
