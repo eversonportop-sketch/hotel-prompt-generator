@@ -88,43 +88,30 @@ const Cardapio = () => {
   }, [items]);
 
   const filteredItems = useMemo(
-    () =>
-      selectedCategory === "Todos"
-        ? items
-        : items.filter((i) => i.category === selectedCategory),
-    [items, selectedCategory]
+    () => (selectedCategory === "Todos" ? items : items.filter((i) => i.category === selectedCategory)),
+    [items, selectedCategory],
   );
 
   const addToCart = (item: (typeof items)[0]) => {
     setCart((prev) => {
       const existing = prev.find((c) => c.id === item.id);
       if (existing) {
-        return prev.map((c) =>
-          c.id === item.id ? { ...c, quantity: c.quantity + 1 } : c
-        );
+        return prev.map((c) => (c.id === item.id ? { ...c, quantity: c.quantity + 1 } : c));
       }
-      return [
-        ...prev,
-        { id: item.id, name: item.name, price: item.price, quantity: 1, category: item.category },
-      ];
+      return [...prev, { id: item.id, name: item.name, price: item.price, quantity: 1, category: item.category }];
     });
   };
 
   const updateQuantity = (id: string, delta: number) => {
     setCart((prev) =>
-      prev
-        .map((c) => (c.id === id ? { ...c, quantity: c.quantity + delta } : c))
-        .filter((c) => c.quantity > 0)
+      prev.map((c) => (c.id === id ? { ...c, quantity: c.quantity + delta } : c)).filter((c) => c.quantity > 0),
     );
   };
 
   const cartTotal = cart.reduce((s, c) => s + c.price * c.quantity, 0);
   const cartCount = cart.reduce((s, c) => s + c.quantity, 0);
 
-  const roomName =
-    activeReservation && (activeReservation as any).rooms
-      ? (activeReservation as any).rooms.name
-      : null;
+  const roomName = activeReservation && (activeReservation as any).rooms ? (activeReservation as any).rooms.name : null;
 
   const orderMutation = useMutation({
     mutationFn: async () => {
@@ -158,12 +145,14 @@ const Cardapio = () => {
       <Layout>
         <div className="min-h-[60vh] flex flex-col items-center justify-center gap-6 px-4 text-center">
           <AlertCircle className="w-16 h-16 text-primary" />
-          <h1 className="font-display text-3xl text-foreground">Cardápio do Hotel</h1>
-          <p className="text-muted-foreground max-w-md">
+          <h1 className="font-display text-3xl text-cream">Cardápio do Hotel</h1>
+          <p className="text-cream/50 max-w-md">
             Faça login para acessar o cardápio e fazer pedidos diretamente do seu quarto.
           </p>
           <Link to="/login">
-            <Button variant="gold" size="lg">Entrar</Button>
+            <Button variant="gold" size="lg">
+              Entrar
+            </Button>
           </Link>
         </div>
       </Layout>
@@ -185,10 +174,11 @@ const Cardapio = () => {
     return (
       <Layout>
         <div className="min-h-[60vh] flex flex-col items-center justify-center gap-6 px-4 text-center">
-          <AlertCircle className="w-16 h-16 text-muted-foreground" />
-          <h1 className="font-display text-3xl text-foreground">Sem Reserva Ativa</h1>
-          <p className="text-muted-foreground max-w-md">
-            Você não possui reserva ativa no momento. O cardápio está disponível apenas para hóspedes com reserva em andamento.
+          <AlertCircle className="w-16 h-16 text-cream/50" />
+          <h1 className="font-display text-3xl text-cream">Sem Reserva Ativa</h1>
+          <p className="text-cream/50 max-w-md">
+            Você não possui reserva ativa no momento. O cardápio está disponível apenas para hóspedes com reserva em
+            andamento.
           </p>
           <Link to="/quartos">
             <Button variant="gold">Ver Quartos</Button>
@@ -200,14 +190,12 @@ const Cardapio = () => {
 
   return (
     <Layout>
-      <section className="pt-28 pb-20 min-h-screen bg-background">
+      <section className="pt-28 pb-20 min-h-screen bg-charcoal">
         <div className="container-hotel">
           {/* Header */}
           <div className="mb-8">
-            <h1 className="font-display text-3xl md:text-4xl text-foreground mb-2">
-              Cardápio
-            </h1>
-            <p className="text-muted-foreground">
+            <h1 className="font-display text-3xl md:text-4xl text-cream mb-2">Cardápio</h1>
+            <p className="text-cream/50">
               Quarto: <span className="text-primary font-medium">{roomName || "—"}</span>
             </p>
           </div>
@@ -221,7 +209,7 @@ const Cardapio = () => {
                 className={`flex items-center gap-1.5 px-4 py-2 rounded-full text-sm font-body whitespace-nowrap transition-all duration-200 border ${
                   selectedCategory === cat
                     ? "bg-primary text-primary-foreground border-primary"
-                    : "bg-card text-muted-foreground border-border hover:border-primary/50"
+                    : "bg-charcoal-light text-cream/50 border-gold/10 hover:border-primary/50"
                 }`}
               >
                 {cat !== "Todos" && (categoryIcons[cat] || <Package className="w-4 h-4" />)}
@@ -240,32 +228,28 @@ const Cardapio = () => {
                   layout
                   initial={{ opacity: 0, y: 12 }}
                   animate={{ opacity: 1, y: 0 }}
-                  className="bg-card border border-border rounded-lg p-5 flex flex-col justify-between hover:border-primary/30 transition-colors"
+                  className="bg-charcoal-light border border-gold/10 rounded-lg p-5 flex flex-col justify-between hover:border-primary/30 transition-colors"
                 >
                   <div>
                     <div className="flex items-start justify-between mb-2">
-                      <h3 className="font-display text-lg text-foreground leading-tight">{item.name}</h3>
+                      <h3 className="font-display text-lg text-cream leading-tight">{item.name}</h3>
                       <Badge variant="outline" className="text-xs shrink-0 ml-2 border-primary/30 text-primary">
                         {item.category}
                       </Badge>
                     </div>
-                    {item.description && (
-                      <p className="text-muted-foreground text-sm mb-3">{item.description}</p>
-                    )}
+                    {item.description && <p className="text-cream/50 text-sm mb-3">{item.description}</p>}
                   </div>
                   <div className="flex items-center justify-between mt-2">
-                    <span className="text-primary font-semibold text-lg">
-                      R$ {item.price.toFixed(2)}
-                    </span>
+                    <span className="text-primary font-semibold text-lg">R$ {item.price.toFixed(2)}</span>
                     {inCart ? (
                       <div className="flex items-center gap-2">
                         <button
                           onClick={() => updateQuantity(item.id, -1)}
-                          className="w-8 h-8 rounded-full border border-border flex items-center justify-center text-muted-foreground hover:text-destructive hover:border-destructive transition-colors"
+                          className="w-8 h-8 rounded-full border border-gold/10 flex items-center justify-center text-cream/50 hover:text-destructive hover:border-destructive transition-colors"
                         >
                           <Minus className="w-4 h-4" />
                         </button>
-                        <span className="w-6 text-center font-medium text-foreground">{inCart.quantity}</span>
+                        <span className="w-6 text-center font-medium text-cream">{inCart.quantity}</span>
                         <button
                           onClick={() => updateQuantity(item.id, 1)}
                           className="w-8 h-8 rounded-full border border-primary bg-primary/10 flex items-center justify-center text-primary hover:bg-primary/20 transition-colors"
@@ -274,12 +258,7 @@ const Cardapio = () => {
                         </button>
                       </div>
                     ) : (
-                      <Button
-                        variant="gold-outline"
-                        size="sm"
-                        onClick={() => addToCart(item)}
-                        className="gap-1"
-                      >
+                      <Button variant="gold-outline" size="sm" onClick={() => addToCart(item)} className="gap-1">
                         <Plus className="w-4 h-4" /> Adicionar
                       </Button>
                     )}
@@ -290,7 +269,7 @@ const Cardapio = () => {
           </div>
 
           {filteredItems.length === 0 && (
-            <p className="text-center text-muted-foreground py-12">Nenhum item disponível nesta categoria.</p>
+            <p className="text-center text-cream/50 py-12">Nenhum item disponível nesta categoria.</p>
           )}
         </div>
       </section>
@@ -329,21 +308,21 @@ const Cardapio = () => {
               animate={{ x: 0 }}
               exit={{ x: "100%" }}
               transition={{ type: "spring", damping: 25, stiffness: 300 }}
-              className="fixed right-0 top-0 bottom-0 z-50 w-full max-w-md bg-card border-l border-border flex flex-col"
+              className="fixed right-0 top-0 bottom-0 z-50 w-full max-w-md bg-charcoal-light border-l border-gold/10 flex flex-col"
             >
-              <div className="flex items-center justify-between p-5 border-b border-border">
-                <h2 className="font-display text-xl text-foreground">Seu Pedido</h2>
-                <button onClick={() => setCartOpen(false)} className="text-muted-foreground hover:text-foreground">
+              <div className="flex items-center justify-between p-5 border-b border-gold/10">
+                <h2 className="font-display text-xl text-cream">Seu Pedido</h2>
+                <button onClick={() => setCartOpen(false)} className="text-cream/50 hover:text-cream">
                   <X className="w-5 h-5" />
                 </button>
               </div>
 
               <div className="flex-1 overflow-y-auto p-5 space-y-3">
                 {cart.map((item) => (
-                  <div key={item.id} className="flex items-center gap-3 bg-muted/50 rounded-lg p-3">
+                  <div key={item.id} className="flex items-center gap-3 bg-charcoal/50 rounded-lg p-3">
                     <div className="flex-1 min-w-0">
-                      <p className="text-foreground font-medium text-sm truncate">{item.name}</p>
-                      <p className="text-muted-foreground text-xs">
+                      <p className="text-cream font-medium text-sm truncate">{item.name}</p>
+                      <p className="text-cream/50 text-xs">
                         R$ {item.price.toFixed(2)} × {item.quantity}
                       </p>
                     </div>
@@ -353,7 +332,7 @@ const Cardapio = () => {
                     <div className="flex items-center gap-1">
                       <button
                         onClick={() => updateQuantity(item.id, -1)}
-                        className="w-7 h-7 rounded-full border border-border flex items-center justify-center text-muted-foreground hover:text-destructive transition-colors"
+                        className="w-7 h-7 rounded-full border border-gold/10 flex items-center justify-center text-cream/50 hover:text-destructive transition-colors"
                       >
                         {item.quantity === 1 ? <Trash2 className="w-3 h-3" /> : <Minus className="w-3 h-3" />}
                       </button>
@@ -368,9 +347,9 @@ const Cardapio = () => {
                 ))}
               </div>
 
-              <div className="p-5 border-t border-border space-y-4">
+              <div className="p-5 border-t border-gold/10 space-y-4">
                 <div className="flex justify-between items-center">
-                  <span className="text-foreground font-medium">Total</span>
+                  <span className="text-cream font-medium">Total</span>
                   <span className="text-primary font-display text-2xl">R$ {cartTotal.toFixed(2)}</span>
                 </div>
                 <Button
