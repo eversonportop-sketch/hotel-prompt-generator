@@ -330,9 +330,17 @@ const AdminConsumo = () => {
   });
 
   const pendingOrders = orders.filter((o) => o.status === "pending").length;
-  const todayRevenue = orders
-    .filter((o) => o.status !== "pending" && o.created_at.startsWith(new Date().toISOString().split("T")[0]))
-    .reduce((s, o) => s + Number(o.total), 0);
+  const todayStr = new Date().toISOString().split("T")[0];
+  const todayOrders = orders.filter((o) => o.created_at.startsWith(todayStr));
+  const todayRevenue = todayOrders.reduce((s, o) => s + Number(o.total), 0);
+
+  // item mais pedido (all time)
+  const itemCounts: Record<string, { name: string; qty: number }> = {};
+  orders.forEach((o) => {
+    if (!itemCounts[o.item_name]) itemCounts[o.item_name] = { name: o.item_name, qty: 0 };
+    itemCounts[o.item_name].qty += o.quantity;
+  });
+  const topItem = Object.values(itemCounts).sort((a, b) => b.qty - a.qty)[0];
   const selectedItem = items.find((i) => i.id === orderForm.item_id);
 
   return (
@@ -376,20 +384,32 @@ const AdminConsumo = () => {
         </div>
 
         {/* Stats */}
-        <div className="grid grid-cols-2 md:grid-cols-4 gap-4 mb-8">
+        <div className="grid grid-cols-2 md:grid-cols-5 gap-4 mb-8">
           {[
             {
               label: "Pedidos pendentes",
               value: pendingOrders,
               color: pendingOrders > 0 ? "text-yellow-400" : "text-green-400",
+              icon: <Bell className="w-4 h-4 text-yellow-400/60" />,
             },
-            { label: "Total de pedidos", value: orders.length, color: "text-cream" },
-            { label: "Receita hoje", value: `R$ ${todayRevenue.toFixed(0)}`, color: "text-primary" },
-            { label: "Itens no cardápio", value: items.filter((i) => i.available).length, color: "text-green-400" },
-          ].map((s) => (
+            { label: "Pedidos hoje", value: todayOrders.length, color: "text-cream", icon: <ShoppingCart className="w-4 h-4 text-cream/40" /> },
+            { label: "Receita hoje", value: `R$ ${todayRevenue.toFixed(0)}`, color: "text-primary", icon: <TrendingUp className="w-4 h-4 text-primary/60" /> },
+            {
+              label: "Mais pedido",
+              value: topItem ? topItem.name : "—",
+              color: "text-cream",
+              icon: <Star className="w-4 h-4 text-primary/60" />,
+              sub: topItem ? `${topItem.qty}× pedidos` : undefined,
+            },
+            { label: "Itens cardápio", value: items.filter((i) => i.available).length, color: "text-green-400", icon: <Package className="w-4 h-4 text-green-400/60" /> },
+          ].map((s: any) => (
             <div key={s.label} className="bg-charcoal-light border border-gold/10 rounded-xl p-4">
-              <p className="text-cream/40 text-xs font-body uppercase tracking-wider mb-1">{s.label}</p>
-              <p className={`font-display text-2xl font-bold ${s.color}`}>{s.value}</p>
+              <div className="flex items-center gap-2 mb-1">
+                {s.icon}
+                <p className="text-cream/40 text-xs font-body uppercase tracking-wider">{s.label}</p>
+              </div>
+              <p className={`font-display text-2xl font-bold ${s.color} truncate`}>{s.value}</p>
+              {s.sub && <p className="text-cream/30 text-xs font-body mt-0.5">{s.sub}</p>}
             </div>
           ))}
         </div>
