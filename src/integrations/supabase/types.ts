@@ -309,6 +309,39 @@ export type Database = {
         }
         Relationships: []
       }
+      hotel_info: {
+        Row: {
+          active: boolean | null
+          content: string
+          created_at: string | null
+          display_order: number | null
+          icon: string | null
+          id: string
+          title: string
+          updated_at: string | null
+        }
+        Insert: {
+          active?: boolean | null
+          content: string
+          created_at?: string | null
+          display_order?: number | null
+          icon?: string | null
+          id?: string
+          title: string
+          updated_at?: string | null
+        }
+        Update: {
+          active?: boolean | null
+          content?: string
+          created_at?: string | null
+          display_order?: number | null
+          icon?: string | null
+          id?: string
+          title?: string
+          updated_at?: string | null
+        }
+        Relationships: []
+      }
       hotel_media: {
         Row: {
           category: string
