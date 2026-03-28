@@ -2,6 +2,7 @@ import { Link } from "react-router-dom";
 import { motion } from "framer-motion";
 import {
   BedDouble,
+  Info,
   PartyPopper,
   Waves,
   Tag,
@@ -24,61 +25,47 @@ import { supabase } from "@/integrations/supabase/client";
 import hotelLogo from "@/assets/hotel-sb-logo.png";
 
 const adminModules = [
-  {
-    icon: BedDouble,
-    label: "Quartos",
-    href: "/admin/quartos",
-    description: "Gerenciar quartos e acomodações",
-    color: "from-amber-900/30 to-amber-800/10",
-  },
+  // Operacional — uso diário
   {
     icon: CalendarDays,
     label: "Reservas",
     href: "/admin/reservas",
     description: "Gestão de reservas",
     color: "from-emerald-900/30 to-emerald-800/10",
+    group: "Operacional",
   },
   {
-    icon: PartyPopper,
-    label: "Salão de Festas",
-    href: "/admin/salao",
-    description: "Gerenciar salão de eventos",
-    color: "from-purple-900/30 to-purple-800/10",
-  },
-  {
-    icon: Waves,
-    label: "Piscina",
-    href: "/admin/piscina",
-    description: "Configurações da piscina",
+    icon: LogIn,
+    label: "Check-in",
+    href: "/admin/checkin",
+    description: "Registrar entradas",
     color: "from-sky-900/30 to-sky-800/10",
-  },
-  {
-    icon: UtensilsCrossed,
-    label: "Consumo",
-    href: "/admin/consumo",
-    description: "Frigobar e alimentos",
-    color: "from-rose-900/30 to-rose-800/10",
+    group: "Operacional",
   },
   {
     icon: Receipt,
     label: "Checkout",
     href: "/admin/checkout",
     description: "Fechar conta do hóspede",
-    color: "from-emerald-900/30 to-emerald-800/10",
+    color: "from-green-900/30 to-green-800/10",
+    group: "Operacional",
   },
   {
-    icon: Tag,
-    label: "Promoções",
-    href: "/admin/promocoes",
-    description: "Gerenciar promoções",
-    color: "from-orange-900/30 to-orange-800/10",
+    icon: UtensilsCrossed,
+    label: "Consumo",
+    href: "/admin/consumo",
+    description: "Frigobar e room service",
+    color: "from-rose-900/30 to-rose-800/10",
+    group: "Operacional",
   },
+  // Gestão
   {
-    icon: Image,
-    label: "Banners",
-    href: "/admin/banners",
-    description: "Banners do site",
-    color: "from-indigo-900/30 to-indigo-800/10",
+    icon: BedDouble,
+    label: "Quartos",
+    href: "/admin/quartos",
+    description: "Gerenciar acomodações",
+    color: "from-amber-900/30 to-amber-800/10",
+    group: "Gestão",
   },
   {
     icon: Users,
@@ -86,6 +73,40 @@ const adminModules = [
     href: "/admin/clientes",
     description: "Cadastro de clientes",
     color: "from-teal-900/30 to-teal-800/10",
+    group: "Gestão",
+  },
+  {
+    icon: Waves,
+    label: "Piscina",
+    href: "/admin/piscina",
+    description: "Configurações da piscina",
+    color: "from-cyan-900/30 to-cyan-800/10",
+    group: "Gestão",
+  },
+  {
+    icon: PartyPopper,
+    label: "Salão",
+    href: "/admin/salao",
+    description: "Gerenciar salão de eventos",
+    color: "from-purple-900/30 to-purple-800/10",
+    group: "Gestão",
+  },
+  // Conteúdo
+  {
+    icon: Tag,
+    label: "Promoções",
+    href: "/admin/promocoes",
+    description: "Gerenciar promoções",
+    color: "from-orange-900/30 to-orange-800/10",
+    group: "Conteúdo",
+  },
+  {
+    icon: Image,
+    label: "Banners",
+    href: "/admin/banners",
+    description: "Banners do site",
+    color: "from-indigo-900/30 to-indigo-800/10",
+    group: "Conteúdo",
   },
   {
     icon: Image,
@@ -93,13 +114,15 @@ const adminModules = [
     href: "/admin/midia",
     description: "Galeria de imagens",
     color: "from-pink-900/30 to-pink-800/10",
+    group: "Conteúdo",
   },
   {
     icon: Info,
     label: "Informações",
     href: "/admin/informacoes",
     description: "Dados úteis para hóspedes",
-    color: "from-cyan-900/30 to-cyan-800/10",
+    color: "from-yellow-900/30 to-yellow-800/10",
+    group: "Conteúdo",
   },
   {
     icon: Settings,
@@ -107,9 +130,9 @@ const adminModules = [
     href: "/admin/configuracoes",
     description: "Dados do hotel",
     color: "from-slate-900/30 to-slate-800/10",
+    group: "Conteúdo",
   },
 ];
-
 const statusLabels: Record<string, string> = {
   pending: "Pendente",
   confirmed: "Confirmada",
@@ -350,35 +373,40 @@ const AdminDashboard = () => {
           </motion.div>
         </div>
 
-        {/* MÓDULOS */}
-        <motion.div {...fadeUp(0.3)}>
-          <h2 className="text-xs font-semibold uppercase tracking-widest text-white/25 font-body mb-4">Módulos</h2>
-          <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5 gap-3">
-            {adminModules.map((mod, index) => (
-              <motion.div key={mod.label} {...fadeUp(0.3 + index * 0.04)}>
-                <Link
-                  to={mod.href}
-                  className="flex flex-col gap-3 p-4 rounded-xl bg-charcoal-light border border-white/5 hover:border-primary/25 transition-all duration-200 group relative overflow-hidden"
-                >
-                  <div
-                    className={`absolute inset-0 bg-gradient-to-br ${mod.color} opacity-0 group-hover:opacity-100 transition-opacity duration-300`}
-                  />
-                  <div className="relative">
-                    <div className="w-9 h-9 rounded-lg bg-primary/10 flex items-center justify-center mb-3 group-hover:bg-primary/20 transition-colors">
-                      <mod.icon className="w-4 h-4 text-primary" />
-                    </div>
-                    <p className="text-sm font-semibold text-cream leading-tight font-body">{mod.label}</p>
-                    <p className="text-xs text-white/30 mt-0.5 leading-snug font-body">{mod.description}</p>
-                  </div>
-                  <div className="relative flex items-center gap-1 text-xs text-primary/40 group-hover:text-primary transition-colors font-body">
-                    <span>Acessar</span>
-                    <ArrowRight className="w-3 h-3 group-hover:translate-x-0.5 transition-transform" />
-                  </div>
-                </Link>
-              </motion.div>
-            ))}
-          </div>
-        </motion.div>
+        {/* MÓDULOS por grupo */}
+        {(["Operacional", "Gestão", "Conteúdo"] as const).map((group, gi) => {
+          const groupMods = adminModules.filter((m) => m.group === group);
+          return (
+            <motion.div key={group} {...fadeUp(0.3 + gi * 0.08)}>
+              <h2 className="text-xs font-semibold uppercase tracking-widest text-white/25 font-body mb-3">{group}</h2>
+              <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 gap-3 mb-8">
+                {groupMods.map((mod, index) => (
+                  <motion.div key={mod.label} {...fadeUp(0.3 + gi * 0.08 + index * 0.04)}>
+                    <Link
+                      to={mod.href}
+                      className="flex flex-col gap-3 p-4 rounded-xl bg-charcoal-light border border-white/5 hover:border-primary/25 transition-all duration-200 group relative overflow-hidden"
+                    >
+                      <div
+                        className={`absolute inset-0 bg-gradient-to-br ${mod.color} opacity-0 group-hover:opacity-100 transition-opacity duration-300`}
+                      />
+                      <div className="relative">
+                        <div className="w-9 h-9 rounded-lg bg-primary/10 flex items-center justify-center mb-3 group-hover:bg-primary/20 transition-colors">
+                          <mod.icon className="w-4 h-4 text-primary" />
+                        </div>
+                        <p className="text-sm font-semibold text-cream leading-tight font-body">{mod.label}</p>
+                        <p className="text-xs text-white/30 mt-0.5 leading-snug font-body">{mod.description}</p>
+                      </div>
+                      <div className="relative flex items-center gap-1 text-xs text-primary/40 group-hover:text-primary transition-colors font-body">
+                        <span>Acessar</span>
+                        <ArrowRight className="w-3 h-3 group-hover:translate-x-0.5 transition-transform" />
+                      </div>
+                    </Link>
+                  </motion.div>
+                ))}
+              </div>
+            </motion.div>
+          );
+        })}
       </div>
     </div>
   );
