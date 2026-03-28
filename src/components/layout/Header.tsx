@@ -1,6 +1,6 @@
 import { useState } from "react";
 import { Link, useLocation, useNavigate } from "react-router-dom";
-import { Menu, X, User, ChevronDown, LogOut, UtensilsCrossed } from "lucide-react";
+import { Menu, X, User, ChevronDown, LogOut, UtensilsCrossed, LayoutDashboard } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { motion, AnimatePresence } from "framer-motion";
 import { useAuth } from "@/hooks/useAuth";
@@ -129,15 +129,26 @@ const Header = () => {
             </Link>
           ))}
           {user && (
-            <Link
-              to="/cardapio"
-              className={`px-3 py-2 text-sm font-body tracking-wide transition-colors duration-200 flex items-center gap-1.5 ${
-                location.pathname === "/cardapio" ? "text-primary" : "text-cream/70 hover:text-primary"
-              }`}
-            >
-              <UtensilsCrossed className="w-3.5 h-3.5" />
-              Cardápio
-            </Link>
+            <>
+              <Link
+                to="/portal"
+                className={`px-3 py-2 text-sm font-body tracking-wide transition-colors duration-200 flex items-center gap-1.5 ${
+                  location.pathname === "/portal" ? "text-primary" : "text-cream/70 hover:text-primary"
+                }`}
+              >
+                <LayoutDashboard className="w-3.5 h-3.5" />
+                Meu Portal
+              </Link>
+              <Link
+                to="/cardapio"
+                className={`px-3 py-2 text-sm font-body tracking-wide transition-colors duration-200 flex items-center gap-1.5 ${
+                  location.pathname === "/cardapio" ? "text-primary" : "text-cream/70 hover:text-primary"
+                }`}
+              >
+                <UtensilsCrossed className="w-3.5 h-3.5" />
+                Cardápio
+              </Link>
+            </>
           )}
         </nav>
 
@@ -193,18 +204,32 @@ const Header = () => {
                 </Link>
               ))}
               {user && (
-                <Link
-                  to="/cardapio"
-                  onClick={() => setIsOpen(false)}
-                  className={`px-4 py-3 text-sm font-body tracking-wide rounded transition-colors flex items-center gap-2 ${
-                    location.pathname === "/cardapio"
-                      ? "text-primary bg-charcoal-light"
-                      : "text-cream/70 hover:text-primary hover:bg-charcoal-light"
-                  }`}
-                >
-                  <UtensilsCrossed className="w-4 h-4" />
-                  Cardápio
-                </Link>
+                <>
+                  <Link
+                    to="/portal"
+                    onClick={() => setIsOpen(false)}
+                    className={`px-4 py-3 text-sm font-body tracking-wide rounded transition-colors flex items-center gap-2 ${
+                      location.pathname === "/portal"
+                        ? "text-primary bg-charcoal-light"
+                        : "text-cream/70 hover:text-primary hover:bg-charcoal-light"
+                    }`}
+                  >
+                    <LayoutDashboard className="w-4 h-4" />
+                    Meu Portal
+                  </Link>
+                  <Link
+                    to="/cardapio"
+                    onClick={() => setIsOpen(false)}
+                    className={`px-4 py-3 text-sm font-body tracking-wide rounded transition-colors flex items-center gap-2 ${
+                      location.pathname === "/cardapio"
+                        ? "text-primary bg-charcoal-light"
+                        : "text-cream/70 hover:text-primary hover:bg-charcoal-light"
+                    }`}
+                  >
+                    <UtensilsCrossed className="w-4 h-4" />
+                    Cardápio
+                  </Link>
+                </>
               )}
               {user ? (
                 <button
