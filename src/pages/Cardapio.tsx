@@ -53,6 +53,7 @@ const Cardapio = () => {
     queryKey: ["active-reservation", user?.id],
     queryFn: async () => {
       const today = new Date().toISOString().split("T")[0];
+      // First try: reserva ativa com datas exatas
       const { data, error } = await supabase
         .from("reservations")
         .select("id, room_id, rooms:room_id(name)")
@@ -63,7 +64,19 @@ const Cardapio = () => {
         .limit(1)
         .maybeSingle();
       if (error) throw error;
-      return data;
+      if (data) return data;
+
+      // Fallback: qualquer reserva confirmed/pending do usuário
+      const { data: fallback, error: fallbackError } = await supabase
+        .from("reservations")
+        .select("id, room_id, rooms:room_id(name)")
+        .eq("client_id", user!.id)
+        .in("status", ["confirmed", "pending"])
+        .order("check_in", { ascending: false })
+        .limit(1)
+        .maybeSingle();
+      if (fallbackError) throw fallbackError;
+      return fallback;
     },
     enabled: !!user,
   });
