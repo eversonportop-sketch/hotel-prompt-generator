@@ -474,6 +474,39 @@ export type Database = {
         }
         Relationships: []
       }
+      popup_config: {
+        Row: {
+          button_text: string | null
+          collect_email: boolean | null
+          description: string | null
+          enabled: boolean | null
+          id: number
+          subtitle: string | null
+          success_message: string | null
+          title: string | null
+        }
+        Insert: {
+          button_text?: string | null
+          collect_email?: boolean | null
+          description?: string | null
+          enabled?: boolean | null
+          id?: number
+          subtitle?: string | null
+          success_message?: string | null
+          title?: string | null
+        }
+        Update: {
+          button_text?: string | null
+          collect_email?: boolean | null
+          description?: string | null
+          enabled?: boolean | null
+          id?: number
+          subtitle?: string | null
+          success_message?: string | null
+          title?: string | null
+        }
+        Relationships: []
+      }
       profiles: {
         Row: {
           created_at: string
