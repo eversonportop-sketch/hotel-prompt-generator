@@ -30,6 +30,7 @@ interface Profile {
   email: string | null;
   phone: string | null;
   cpf: string | null;
+  role: string | null;
 }
 interface Room {
   id: string;
@@ -134,7 +135,10 @@ const AdminReservas = () => {
     queryFn: async () => {
       const { data, error } = await supabase
         .from("profiles")
-        .select("id, full_name, email, phone, cpf")
+        .select("id, full_name, email, phone, cpf, role")
+        .not("full_name", "is", null)
+        .neq("full_name", "")
+        .neq("role", "admin")
         .order("full_name");
       if (error) throw error;
       return data as unknown as Profile[];
