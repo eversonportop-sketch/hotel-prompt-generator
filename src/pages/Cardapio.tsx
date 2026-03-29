@@ -136,6 +136,7 @@ const Cardapio = () => {
         unit_price: c.price,
         total: c.price * c.quantity,
         room_number: roomName || "N/A",
+        reservation_id: activeReservation.id,
         status: "pending",
       }));
       const { error } = await supabase.from("consumption_orders").insert(rows);
