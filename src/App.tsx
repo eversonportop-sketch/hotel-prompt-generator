@@ -4,6 +4,9 @@ import { Toaster as Sonner } from "@/components/ui/sonner";
 import { Toaster } from "@/components/ui/toaster";
 import { TooltipProvider } from "@/components/ui/tooltip";
 import { AuthProvider } from "@/hooks/useAuth";
+import { LangProvider } from "@/contexts/LangContext";
+import AdminLayout from "@/components/layout/AdminLayout";
+
 import Index from "./pages/Index";
 import Quartos from "./pages/Quartos";
 import QuartoDetalhe from "./pages/QuartoDetalhe";
@@ -14,6 +17,7 @@ import Galeria from "./pages/Galeria";
 import Contato from "./pages/Contato";
 import Login from "./pages/Login";
 import Cadastro from "./pages/Cadastro";
+
 import AdminDashboard from "./pages/admin/AdminDashboard";
 import AdminReservas from "./pages/admin/AdminReservas";
 import AdminCheckin from "./pages/admin/AdminCheckin";
@@ -29,8 +33,6 @@ import AdminConsumo from "./pages/admin/AdminConsumo";
 import AdminMidia from "./pages/admin/AdminMidia";
 import AdminInformacoes from "./pages/admin/AdminInformacoes";
 import AdminPopup from "./pages/admin/AdminPopup";
-import Cardapio from "./pages/Cardapio";
-import Portal from "./pages/Portal";
 import NotFound from "./pages/NotFound";
 
 const queryClient = new QueryClient();
@@ -38,47 +40,48 @@ const queryClient = new QueryClient();
 const App = () => (
   <QueryClientProvider client={queryClient}>
     <AuthProvider>
-      <TooltipProvider>
-        <Toaster />
-        <Sonner />
-        <BrowserRouter>
-          <Routes>
-            {/* Site público */}
-            <Route path="/" element={<Index />} />
-            <Route path="/quartos" element={<Quartos />} />
-            <Route path="/quartos/:id" element={<QuartoDetalhe />} />
-            <Route path="/salao" element={<Salao />} />
-            <Route path="/piscina" element={<Piscina />} />
-            <Route path="/promocoes" element={<Promocoes />} />
-            <Route path="/galeria" element={<Galeria />} />
-            <Route path="/contato" element={<Contato />} />
-            <Route path="/login" element={<Login />} />
-            <Route path="/cadastro" element={<Cadastro />} />
-            <Route path="/cardapio" element={<Cardapio />} />
-            <Route path="/portal" element={<Portal />} />
+      <LangProvider>
+        <TooltipProvider>
+          <Toaster />
+          <Sonner />
+          <BrowserRouter>
+            <Routes>
+              {/* ── Site público ── */}
+              <Route path="/" element={<Index />} />
+              <Route path="/quartos" element={<Quartos />} />
+              <Route path="/quartos/:id" element={<QuartoDetalhe />} />
+              <Route path="/salao" element={<Salao />} />
+              <Route path="/piscina" element={<Piscina />} />
+              <Route path="/promocoes" element={<Promocoes />} />
+              <Route path="/galeria" element={<Galeria />} />
+              <Route path="/contato" element={<Contato />} />
+              <Route path="/login" element={<Login />} />
+              <Route path="/cadastro" element={<Cadastro />} />
 
-            {/* Admin — módulos completos */}
-            <Route path="/admin" element={<AdminDashboard />} />
-            <Route path="/admin/reservas" element={<AdminReservas />} />
-            <Route path="/admin/checkin" element={<AdminCheckin />} />
-            <Route path="/admin/checkout" element={<AdminCheckout />} />
-            <Route path="/admin/quartos" element={<AdminQuartos />} />
-            <Route path="/admin/clientes" element={<AdminClientes />} />
-            <Route path="/admin/promocoes" element={<AdminPromocoes />} />
-            <Route path="/admin/configuracoes" element={<AdminConfiguracoes />} />
-            <Route path="/admin/banners" element={<AdminBanners />} />
+              {/* ── Admin — todas as páginas dentro do AdminLayout ── */}
+              <Route path="/admin" element={<AdminLayout />}>
+                <Route index element={<AdminDashboard />} />
+                <Route path="reservas" element={<AdminReservas />} />
+                <Route path="checkin" element={<AdminCheckin />} />
+                <Route path="checkout" element={<AdminCheckout />} />
+                <Route path="quartos" element={<AdminQuartos />} />
+                <Route path="clientes" element={<AdminClientes />} />
+                <Route path="promocoes" element={<AdminPromocoes />} />
+                <Route path="configuracoes" element={<AdminConfiguracoes />} />
+                <Route path="banners" element={<AdminBanners />} />
+                <Route path="salao" element={<AdminSalao />} />
+                <Route path="piscina" element={<AdminPiscina />} />
+                <Route path="consumo" element={<AdminConsumo />} />
+                <Route path="midia" element={<AdminMidia />} />
+                <Route path="informacoes" element={<AdminInformacoes />} />
+                <Route path="popup" element={<AdminPopup />} />
+              </Route>
 
-            <Route path="/admin/salao" element={<AdminSalao />} />
-            <Route path="/admin/piscina" element={<AdminPiscina />} />
-            <Route path="/admin/consumo" element={<AdminConsumo />} />
-            <Route path="/admin/midia" element={<AdminMidia />} />
-            <Route path="/admin/informacoes" element={<AdminInformacoes />} />
-            <Route path="/admin/popup" element={<AdminPopup />} />
-
-            <Route path="*" element={<NotFound />} />
-          </Routes>
-        </BrowserRouter>
-      </TooltipProvider>
+              <Route path="*" element={<NotFound />} />
+            </Routes>
+          </BrowserRouter>
+        </TooltipProvider>
+      </LangProvider>
     </AuthProvider>
   </QueryClientProvider>
 );
