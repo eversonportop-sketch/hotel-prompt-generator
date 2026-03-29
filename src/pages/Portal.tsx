@@ -75,7 +75,18 @@ const Portal = () => {
         .gte("check_out", today)
         .limit(1)
         .maybeSingle();
-      return data;
+      if (data) return data;
+
+      // Fallback: qualquer reserva ativa do usuário
+      const { data: fallback } = await supabase
+        .from("reservations")
+        .select("id, room_id, check_in, check_out, rooms(name)")
+        .eq("client_id", user!.id)
+        .in("status", ["pending", "confirmed"])
+        .order("check_in", { ascending: false })
+        .limit(1)
+        .maybeSingle();
+      return fallback;
     },
   });
 
