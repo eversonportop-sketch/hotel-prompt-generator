@@ -1,5 +1,5 @@
-import { useState } from "react";
-import { Link, useLocation, Outlet } from "react-router-dom";
+import { useState, useEffect } from "react";
+import { Link, useLocation, Outlet, useNavigate } from "react-router-dom";
 import { motion, AnimatePresence } from "framer-motion";
 import {
   LayoutDashboard,
@@ -18,10 +18,13 @@ import {
   ChevronRight,
   Menu,
   X,
+  LogOut,
+  Loader2,
 } from "lucide-react";
 import hotelLogo from "@/assets/hotel-sb-logo.png";
+import { useAuth } from "@/hooks/useAuth";
+import { supabase } from "@/integrations/supabase/client";
 
-// ─── Grupos da sidebar ────────────────────────────────────────────────────────
 const sidebarGroups = [
   {
     label: "Operacional",
@@ -51,13 +54,21 @@ const sidebarGroups = [
   },
 ];
 
-// ─── Sidebar interna ──────────────────────────────────────────────────────────
-const SidebarContent = ({ collapsed, onClose }: { collapsed: boolean; onClose?: () => void }) => {
+const SidebarContent = ({
+  collapsed,
+  onClose,
+  adminName,
+  onSignOut,
+}: {
+  collapsed: boolean;
+  onClose?: () => void;
+  adminName: string;
+  onSignOut: () => void;
+}) => {
   const location = useLocation();
 
   return (
     <div className="flex flex-col h-full">
-      {/* Logo */}
       <div className="flex items-center gap-3 px-4 py-5 border-b border-white/5">
         <img src={hotelLogo} alt="Hotel SB" className="h-8 w-8 object-contain flex-shrink-0" />
         {!collapsed && (
@@ -68,9 +79,7 @@ const SidebarContent = ({ collapsed, onClose }: { collapsed: boolean; onClose?: 
         )}
       </div>
 
-      {/* Nav */}
       <nav className="flex-1 overflow-y-auto px-2 py-3 space-y-1">
-        {/* Dashboard */}
         <Link
           to="/admin"
           onClick={onClose}
@@ -84,7 +93,6 @@ const SidebarContent = ({ collapsed, onClose }: { collapsed: boolean; onClose?: 
           {!collapsed && <span className="truncate">Dashboard</span>}
         </Link>
 
-        {/* Grupos */}
         {sidebarGroups.map((group) => (
           <div key={group.label} className="pt-4">
             {!collapsed ? (
@@ -118,38 +126,90 @@ const SidebarContent = ({ collapsed, onClose }: { collapsed: boolean; onClose?: 
         ))}
       </nav>
 
-      {/* Ver site */}
-      {!collapsed && (
-        <div className="border-t border-white/5 p-3">
-          <Link
-            to="/"
-            className="flex items-center gap-2 px-3 py-2 text-xs text-white/30 hover:text-primary transition-colors font-body"
-          >
-            <ArrowRight className="w-3 h-3" />
-            <span>Ver site</span>
-          </Link>
-        </div>
-      )}
+      <div className="border-t border-white/5 p-3 space-y-1">
+        {!collapsed && adminName && (
+          <div className="px-3 py-2 mb-1">
+            <p className="text-[11px] text-white/20 font-body uppercase tracking-wider">Logado como</p>
+            <p className="text-xs text-cream/60 font-body truncate mt-0.5">{adminName}</p>
+          </div>
+        )}
+        <Link
+          to="/"
+          className="flex items-center gap-2 px-3 py-2 text-xs text-white/30 hover:text-primary transition-colors font-body rounded-lg hover:bg-white/5"
+        >
+          <ArrowRight className="w-3 h-3" />
+          {!collapsed && <span>Ver site</span>}
+        </Link>
+        <button
+          onClick={onSignOut}
+          className="w-full flex items-center gap-2 px-3 py-2 text-xs text-white/30 hover:text-red-400 transition-colors font-body rounded-lg hover:bg-red-500/10"
+        >
+          <LogOut className="w-3 h-3" />
+          {!collapsed && <span>Sair</span>}
+        </button>
+      </div>
     </div>
   );
 };
 
-// ─── Layout principal ─────────────────────────────────────────────────────────
 const AdminLayout = () => {
   const [collapsed, setCollapsed] = useState(false);
   const [mobileOpen, setMobileOpen] = useState(false);
+  const [checking, setChecking] = useState(true);
+  const [adminName, setAdminName] = useState("");
+  const { user, loading, signOut } = useAuth();
+  const navigate = useNavigate();
+
+  useEffect(() => {
+    if (loading) return;
+
+    if (!user) {
+      navigate("/login", { replace: true });
+      return;
+    }
+
+    supabase
+      .from("profiles")
+      .select("role, full_name")
+      .eq("id", user.id)
+      .single()
+      .then(({ data }) => {
+        if (data?.role !== "admin") {
+          navigate("/portal", { replace: true });
+        } else {
+          setAdminName(data.full_name || user.email || "Admin");
+          setChecking(false);
+        }
+      });
+  }, [user, loading, navigate]);
+
+  const handleSignOut = async () => {
+    await signOut();
+    navigate("/login", { replace: true });
+  };
+
+  if (loading || checking) {
+    return (
+      <div className="min-h-screen bg-charcoal flex items-center justify-center">
+        <div className="flex flex-col items-center gap-4">
+          <img src={hotelLogo} alt="Hotel SB" className="h-12 w-auto opacity-60" />
+          <div className="flex items-center gap-2 text-white/30 text-sm font-body">
+            <Loader2 className="w-4 h-4 animate-spin" />
+            Verificando acesso...
+          </div>
+        </div>
+      </div>
+    );
+  }
 
   return (
     <div className="flex min-h-screen bg-charcoal text-cream">
-      {/* ── Desktop Sidebar ── */}
       <aside
         className={`hidden lg:flex flex-col border-r border-white/5 bg-charcoal-light transition-all duration-300 ${
           collapsed ? "w-[68px]" : "w-60"
         }`}
       >
-        <SidebarContent collapsed={collapsed} />
-
-        {/* Toggle collapse */}
+        <SidebarContent collapsed={collapsed} adminName={adminName} onSignOut={handleSignOut} />
         <button
           onClick={() => setCollapsed(!collapsed)}
           className="flex-shrink-0 border-t border-white/5 p-3 flex items-center justify-end text-white/20 hover:text-cream transition-colors"
@@ -158,7 +218,6 @@ const AdminLayout = () => {
         </button>
       </aside>
 
-      {/* ── Mobile Drawer ── */}
       <AnimatePresence>
         {mobileOpen && (
           <>
@@ -182,15 +241,18 @@ const AdminLayout = () => {
               >
                 <X className="w-5 h-5" />
               </button>
-              <SidebarContent collapsed={false} onClose={() => setMobileOpen(false)} />
+              <SidebarContent
+                collapsed={false}
+                onClose={() => setMobileOpen(false)}
+                adminName={adminName}
+                onSignOut={handleSignOut}
+              />
             </motion.aside>
           </>
         )}
       </AnimatePresence>
 
-      {/* ── Conteúdo ── */}
       <div className="flex-1 flex flex-col min-w-0">
-        {/* Top bar mobile */}
         <header className="flex lg:hidden items-center gap-3 px-4 py-3 border-b border-white/5 bg-charcoal/80 backdrop-blur-md sticky top-0 z-30">
           <button onClick={() => setMobileOpen(true)} className="text-white/40 hover:text-cream transition-colors">
             <Menu className="w-5 h-5" />
