@@ -87,7 +87,7 @@ const AdminReservas = () => {
         .select("id, full_name, email, phone, cpf")
         .order("full_name");
       if (error) throw error;
-      return data as Profile[];
+      return data as unknown as Profile[];
     },
   });
 
