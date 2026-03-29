@@ -98,9 +98,20 @@ const AdminCheckout = () => {
     enabled: !!selectedRes,
     queryFn: async () => {
       if (!selectedRes) return [];
+
+      // Tenta primeiro por reservation_id (confiável, independe do nome do quarto)
+      const { data: byResId } = await supabase
+        .from("consumption_orders")
+        .select("*")
+        .eq("reservation_id", selectedRes.id)
+        .in("status", ["pending", "delivered"])
+        .order("created_at", { ascending: true });
+
+      if (byResId && byResId.length > 0) return byResId as ConsumptionOrder[];
+
+      // Fallback: busca por room_number (compatibilidade com dados antigos)
       const roomName = (selectedRes.rooms as any)?.name;
       if (!roomName) return [];
-      // Busca TODOS os consumos do quarto que não foram ainda faturados
       const { data, error } = await supabase
         .from("consumption_orders")
         .select("*")
