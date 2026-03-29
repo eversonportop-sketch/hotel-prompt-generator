@@ -2,13 +2,28 @@ import { useState } from "react";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import { motion, AnimatePresence } from "framer-motion";
-import { CalendarDays, Search, Plus, X, Loader2, BedDouble, User, Users, Save, CalendarIcon } from "lucide-react";
+import {
+  CalendarDays,
+  Search,
+  Plus,
+  X,
+  Loader2,
+  BedDouble,
+  User,
+  Users,
+  Save,
+  CalendarIcon,
+  Trash2,
+  Pencil,
+  FileText,
+} from "lucide-react";
 import { format, differenceInDays, addDays } from "date-fns";
 import { Calendar } from "@/components/ui/calendar";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 import { cn } from "@/lib/utils";
 import { toast } from "sonner";
 
+/* ── Tipos ──────────────────────────────────────────────────────────────────── */
 interface Profile {
   id: string;
   full_name: string | null;
@@ -32,8 +47,13 @@ interface Reservation {
   total_price: number;
   status: string;
   notes: string | null;
+  profile_id: string | null;
+  client_id: string | null;
   rooms: { name: string; category: string } | null;
+  // join via profile_id
   profiles: { full_name: string | null } | null;
+  // join via client_id (fallback para reservas antigas)
+  profiles_client: { full_name: string | null } | null;
 }
 
 const STATUS_LABELS: Record<string, string> = {
@@ -58,21 +78,47 @@ const emptyForm = {
   notes: "",
 };
 
+/* ── Helpers ────────────────────────────────────────────────────────────────── */
+// Retorna o nome do cliente independente de qual FK foi preenchida
+const getClientName = (r: Reservation) =>
+  (r.profiles as any)?.full_name || (r.profiles_client as any)?.full_name || null;
+
+const getNights = (r: Reservation) =>
+  differenceInDays(new Date(r.check_out + "T12:00:00"), new Date(r.check_in + "T12:00:00"));
+
+/* ════════════════════════════════════════════════════════════════════════════ */
 const AdminReservas = () => {
   const qc = useQueryClient();
   const [search, setSearch] = useState("");
   const [statusFilter, setStatusFilter] = useState("all");
+
+  // Modal criar / editar
   const [modalOpen, setModalOpen] = useState(false);
+  const [editingId, setEditingId] = useState<string | null>(null);
   const [form, setForm] = useState({ ...emptyForm });
   const [clientSearch, setClientSearch] = useState("");
   const [saving, setSaving] = useState(false);
 
+  // Confirmação de exclusão
+  const [deleteConfirm, setDeleteConfirm] = useState<string | null>(null);
+
+  // Detalhe (ver notas)
+  const [detailRow, setDetailRow] = useState<Reservation | null>(null);
+
+  /* ── Queries ──────────────────────────────────────────────────────────────── */
   const { data: reservations = [], isLoading } = useQuery({
     queryKey: ["admin-reservations"],
     queryFn: async () => {
       const { data, error } = await supabase
         .from("reservations")
-        .select("*, rooms(name, category), profiles!reservations_profile_id_fkey(full_name)")
+        .select(
+          `
+          *,
+          rooms(name, category),
+          profiles!reservations_profile_id_fkey(full_name),
+          profiles_client:profiles!reservations_client_id_fkey(full_name)
+        `,
+        )
         .order("created_at", { ascending: false });
       if (error) throw error;
       return data as Reservation[];
@@ -104,6 +150,7 @@ const AdminReservas = () => {
     },
   });
 
+  /* ── Mutations ────────────────────────────────────────────────────────────── */
   const updateStatus = useMutation({
     mutationFn: async ({ id, status }: { id: string; status: string }) => {
       const { error } = await supabase.from("reservations").update({ status }).eq("id", id);
@@ -116,6 +163,20 @@ const AdminReservas = () => {
     onError: () => toast.error("Erro ao atualizar status."),
   });
 
+  const deleteReservation = useMutation({
+    mutationFn: async (id: string) => {
+      const { error } = await supabase.from("reservations").delete().eq("id", id);
+      if (error) throw error;
+    },
+    onSuccess: () => {
+      qc.invalidateQueries({ queryKey: ["admin-reservations"] });
+      toast.success("Reserva excluída.");
+      setDeleteConfirm(null);
+    },
+    onError: () => toast.error("Erro ao excluir reserva."),
+  });
+
+  /* ── Salvar (criar ou editar) ─────────────────────────────────────────────── */
   const handleSave = async () => {
     if (!form.profile_id) {
       toast.error("Selecione um cliente.");
@@ -129,54 +190,105 @@ const AdminReservas = () => {
       toast.error("Selecione as datas.");
       return;
     }
+
     const nights = differenceInDays(form.check_out, form.check_in);
     if (nights < 1) {
       toast.error("Check-out deve ser após o check-in.");
       return;
     }
+
     const room = rooms.find((r) => r.id === form.room_id)!;
     const total = nights * Number(room.promotional_price || room.price);
     setSaving(true);
+
     try {
-      const { data: available, error: availErr } = await supabase.rpc("check_room_availability", {
-        p_room_id: form.room_id,
-        p_check_in: format(form.check_in, "yyyy-MM-dd"),
-        p_check_out: format(form.check_out, "yyyy-MM-dd"),
-      });
-      if (availErr) throw availErr;
-      if (!available) {
-        toast.error("Quarto indisponível para essas datas.");
-        setSaving(false);
-        return;
+      if (editingId) {
+        // ── Editar reserva existente ──
+        const { error } = await supabase
+          .from("reservations")
+          .update({
+            profile_id: form.profile_id,
+            client_id: form.profile_id,
+            room_id: form.room_id,
+            check_in: format(form.check_in, "yyyy-MM-dd"),
+            check_out: format(form.check_out, "yyyy-MM-dd"),
+            guests_count: form.guests_count,
+            total_price: total,
+            notes: form.notes || null,
+          })
+          .eq("id", editingId);
+        if (error) throw error;
+        toast.success("Reserva atualizada!");
+      } else {
+        // ── Criar nova reserva ──
+        const { data: available, error: availErr } = await supabase.rpc("check_room_availability", {
+          p_room_id: form.room_id,
+          p_check_in: format(form.check_in, "yyyy-MM-dd"),
+          p_check_out: format(form.check_out, "yyyy-MM-dd"),
+        });
+        if (availErr) throw availErr;
+        if (!available) {
+          toast.error("Quarto indisponível para essas datas.");
+          setSaving(false);
+          return;
+        }
+        const { error } = await supabase.from("reservations").insert({
+          profile_id: form.profile_id,
+          client_id: form.profile_id,
+          room_id: form.room_id,
+          check_in: format(form.check_in, "yyyy-MM-dd"),
+          check_out: format(form.check_out, "yyyy-MM-dd"),
+          guests_count: form.guests_count,
+          total_price: total,
+          status: "confirmed",
+          notes: form.notes || null,
+        });
+        if (error) throw error;
+        toast.success("Reserva criada e confirmada!");
       }
-      const { error } = await supabase.from("reservations").insert({
-        profile_id: form.profile_id,
-        client_id: form.profile_id,
-        room_id: form.room_id,
-        check_in: format(form.check_in, "yyyy-MM-dd"),
-        check_out: format(form.check_out, "yyyy-MM-dd"),
-        guests_count: form.guests_count,
-        total_price: total,
-        status: "confirmed",
-        notes: form.notes || null,
-      });
-      if (error) throw error;
-      toast.success("Reserva criada e confirmada!");
+
       qc.invalidateQueries({ queryKey: ["admin-reservations"] });
-      setModalOpen(false);
-      setForm({ ...emptyForm });
-      setClientSearch("");
+      closeModal();
     } catch (err: any) {
-      toast.error(err.message || "Erro ao criar reserva.");
+      toast.error(err.message || "Erro ao salvar reserva.");
     } finally {
       setSaving(false);
     }
   };
 
+  const openCreate = () => {
+    setEditingId(null);
+    setForm({ ...emptyForm });
+    setClientSearch("");
+    setModalOpen(true);
+  };
+
+  const openEdit = (r: Reservation) => {
+    setEditingId(r.id);
+    setForm({
+      profile_id: r.profile_id || r.client_id || "",
+      room_id: (r.rooms as any)?.id || "",
+      check_in: new Date(r.check_in + "T12:00:00"),
+      check_out: new Date(r.check_out + "T12:00:00"),
+      guests_count: r.guests_count,
+      notes: r.notes || "",
+    });
+    setClientSearch("");
+    setModalOpen(true);
+  };
+
+  const closeModal = () => {
+    setModalOpen(false);
+    setEditingId(null);
+    setForm({ ...emptyForm });
+    setClientSearch("");
+  };
+
+  /* ── Filtros ──────────────────────────────────────────────────────────────── */
   const filtered = reservations.filter((r) => {
     const matchStatus = statusFilter === "all" || r.status === statusFilter;
     const q = search.toLowerCase();
-    const clientName = (r.profiles as any)?.full_name ?? "";
+    const clientName = getClientName(r) ?? "";
     const roomName = (r.rooms as any)?.name ?? "";
     return matchStatus && (!q || clientName.toLowerCase().includes(q) || roomName.toLowerCase().includes(q));
   });
@@ -224,8 +336,10 @@ const AdminReservas = () => {
     },
   ];
 
+  /* ── Render ───────────────────────────────────────────────────────────────── */
   return (
     <div className="p-6 md:p-8 space-y-6 text-cream">
+      {/* Header */}
       <div className="flex items-center justify-between">
         <div className="flex items-center gap-3">
           <div className="p-2.5 rounded-xl bg-emerald-500/10 border border-emerald-500/20">
@@ -237,11 +351,7 @@ const AdminReservas = () => {
           </div>
         </div>
         <button
-          onClick={() => {
-            setForm({ ...emptyForm });
-            setClientSearch("");
-            setModalOpen(true);
-          }}
+          onClick={openCreate}
           className="flex items-center gap-2 px-4 py-2.5 rounded-lg text-black text-sm font-body font-semibold hover:brightness-110 transition-all"
           style={{ background: "linear-gradient(135deg,#C9A84C,#E5C97A)" }}
         >
@@ -249,6 +359,7 @@ const AdminReservas = () => {
         </button>
       </div>
 
+      {/* KPIs */}
       <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
         {kpis.map((k) => (
           <div key={k.label} className={`${k.bg} border ${k.border} rounded-xl p-4`}>
@@ -258,6 +369,7 @@ const AdminReservas = () => {
         ))}
       </div>
 
+      {/* Filtros */}
       <div className="flex flex-col sm:flex-row gap-3">
         <div className="relative flex-1">
           <Search className="absolute left-3.5 top-1/2 -translate-y-1/2 w-4 h-4 text-white/25" />
@@ -281,6 +393,7 @@ const AdminReservas = () => {
         </select>
       </div>
 
+      {/* Tabela */}
       {isLoading ? (
         <div className="flex items-center justify-center py-20 text-white/20 font-body gap-2">
           <Loader2 className="w-4 h-4 animate-spin" /> Carregando...
@@ -295,7 +408,7 @@ const AdminReservas = () => {
           <table className="w-full">
             <thead>
               <tr className="border-b border-white/5">
-                {["Cliente", "Quarto", "Check-in", "Check-out", "Hóspedes", "Total", "Status", "Ações"].map((h) => (
+                {["Cliente", "Quarto / Tipo", "Período", "Noites", "Total", "Status", "Ações"].map((h) => (
                   <th
                     key={h}
                     className="text-left px-5 py-3.5 text-[10px] uppercase tracking-widest text-white/25 font-body"
@@ -306,66 +419,105 @@ const AdminReservas = () => {
               </tr>
             </thead>
             <tbody>
-              {filtered.map((r, i) => (
-                <motion.tr
-                  key={r.id}
-                  initial={{ opacity: 0 }}
-                  animate={{ opacity: 1 }}
-                  transition={{ delay: i * 0.025 }}
-                  className="border-b border-white/5 last:border-0 hover:bg-white/[0.02] transition-colors"
-                >
-                  <td className="px-5 py-4">
-                    <span className="text-cream text-sm font-body">
-                      {(r.profiles as any)?.full_name || <span className="text-white/25">—</span>}
-                    </span>
-                  </td>
-                  <td className="px-5 py-4">
-                    <span className="text-cream/70 text-sm font-body">{(r.rooms as any)?.name || "—"}</span>
-                  </td>
-                  <td className="px-5 py-4">
-                    <span className="text-white/50 text-sm font-body">
-                      {format(new Date(r.check_in + "T12:00:00"), "dd/MM/yyyy")}
-                    </span>
-                  </td>
-                  <td className="px-5 py-4">
-                    <span className="text-white/50 text-sm font-body">
-                      {format(new Date(r.check_out + "T12:00:00"), "dd/MM/yyyy")}
-                    </span>
-                  </td>
-                  <td className="px-5 py-4">
-                    <span className="text-white/50 text-sm font-body">{r.guests_count}</span>
-                  </td>
-                  <td className="px-5 py-4">
-                    <span className="text-primary font-display font-semibold">
-                      R$ {Number(r.total_price).toFixed(2)}
-                    </span>
-                  </td>
-                  <td className="px-5 py-4">
-                    <span
-                      className={`inline-flex text-xs px-2.5 py-1 rounded-full border font-body ${STATUS_COLORS[r.status] || "bg-white/10 text-white/40 border-white/10"}`}
-                    >
-                      {STATUS_LABELS[r.status] || r.status}
-                    </span>
-                  </td>
-                  <td className="px-5 py-4">
-                    <select
-                      value={r.status}
-                      onChange={(e) => updateStatus.mutate({ id: r.id, status: e.target.value })}
-                      className="bg-charcoal border border-white/10 rounded-lg px-2 py-1.5 text-cream text-xs font-body focus:outline-none focus:border-primary/50 transition"
-                    >
-                      <option value="pending">Pendente</option>
-                      <option value="confirmed">Confirmada</option>
-                      <option value="canceled">Cancelada</option>
-                      <option value="completed">Concluída</option>
-                    </select>
-                  </td>
-                </motion.tr>
-              ))}
+              {filtered.map((r, i) => {
+                const clientName = getClientName(r);
+                const roomName = (r.rooms as any)?.name;
+                const roomCat = (r.rooms as any)?.category;
+                const n = getNights(r);
+                return (
+                  <motion.tr
+                    key={r.id}
+                    initial={{ opacity: 0 }}
+                    animate={{ opacity: 1 }}
+                    transition={{ delay: i * 0.025 }}
+                    className="border-b border-white/5 last:border-0 hover:bg-white/[0.02] transition-colors"
+                  >
+                    {/* Cliente */}
+                    <td className="px-5 py-4">
+                      <span className="text-cream text-sm font-body">
+                        {clientName || <span className="text-white/25">—</span>}
+                      </span>
+                    </td>
+
+                    {/* Quarto + categoria */}
+                    <td className="px-5 py-4">
+                      <p className="text-cream/80 text-sm font-body">{roomName || "—"}</p>
+                      {roomCat && <p className="text-white/30 text-xs font-body mt-0.5">{roomCat}</p>}
+                    </td>
+
+                    {/* Período check-in → check-out */}
+                    <td className="px-5 py-4">
+                      <p className="text-white/60 text-xs font-body">
+                        {format(new Date(r.check_in + "T12:00:00"), "dd/MM/yy")}
+                      </p>
+                      <p className="text-white/30 text-xs font-body">
+                        → {format(new Date(r.check_out + "T12:00:00"), "dd/MM/yy")}
+                      </p>
+                    </td>
+
+                    {/* Noites */}
+                    <td className="px-5 py-4">
+                      <span className="text-white/50 text-sm font-body">{n}n</span>
+                    </td>
+
+                    {/* Total */}
+                    <td className="px-5 py-4">
+                      <span className="text-primary font-display font-semibold">
+                        R$ {Number(r.total_price).toFixed(2)}
+                      </span>
+                    </td>
+
+                    {/* Status badge + select */}
+                    <td className="px-5 py-4">
+                      <select
+                        value={r.status}
+                        onChange={(e) => updateStatus.mutate({ id: r.id, status: e.target.value })}
+                        className={`rounded-lg px-2 py-1.5 text-xs font-body border focus:outline-none transition cursor-pointer ${STATUS_COLORS[r.status] || "bg-white/10 text-white/40 border-white/10"}`}
+                      >
+                        <option value="pending">Pendente</option>
+                        <option value="confirmed">Confirmada</option>
+                        <option value="canceled">Cancelada</option>
+                        <option value="completed">Concluída</option>
+                      </select>
+                    </td>
+
+                    {/* Ações: notas | editar | excluir */}
+                    <td className="px-5 py-4">
+                      <div className="flex items-center gap-1.5">
+                        {r.notes && (
+                          <button
+                            onClick={() => setDetailRow(r)}
+                            title="Ver observações"
+                            className="p-1.5 rounded-lg text-white/30 hover:text-primary hover:bg-primary/10 transition-colors"
+                          >
+                            <FileText className="w-4 h-4" />
+                          </button>
+                        )}
+                        <button
+                          onClick={() => openEdit(r)}
+                          title="Editar"
+                          className="p-1.5 rounded-lg text-white/30 hover:text-cream hover:bg-white/10 transition-colors"
+                        >
+                          <Pencil className="w-4 h-4" />
+                        </button>
+                        <button
+                          onClick={() => setDeleteConfirm(r.id)}
+                          title="Excluir"
+                          className="p-1.5 rounded-lg text-white/30 hover:text-red-400 hover:bg-red-500/10 transition-colors"
+                        >
+                          <Trash2 className="w-4 h-4" />
+                        </button>
+                      </div>
+                    </td>
+                  </motion.tr>
+                );
+              })}
             </tbody>
           </table>
         </div>
       )}
 
+      {/* ── Modal Criar / Editar ──────────────────────────────────────────────── */}
       <AnimatePresence>
         {modalOpen && (
           <>
@@ -375,7 +527,7 @@ const AdminReservas = () => {
               animate={{ opacity: 1 }}
               exit={{ opacity: 0 }}
               className="fixed inset-0 z-50 bg-black/70 backdrop-blur-sm"
-              onClick={() => setModalOpen(false)}
+              onClick={closeModal}
             />
             <motion.div
               key="modal"
@@ -389,19 +541,21 @@ const AdminReservas = () => {
                 className="bg-[#111114] border border-white/10 rounded-2xl w-full max-w-xl shadow-2xl pointer-events-auto overflow-hidden flex flex-col max-h-[90vh]"
                 onClick={(e) => e.stopPropagation()}
               >
+                {/* Header modal */}
                 <div className="flex items-center justify-between px-6 py-5 border-b border-white/5 shrink-0">
                   <div className="flex items-center gap-2">
                     <CalendarDays className="w-4 h-4 text-primary" />
-                    <h2 className="font-display text-lg font-semibold text-cream">Nova Reserva</h2>
+                    <h2 className="font-display text-lg font-semibold text-cream">
+                      {editingId ? "Editar Reserva" : "Nova Reserva"}
+                    </h2>
                   </div>
-                  <button
-                    onClick={() => setModalOpen(false)}
-                    className="text-white/25 hover:text-cream transition-colors"
-                  >
+                  <button onClick={closeModal} className="text-white/25 hover:text-cream transition-colors">
                     <X className="w-5 h-5" />
                   </button>
                 </div>
+
                 <div className="px-6 py-5 space-y-5 overflow-y-auto flex-1">
+                  {/* Cliente */}
                   <div>
                     <label className="flex items-center gap-1.5 text-xs text-white/40 font-body uppercase tracking-wider mb-2">
                       <User className="w-3 h-3" /> Cliente
@@ -456,6 +610,8 @@ const AdminReservas = () => {
                       </div>
                     )}
                   </div>
+
+                  {/* Quarto */}
                   <div>
                     <label className="flex items-center gap-1.5 text-xs text-white/40 font-body uppercase tracking-wider mb-2">
                       <BedDouble className="w-3 h-3" /> Quarto
@@ -465,7 +621,11 @@ const AdminReservas = () => {
                         <button
                           key={room.id}
                           onClick={() => setForm((f) => ({ ...f, room_id: room.id, guests_count: 1 }))}
-                          className={`w-full text-left px-4 py-3 rounded-lg border transition-all ${form.room_id === room.id ? "border-primary/50 bg-primary/10" : "border-white/10 bg-[#1a1a1f] hover:border-white/20"}`}
+                          className={`w-full text-left px-4 py-3 rounded-lg border transition-all ${
+                            form.room_id === room.id
+                              ? "border-primary/50 bg-primary/10"
+                              : "border-white/10 bg-[#1a1a1f] hover:border-white/20"
+                          }`}
                         >
                           <div className="flex items-center justify-between">
                             <div>
@@ -485,6 +645,8 @@ const AdminReservas = () => {
                       ))}
                     </div>
                   </div>
+
+                  {/* Check-in / Check-out */}
                   <div className="grid grid-cols-2 gap-3">
                     {(
                       [
@@ -522,6 +684,8 @@ const AdminReservas = () => {
                       </div>
                     ))}
                   </div>
+
+                  {/* Hóspedes */}
                   <div>
                     <label className="flex items-center gap-1.5 text-xs text-white/40 font-body uppercase tracking-wider mb-2">
                       <Users className="w-3 h-3" /> Hóspedes
@@ -546,6 +710,8 @@ const AdminReservas = () => {
                       <p className="text-white/25 text-xs font-body mt-1">Máximo: {selectedRoom.capacity} hóspedes</p>
                     )}
                   </div>
+
+                  {/* Observações */}
                   <div>
                     <label className="text-xs text-white/40 font-body uppercase tracking-wider block mb-2">
                       Observações (opcional)
@@ -558,6 +724,8 @@ const AdminReservas = () => {
                       className="w-full bg-[#1a1a1f] border border-white/10 rounded-lg px-3 py-2.5 text-cream text-sm font-body focus:outline-none focus:border-primary/50 transition placeholder:text-white/15 resize-none"
                     />
                   </div>
+
+                  {/* Preview total */}
                   {totalPreview > 0 && (
                     <div className="bg-primary/8 border border-primary/20 rounded-xl p-4">
                       <div className="flex justify-between text-sm font-body text-white/50 mb-1">
@@ -576,9 +744,11 @@ const AdminReservas = () => {
                     </div>
                   )}
                 </div>
+
+                {/* Footer modal */}
                 <div className="flex items-center justify-end gap-3 px-6 py-4 border-t border-white/5 shrink-0">
                   <button
-                    onClick={() => setModalOpen(false)}
+                    onClick={closeModal}
                     className="px-4 py-2 text-sm text-white/40 hover:text-cream font-body transition-colors"
                   >
                     Cancelar
@@ -590,7 +760,101 @@ const AdminReservas = () => {
                     style={{ background: "linear-gradient(135deg,#C9A84C,#E5C97A)" }}
                   >
                     {saving ? <Loader2 className="w-4 h-4 animate-spin" /> : <Save className="w-4 h-4" />}
-                    {saving ? "Salvando..." : "Confirmar Reserva"}
+                    {saving ? "Salvando..." : editingId ? "Salvar Alterações" : "Confirmar Reserva"}
+                  </button>
+                </div>
+              </div>
+            </motion.div>
+          </>
+        )}
+      </AnimatePresence>
+
+      {/* ── Modal Detalhe (notas) ─────────────────────────────────────────────── */}
+      <AnimatePresence>
+        {detailRow && (
+          <>
+            <motion.div
+              key="dbg"
+              initial={{ opacity: 0 }}
+              animate={{ opacity: 1 }}
+              exit={{ opacity: 0 }}
+              className="fixed inset-0 z-50 bg-black/60 backdrop-blur-sm"
+              onClick={() => setDetailRow(null)}
+            />
+            <motion.div
+              key="dmodal"
+              initial={{ opacity: 0, scale: 0.95 }}
+              animate={{ opacity: 1, scale: 1 }}
+              exit={{ opacity: 0, scale: 0.95 }}
+              transition={{ duration: 0.15 }}
+              className="fixed inset-0 z-50 flex items-center justify-center p-4 pointer-events-none"
+            >
+              <div
+                className="bg-[#111114] border border-white/10 rounded-2xl w-full max-w-sm shadow-2xl pointer-events-auto p-6 space-y-3"
+                onClick={(e) => e.stopPropagation()}
+              >
+                <div className="flex items-center justify-between">
+                  <h3 className="font-display text-base font-semibold text-cream">Observações</h3>
+                  <button
+                    onClick={() => setDetailRow(null)}
+                    className="text-white/25 hover:text-cream transition-colors"
+                  >
+                    <X className="w-4 h-4" />
+                  </button>
+                </div>
+                <p className="text-sm text-white/60 font-body leading-relaxed">{detailRow.notes}</p>
+              </div>
+            </motion.div>
+          </>
+        )}
+      </AnimatePresence>
+
+      {/* ── Modal Confirmar Exclusão ──────────────────────────────────────────── */}
+      <AnimatePresence>
+        {deleteConfirm && (
+          <>
+            <motion.div
+              key="dbg2"
+              initial={{ opacity: 0 }}
+              animate={{ opacity: 1 }}
+              exit={{ opacity: 0 }}
+              className="fixed inset-0 z-50 bg-black/60 backdrop-blur-sm"
+              onClick={() => setDeleteConfirm(null)}
+            />
+            <motion.div
+              key="dmodal2"
+              initial={{ opacity: 0, scale: 0.95 }}
+              animate={{ opacity: 1, scale: 1 }}
+              exit={{ opacity: 0, scale: 0.95 }}
+              transition={{ duration: 0.15 }}
+              className="fixed inset-0 z-50 flex items-center justify-center p-4 pointer-events-none"
+            >
+              <div
+                className="bg-[#111114] border border-white/10 rounded-2xl w-full max-w-sm shadow-2xl pointer-events-auto p-6 space-y-4"
+                onClick={(e) => e.stopPropagation()}
+              >
+                <div className="flex items-center gap-3">
+                  <div className="p-2 rounded-xl bg-red-500/10 border border-red-500/20">
+                    <Trash2 className="w-5 h-5 text-red-400" />
+                  </div>
+                  <div>
+                    <h3 className="font-display text-base font-semibold text-cream">Excluir reserva?</h3>
+                    <p className="text-white/30 text-xs font-body mt-0.5">Essa ação não pode ser desfeita.</p>
+                  </div>
+                </div>
+                <div className="flex gap-3 pt-1">
+                  <button
+                    onClick={() => setDeleteConfirm(null)}
+                    className="flex-1 py-2 text-sm text-white/40 hover:text-cream font-body border border-white/10 rounded-lg transition-colors"
+                  >
+                    Cancelar
+                  </button>
+                  <button
+                    onClick={() => deleteReservation.mutate(deleteConfirm)}
+                    disabled={deleteReservation.isPending}
+                    className="flex-1 py-2 text-sm font-body font-semibold rounded-lg bg-red-500/20 hover:bg-red-500/30 text-red-400 border border-red-500/30 transition-colors disabled:opacity-50"
+                  >
+                    {deleteReservation.isPending ? "Excluindo..." : "Confirmar exclusão"}
                   </button>
                 </div>
               </div>
