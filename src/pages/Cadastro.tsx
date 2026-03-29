@@ -64,7 +64,7 @@ const Cadastro = () => {
     setLoading(true);
 
     // 1. Cria o usuário no Auth
-    const { error, data } = await signUp(email, password, name);
+    const { error } = await signUp(email, password, name);
 
     if (error) {
       toast.error(error.message || "Erro ao cadastrar.");
@@ -72,8 +72,10 @@ const Cadastro = () => {
       return;
     }
 
-    // 2. Salva dados extras no profile (se o usuário foi criado)
-    const userId = data?.user?.id;
+    // 2. Salva dados extras no profile via Auth listener
+    //    O trigger do Supabase cria o profile — salvamos os extras em seguida
+    const { data: authData } = await supabase.auth.getUser();
+    const userId = authData?.user?.id;
     if (userId) {
       await supabase.from("profiles").upsert({
         id: userId,
