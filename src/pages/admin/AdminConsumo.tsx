@@ -96,6 +96,20 @@ const AdminConsumo = () => {
     },
   });
 
+  // ── Query: quartos ativos ─────────────────────────────────────────────────────
+  const { data: activeRooms = [] } = useQuery({
+    queryKey: ["active-rooms-consumo"],
+    queryFn: async () => {
+      const { data, error } = await supabase
+        .from("rooms")
+        .select("id, name, category")
+        .eq("status", "active")
+        .order("display_order");
+      if (error) throw error;
+      return data as { id: string; name: string; category: string }[];
+    },
+  });
+
   const { data: orders = [], isLoading: loadingOrders } = useQuery({
     queryKey: ["consumption-orders"],
     queryFn: async () => {
@@ -131,42 +145,29 @@ const AdminConsumo = () => {
   useEffect(() => {
     const channel = supabase
       .channel("orders-realtime")
-      .on(
-        "postgres_changes",
-        { event: "INSERT", schema: "public", table: "consumption_orders" },
-        (payload) => {
-          const newOrder = payload.new as ConsumptionOrder;
-          if (newOrder.status === "pending") {
-            playNotificationSound();
-            toast.success(
-              `🔔 Novo pedido! Quarto ${newOrder.room_number} — ${newOrder.item_name} (×${newOrder.quantity})`,
-              { duration: 8000 }
-            );
-          }
-          qc.invalidateQueries({ queryKey: ["consumption-orders"] });
-        },
-      )
-      .on(
-        "postgres_changes",
-        { event: "UPDATE", schema: "public", table: "consumption_orders" },
-        () => {
-          qc.invalidateQueries({ queryKey: ["consumption-orders"] });
-        },
-      )
-      .on(
-        "postgres_changes",
-        { event: "DELETE", schema: "public", table: "consumption_orders" },
-        () => {
-          qc.invalidateQueries({ queryKey: ["consumption-orders"] });
-        },
-      )
+      .on("postgres_changes", { event: "INSERT", schema: "public", table: "consumption_orders" }, (payload) => {
+        const newOrder = payload.new as ConsumptionOrder;
+        if (newOrder.status === "pending") {
+          playNotificationSound();
+          toast.success(
+            `🔔 Novo pedido! Quarto ${newOrder.room_number} — ${newOrder.item_name} (×${newOrder.quantity})`,
+            { duration: 8000 },
+          );
+        }
+        qc.invalidateQueries({ queryKey: ["consumption-orders"] });
+      })
+      .on("postgres_changes", { event: "UPDATE", schema: "public", table: "consumption_orders" }, () => {
+        qc.invalidateQueries({ queryKey: ["consumption-orders"] });
+      })
+      .on("postgres_changes", { event: "DELETE", schema: "public", table: "consumption_orders" }, () => {
+        qc.invalidateQueries({ queryKey: ["consumption-orders"] });
+      })
       .subscribe();
 
     return () => {
       supabase.removeChannel(channel);
     };
   }, [qc, playNotificationSound]);
-
 
   const saveItemMutation = useMutation({
     mutationFn: async () => {
@@ -392,8 +393,18 @@ const AdminConsumo = () => {
               color: pendingOrders > 0 ? "text-yellow-400" : "text-green-400",
               icon: <Bell className="w-4 h-4 text-yellow-400/60" />,
             },
-            { label: "Pedidos hoje", value: todayOrders.length, color: "text-cream", icon: <ShoppingCart className="w-4 h-4 text-cream/40" /> },
-            { label: "Receita hoje", value: `R$ ${todayRevenue.toFixed(0)}`, color: "text-primary", icon: <TrendingUp className="w-4 h-4 text-primary/60" /> },
+            {
+              label: "Pedidos hoje",
+              value: todayOrders.length,
+              color: "text-cream",
+              icon: <ShoppingCart className="w-4 h-4 text-cream/40" />,
+            },
+            {
+              label: "Receita hoje",
+              value: `R$ ${todayRevenue.toFixed(0)}`,
+              color: "text-primary",
+              icon: <TrendingUp className="w-4 h-4 text-primary/60" />,
+            },
             {
               label: "Mais pedido",
               value: topItem ? topItem.name : "—",
@@ -401,7 +412,12 @@ const AdminConsumo = () => {
               icon: <Star className="w-4 h-4 text-primary/60" />,
               sub: topItem ? `${topItem.qty}× pedidos` : undefined,
             },
-            { label: "Itens cardápio", value: items.filter((i) => i.available).length, color: "text-green-400", icon: <Package className="w-4 h-4 text-green-400/60" /> },
+            {
+              label: "Itens cardápio",
+              value: items.filter((i) => i.available).length,
+              color: "text-green-400",
+              icon: <Package className="w-4 h-4 text-green-400/60" />,
+            },
           ].map((s: any) => (
             <div key={s.label} className="bg-charcoal-light border border-gold/10 rounded-xl p-4">
               <div className="flex items-center gap-2 mb-1">
@@ -668,16 +684,20 @@ const AdminConsumo = () => {
                 className="p-6 space-y-4"
               >
                 <div>
-                  <label className="block text-xs uppercase tracking-widest text-primary/70 mb-1.5">
-                    Número do quarto *
-                  </label>
-                  <input
+                  <label className="block text-xs uppercase tracking-widest text-primary/70 mb-1.5">Quarto *</label>
+                  <select
                     className="w-full bg-black/50 border border-gold/20 rounded-lg px-4 py-3 text-cream text-sm focus:border-primary focus:outline-none transition"
                     value={orderForm.room_number}
                     onChange={(e) => setOrderForm({ ...orderForm, room_number: e.target.value })}
                     required
-                    placeholder="Ex: 101"
-                  />
+                  >
+                    <option value="">Selecione o quarto...</option>
+                    {activeRooms.map((r) => (
+                      <option key={r.id} value={r.name}>
+                        {r.name} — {r.category}
+                      </option>
+                    ))}
+                  </select>
                 </div>
                 <div>
                   <label className="block text-xs uppercase tracking-widest text-primary/70 mb-1.5">Item *</label>
