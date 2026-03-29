@@ -158,6 +158,7 @@ export type Database = {
           item_name: string
           notes: string | null
           quantity: number
+          reservation_id: string | null
           room_number: string
           status: string
           total: number
@@ -171,6 +172,7 @@ export type Database = {
           item_name: string
           notes?: string | null
           quantity?: number
+          reservation_id?: string | null
           room_number: string
           status?: string
           total?: number
@@ -184,6 +186,7 @@ export type Database = {
           item_name?: string
           notes?: string | null
           quantity?: number
+          reservation_id?: string | null
           room_number?: string
           status?: string
           total?: number
@@ -196,6 +199,27 @@ export type Database = {
             columns: ["item_id"]
             isOneToOne: false
             referencedRelation: "consumption_items"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "consumption_orders_reservation_id_fkey"
+            columns: ["reservation_id"]
+            isOneToOne: false
+            referencedRelation: "daily_operations"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "consumption_orders_reservation_id_fkey"
+            columns: ["reservation_id"]
+            isOneToOne: false
+            referencedRelation: "operations"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "consumption_orders_reservation_id_fkey"
+            columns: ["reservation_id"]
+            isOneToOne: false
+            referencedRelation: "reservations"
             referencedColumns: ["id"]
           },
         ]
