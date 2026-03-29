@@ -100,7 +100,7 @@ const AdminCheckout = () => {
       if (!selectedRes) return [];
 
       // Tenta primeiro por reservation_id (confiável, independe do nome do quarto)
-      const { data: byResId } = await supabase
+      const { data: byResId } = await (supabase as any)
         .from("consumption_orders")
         .select("*")
         .eq("reservation_id", selectedRes.id)
