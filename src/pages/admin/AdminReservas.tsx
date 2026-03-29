@@ -50,10 +50,7 @@ interface Reservation {
   profile_id: string | null;
   client_id: string | null;
   rooms: { name: string; category: string } | null;
-  // join via profile_id
   profiles: { full_name: string | null } | null;
-  // join via client_id (fallback para reservas antigas)
-  profiles_client: { full_name: string | null } | null;
 }
 
 const STATUS_LABELS: Record<string, string> = {
@@ -79,9 +76,7 @@ const emptyForm = {
 };
 
 /* ── Helpers ────────────────────────────────────────────────────────────────── */
-// Retorna o nome do cliente independente de qual FK foi preenchida
-const getClientName = (r: Reservation) =>
-  (r.profiles as any)?.full_name || (r.profiles_client as any)?.full_name || null;
+const getClientName = (r: Reservation) => (r.profiles as any)?.full_name || null;
 
 const getNights = (r: Reservation) =>
   differenceInDays(new Date(r.check_out + "T12:00:00"), new Date(r.check_in + "T12:00:00"));
@@ -111,17 +106,26 @@ const AdminReservas = () => {
     queryFn: async () => {
       const { data, error } = await supabase
         .from("reservations")
-        .select(
-          `
-          *,
-          rooms(name, category),
-          profiles!reservations_profile_id_fkey(full_name),
-          profiles_client:profiles!reservations_client_id_fkey(full_name)
-        `,
-        )
+        .select("*, rooms(name, category), profiles!reservations_profile_id_fkey(full_name)")
         .order("created_at", { ascending: false });
       if (error) throw error;
-      return data as Reservation[];
+
+      // Fallback: busca nomes de reservas antigas que só têm client_id
+      const orphans = (data || []).filter((r: any) => !r.profiles?.full_name && r.client_id);
+      if (orphans.length > 0) {
+        const ids = [...new Set(orphans.map((r: any) => r.client_id as string))];
+        const { data: pData } = await supabase.from("profiles").select("id, full_name").in("id", ids);
+        const map: Record<string, string> = {};
+        (pData || []).forEach((p: any) => {
+          map[p.id] = p.full_name;
+        });
+        (data || []).forEach((r: any) => {
+          if (!r.profiles?.full_name && r.client_id && map[r.client_id]) {
+            r.profiles = { full_name: map[r.client_id] };
+          }
+        });
+      }
+      return (data || []) as Reservation[];
     },
   });
 
