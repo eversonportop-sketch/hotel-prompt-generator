@@ -280,6 +280,24 @@ const QuartoDetalhe = () => {
   const [available, setAvailable] = useState<boolean | null>(null);
   const [checking, setChecking] = useState(false);
 
+  // Restaura intenção de reserva se o usuário acabou de fazer login
+  useState(() => {
+    if (user) {
+      const raw = sessionStorage.getItem("reserva_intent");
+      if (raw) {
+        try {
+          const intent = JSON.parse(raw);
+          if (intent.checkIn) setCheckIn(new Date(intent.checkIn + "T12:00:00"));
+          if (intent.checkOut) setCheckOut(new Date(intent.checkOut + "T12:00:00"));
+          if (intent.guestsCount) setGuestsCount(intent.guestsCount);
+          sessionStorage.removeItem("reserva_intent");
+        } catch {
+          sessionStorage.removeItem("reserva_intent");
+        }
+      }
+    }
+  });
+
   const { data: room, isLoading } = useQuery({
     queryKey: ["room", id],
     queryFn: async () => {
@@ -564,8 +582,17 @@ const QuartoDetalhe = () => {
                       disabled={!checkIn || !checkOut || !available || reservationMutation.isPending}
                       onClick={() => {
                         if (!user) {
-                          toast.error("Faça login para reservar.");
-                          navigate("/login");
+                          // Salva a intenção de reserva para restaurar após login
+                          sessionStorage.setItem(
+                            "reserva_intent",
+                            JSON.stringify({
+                              checkIn: checkIn ? format(checkIn, "yyyy-MM-dd") : null,
+                              checkOut: checkOut ? format(checkOut, "yyyy-MM-dd") : null,
+                              guestsCount,
+                            }),
+                          );
+                          // Redireciona para login e volta para este quarto após autenticar
+                          navigate(`/login?redirect=/quartos/${id}`);
                           return;
                         }
                         reservationMutation.mutate();
