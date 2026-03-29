@@ -57,7 +57,6 @@ const EMPTY_FORM = {
 
 const CATEGORIES = ["Standard", "Luxo", "Super Luxo", "Suite", "Suite Master"];
 
-// ── Utilitário de upload para Supabase Storage ─────────────────────────────────
 async function uploadRoomImage(file: File): Promise<string> {
   const ext = file.name.split(".").pop() || "jpg";
   const path = `rooms/${Date.now()}-${Math.random().toString(36).slice(2)}.${ext}`;
@@ -68,6 +67,8 @@ async function uploadRoomImage(file: File): Promise<string> {
   const { data } = supabase.storage.from("hotel-images").getPublicUrl(path);
   return data.publicUrl;
 }
+
+// ── Componentes externos (fora do AdminQuartos) ────────────────────────────────
 
 const GalleryViewer = ({ images, name }: { images: string[]; name: string }) => {
   const [idx, setIdx] = useState(0);
@@ -113,6 +114,333 @@ const GalleryViewer = ({ images, name }: { images: string[]; name: string }) => 
   );
 };
 
+const AdminHeader = () => (
+  <header className="bg-charcoal-light border-b border-gold/10 px-6 py-4 flex items-center justify-between">
+    <div className="flex items-center gap-3">
+      <img src={hotelLogo} alt="SB Hotel" className="h-10 w-auto object-contain" />
+      <span className="text-cream/40 text-xs font-body">Admin</span>
+    </div>
+    <Link to="/" className="text-cream/50 text-sm font-body hover:text-primary transition-colors">
+      Ver Site →
+    </Link>
+  </header>
+);
+
+interface RoomModalProps {
+  editingRoom: Room | null;
+  form: typeof EMPTY_FORM;
+  setForm: React.Dispatch<React.SetStateAction<typeof EMPTY_FORM>>;
+  uploadingFile: boolean;
+  filePreviewUrl: string | null;
+  fileInputRef: React.RefObject<HTMLInputElement>;
+  onClose: () => void;
+  onSubmit: () => void;
+  onAddGalleryImage: () => void;
+  onRemoveGalleryImage: (url: string) => void;
+  isPending: boolean;
+}
+
+const RoomModal = ({
+  editingRoom,
+  form,
+  setForm,
+  uploadingFile,
+  filePreviewUrl,
+  fileInputRef,
+  onClose,
+  onSubmit,
+  onAddGalleryImage,
+  onRemoveGalleryImage,
+  isPending,
+}: RoomModalProps) => (
+  <motion.div
+    initial={{ opacity: 0 }}
+    animate={{ opacity: 1 }}
+    exit={{ opacity: 0 }}
+    className="fixed inset-0 z-50 bg-black/70 backdrop-blur-sm flex items-start justify-center overflow-y-auto py-10 px-4"
+    onClick={(e) => e.target === e.currentTarget && onClose()}
+  >
+    <motion.div
+      initial={{ opacity: 0, y: 30 }}
+      animate={{ opacity: 1, y: 0 }}
+      exit={{ opacity: 0, y: 20 }}
+      className="bg-charcoal border border-gold/20 rounded-2xl w-full max-w-2xl shadow-2xl"
+    >
+      <div className="flex items-center justify-between p-6 border-b border-gold/10">
+        <h2 className="font-display text-xl font-bold text-cream">{editingRoom ? "Editar Quarto" : "Novo Quarto"}</h2>
+        <button onClick={onClose} className="text-cream/40 hover:text-cream">
+          <X className="w-5 h-5" />
+        </button>
+      </div>
+      <form
+        onSubmit={(e) => {
+          e.preventDefault();
+          onSubmit();
+        }}
+        className="p-6 space-y-4"
+      >
+        <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+          <div className="sm:col-span-2">
+            <label className="block text-xs uppercase tracking-widest text-primary/70 mb-1.5">Nome *</label>
+            <input
+              className="w-full bg-black/50 border border-gold/20 rounded-lg px-4 py-3 text-cream text-sm focus:border-primary focus:outline-none transition"
+              value={form.name}
+              onChange={(e) => setForm((f) => ({ ...f, name: e.target.value }))}
+              placeholder="Ex: Suíte Master"
+              required
+            />
+          </div>
+          <div>
+            <label className="block text-xs uppercase tracking-widest text-primary/70 mb-1.5">Categoria</label>
+            <select
+              className="w-full bg-black/50 border border-gold/20 rounded-lg px-4 py-3 text-cream text-sm focus:border-primary focus:outline-none transition"
+              value={form.category}
+              onChange={(e) => setForm((f) => ({ ...f, category: e.target.value }))}
+            >
+              {CATEGORIES.map((c) => (
+                <option key={c} value={c}>
+                  {c}
+                </option>
+              ))}
+            </select>
+          </div>
+          <div>
+            <label className="block text-xs uppercase tracking-widest text-primary/70 mb-1.5">Camas</label>
+            <input
+              className="w-full bg-black/50 border border-gold/20 rounded-lg px-4 py-3 text-cream text-sm focus:border-primary focus:outline-none transition"
+              value={form.beds}
+              onChange={(e) => setForm((f) => ({ ...f, beds: e.target.value }))}
+              placeholder="Ex: 1 cama de casal"
+            />
+          </div>
+          <div>
+            <label className="block text-xs uppercase tracking-widest text-primary/70 mb-1.5">Capacidade</label>
+            <input
+              type="number"
+              min={1}
+              max={20}
+              className="w-full bg-black/50 border border-gold/20 rounded-lg px-4 py-3 text-cream text-sm focus:border-primary focus:outline-none transition"
+              value={form.capacity}
+              onChange={(e) => setForm((f) => ({ ...f, capacity: Number(e.target.value) }))}
+            />
+          </div>
+          <div>
+            <label className="block text-xs uppercase tracking-widest text-primary/70 mb-1.5">Ordem de exibição</label>
+            <input
+              type="number"
+              min={0}
+              className="w-full bg-black/50 border border-gold/20 rounded-lg px-4 py-3 text-cream text-sm focus:border-primary focus:outline-none transition"
+              value={form.display_order}
+              onChange={(e) => setForm((f) => ({ ...f, display_order: Number(e.target.value) }))}
+            />
+          </div>
+          <div>
+            <label className="block text-xs uppercase tracking-widest text-primary/70 mb-1.5">
+              Preço / noite (R$) *
+            </label>
+            <input
+              type="number"
+              min={0}
+              step="0.01"
+              className="w-full bg-black/50 border border-gold/20 rounded-lg px-4 py-3 text-cream text-sm focus:border-primary focus:outline-none transition"
+              value={form.price}
+              onChange={(e) => setForm((f) => ({ ...f, price: Number(e.target.value) }))}
+              required
+            />
+          </div>
+          <div>
+            <label className="block text-xs uppercase tracking-widest text-primary/70 mb-1.5">
+              Preço promocional (R$)
+            </label>
+            <input
+              type="number"
+              min={0}
+              step="0.01"
+              className="w-full bg-black/50 border border-gold/20 rounded-lg px-4 py-3 text-cream text-sm focus:border-primary focus:outline-none transition"
+              value={form.promotional_price}
+              onChange={(e) => setForm((f) => ({ ...f, promotional_price: e.target.value }))}
+              placeholder="Vazio = sem promoção"
+            />
+          </div>
+          <div className="sm:col-span-2">
+            <label className="block text-xs uppercase tracking-widest text-primary/70 mb-1.5">Galeria de fotos</label>
+            <div
+              onClick={() => !uploadingFile && fileInputRef.current?.click()}
+              className={`relative cursor-pointer border-2 border-dashed rounded-xl transition-all mb-3 ${uploadingFile ? "border-primary/40 bg-primary/5" : "border-gold/20 hover:border-primary/40"}`}
+            >
+              {filePreviewUrl && uploadingFile ? (
+                <div className="relative h-24 overflow-hidden rounded-xl">
+                  <img src={filePreviewUrl} alt="" className="w-full h-full object-cover opacity-50" />
+                  <div className="absolute inset-0 flex items-center justify-center">
+                    <Loader2 className="w-6 h-6 text-primary animate-spin" />
+                    <span className="ml-2 text-cream text-sm font-body">Enviando...</span>
+                  </div>
+                </div>
+              ) : (
+                <div className="h-20 flex items-center justify-center gap-3">
+                  <div className="w-8 h-8 rounded-lg bg-primary/10 border border-primary/20 flex items-center justify-center">
+                    <Upload className="w-4 h-4 text-primary" />
+                  </div>
+                  <div>
+                    <p className="text-cream/60 text-sm font-body">Clique para enviar foto do PC</p>
+                    <p className="text-cream/30 text-xs font-body">JPG, PNG, WebP · Máx 10 MB</p>
+                  </div>
+                </div>
+              )}
+            </div>
+            <div className="flex gap-2">
+              <input
+                className="flex-1 bg-black/50 border border-gold/20 rounded-lg px-4 py-3 text-cream text-sm focus:border-primary focus:outline-none transition"
+                value={form.gallery_input}
+                onChange={(e) => setForm((f) => ({ ...f, gallery_input: e.target.value }))}
+                placeholder="Ou cole uma URL: https://exemplo.com/foto.jpg"
+                onKeyDown={(e) => {
+                  if (e.key === "Enter") {
+                    e.preventDefault();
+                    onAddGalleryImage();
+                  }
+                }}
+              />
+              <button
+                type="button"
+                onClick={onAddGalleryImage}
+                className="px-4 py-2 bg-primary/20 hover:bg-primary/30 text-primary border border-primary/30 rounded-lg text-sm transition-all"
+              >
+                <Plus className="w-4 h-4" />
+              </button>
+            </div>
+            {form.gallery.length > 0 && (
+              <div className="mt-3 grid grid-cols-3 sm:grid-cols-5 gap-2">
+                {form.gallery.map((url, i) => (
+                  <div
+                    key={i}
+                    className={`relative group rounded-lg overflow-hidden border-2 transition ${url === form.image_url ? "border-primary" : "border-gold/20"}`}
+                  >
+                    <img src={url} alt="" className="w-full h-16 object-cover" />
+                    <div className="absolute inset-0 bg-black/70 opacity-0 group-hover:opacity-100 transition-opacity flex flex-col items-center justify-center gap-1 p-1">
+                      {url !== form.image_url && (
+                        <button
+                          type="button"
+                          onClick={() => setForm((f) => ({ ...f, image_url: url }))}
+                          className="text-xs text-primary font-body bg-black/80 px-1.5 py-0.5 rounded w-full text-center"
+                        >
+                          Capa
+                        </button>
+                      )}
+                      <button
+                        type="button"
+                        onClick={() => onRemoveGalleryImage(url)}
+                        className="text-xs text-red-400 font-body bg-black/80 px-1.5 py-0.5 rounded w-full text-center"
+                      >
+                        Remover
+                      </button>
+                    </div>
+                    {url === form.image_url && (
+                      <span className="absolute top-0.5 left-0.5 text-xs bg-primary text-black px-1 py-0.5 rounded font-body leading-none">
+                        ✓
+                      </span>
+                    )}
+                  </div>
+                ))}
+              </div>
+            )}
+          </div>
+          <div className="sm:col-span-2">
+            <label className="block text-xs uppercase tracking-widest text-primary/70 mb-1.5">Descrição</label>
+            <textarea
+              rows={3}
+              className="w-full bg-black/50 border border-gold/20 rounded-lg px-4 py-3 text-cream text-sm focus:border-primary focus:outline-none transition resize-none"
+              value={form.description}
+              onChange={(e) => setForm((f) => ({ ...f, description: e.target.value }))}
+              placeholder="Descreva o quarto..."
+            />
+          </div>
+          <div className="sm:col-span-2">
+            <label className="block text-xs uppercase tracking-widest text-primary/70 mb-1.5">
+              Comodidades <span className="normal-case text-cream/30">(separadas por vírgula)</span>
+            </label>
+            <input
+              className="w-full bg-black/50 border border-gold/20 rounded-lg px-4 py-3 text-cream text-sm focus:border-primary focus:outline-none transition"
+              value={form.amenities}
+              onChange={(e) => setForm((f) => ({ ...f, amenities: e.target.value }))}
+              placeholder="Wi-Fi, Ar-condicionado, TV, Frigobar"
+            />
+          </div>
+        </div>
+        <div className="flex gap-3 pt-2">
+          <button
+            type="button"
+            onClick={onClose}
+            className="flex-1 border border-gold/20 text-cream/60 hover:text-cream rounded-lg py-3 text-sm font-body transition-all"
+          >
+            Cancelar
+          </button>
+          <button
+            type="submit"
+            disabled={isPending || uploadingFile}
+            className="flex-1 flex items-center justify-center gap-2 bg-gradient-to-r from-[#C9A84C] to-[#E5C97A] text-black font-semibold text-sm rounded-lg py-3 hover:scale-[1.01] transition-all disabled:opacity-50"
+          >
+            {isPending ? (
+              <>
+                <Loader2 className="w-4 h-4 animate-spin" /> Salvando...
+              </>
+            ) : (
+              <>
+                <Save className="w-4 h-4" />
+                {editingRoom ? "Salvar alterações" : "Criar quarto"}
+              </>
+            )}
+          </button>
+        </div>
+      </form>
+    </motion.div>
+  </motion.div>
+);
+
+const DeleteConfirm = ({
+  onCancel,
+  onConfirm,
+  isPending,
+}: {
+  onCancel: () => void;
+  onConfirm: () => void;
+  isPending: boolean;
+}) => (
+  <motion.div
+    initial={{ opacity: 0 }}
+    animate={{ opacity: 1 }}
+    exit={{ opacity: 0 }}
+    className="fixed inset-0 z-50 bg-black/70 backdrop-blur-sm flex items-center justify-center px-4"
+  >
+    <motion.div
+      initial={{ scale: 0.9 }}
+      animate={{ scale: 1 }}
+      exit={{ scale: 0.9 }}
+      className="bg-charcoal border border-red-900/40 rounded-2xl p-8 max-w-sm w-full text-center"
+    >
+      <Trash2 className="w-10 h-10 text-red-400 mx-auto mb-4" />
+      <h3 className="font-display text-xl font-bold text-cream mb-2">Excluir quarto?</h3>
+      <p className="text-cream/50 text-sm font-body mb-6">Esta ação não pode ser desfeita.</p>
+      <div className="flex gap-3">
+        <button
+          onClick={onCancel}
+          className="flex-1 border border-gold/20 text-cream/60 rounded-lg py-2.5 text-sm transition hover:text-cream"
+        >
+          Cancelar
+        </button>
+        <button
+          onClick={onConfirm}
+          disabled={isPending}
+          className="flex-1 bg-red-600 hover:bg-red-500 text-white rounded-lg py-2.5 text-sm font-semibold transition disabled:opacity-50"
+        >
+          {isPending ? "Excluindo..." : "Excluir"}
+        </button>
+      </div>
+    </motion.div>
+  </motion.div>
+);
+
+// ── Componente principal ───────────────────────────────────────────────────────
 const AdminQuartos = () => {
   const queryClient = useQueryClient();
   const [view, setView] = useState<"list" | "detail">("list");
@@ -121,8 +449,6 @@ const AdminQuartos = () => {
   const [editingRoom, setEditingRoom] = useState<Room | null>(null);
   const [form, setForm] = useState(EMPTY_FORM);
   const [deleteConfirm, setDeleteConfirm] = useState<string | null>(null);
-
-  // ── Estado para upload de arquivo ────────────────────────────────────────────
   const [uploadingFile, setUploadingFile] = useState(false);
   const [filePreviewUrl, setFilePreviewUrl] = useState<string | null>(null);
   const fileInputRef = useRef<HTMLInputElement>(null);
@@ -242,7 +568,6 @@ const AdminQuartos = () => {
     setFilePreviewUrl(null);
   };
 
-  // ── Adicionar imagem por URL ──────────────────────────────────────────────────
   const addGalleryImage = () => {
     const url = form.gallery_input.trim();
     if (!url) return;
@@ -250,41 +575,37 @@ const AdminQuartos = () => {
       toast.error("Imagem já adicionada.");
       return;
     }
-    const g = [...form.gallery, url];
-    setForm({ ...form, gallery: g, gallery_input: "", image_url: form.image_url || url });
+    setForm((f) => {
+      const g = [...f.gallery, url];
+      return { ...f, gallery: g, gallery_input: "", image_url: f.image_url || url };
+    });
   };
 
-  // ── Upload de arquivo do PC → Supabase Storage → adiciona à galeria ───────────
+  const removeGalleryImage = (url: string) => {
+    setForm((f) => {
+      const g = f.gallery.filter((u) => u !== url);
+      return { ...f, gallery: g, image_url: f.image_url === url ? (g[0] ?? "") : f.image_url };
+    });
+  };
+
   const handleFileUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
     if (!file) return;
-
     if (!file.type.startsWith("image/")) {
-      toast.error("Selecione um arquivo de imagem (JPG, PNG, WebP…)");
+      toast.error("Selecione uma imagem (JPG, PNG, WebP…)");
       return;
     }
     if (file.size > 10 * 1024 * 1024) {
       toast.error("Imagem muito grande. Máximo 10 MB.");
       return;
     }
-
-    // Mostra preview local imediatamente
-    const localUrl = URL.createObjectURL(file);
-    setFilePreviewUrl(localUrl);
-
+    setFilePreviewUrl(URL.createObjectURL(file));
     setUploadingFile(true);
     try {
       const publicUrl = await uploadRoomImage(file);
-      if (form.gallery.includes(publicUrl)) {
-        toast.error("Imagem já adicionada.");
-        return;
-      }
-      const g = [...form.gallery, publicUrl];
-      setForm({
-        ...form,
-        gallery: g,
-        gallery_input: "",
-        image_url: form.image_url || publicUrl,
+      setForm((f) => {
+        const g = [...f.gallery, publicUrl];
+        return { ...f, gallery: g, gallery_input: "", image_url: f.image_url || publicUrl };
       });
       toast.success("Imagem adicionada à galeria!");
     } catch (err: any) {
@@ -292,331 +613,16 @@ const AdminQuartos = () => {
     } finally {
       setUploadingFile(false);
       setFilePreviewUrl(null);
-      // Limpa o input para permitir re-upload do mesmo arquivo
       if (fileInputRef.current) fileInputRef.current.value = "";
     }
   };
 
-  const removeGalleryImage = (url: string) => {
-    const g = form.gallery.filter((u) => u !== url);
-    setForm({ ...form, gallery: g, image_url: form.image_url === url ? (g[0] ?? "") : form.image_url });
-  };
-
-  const Header = () => (
-    <header className="bg-charcoal-light border-b border-gold/10 px-6 py-4 flex items-center justify-between">
-      <div className="flex items-center gap-3">
-        <img src={hotelLogo} alt="SB Hotel" className="h-10 w-auto object-contain" />
-        <span className="text-cream/40 text-xs font-body">Admin</span>
-      </div>
-      <Link to="/" className="text-cream/50 text-sm font-body hover:text-primary transition-colors">
-        Ver Site →
-      </Link>
-    </header>
-  );
-
-  const Modal = () => (
-    <motion.div
-      initial={{ opacity: 0 }}
-      animate={{ opacity: 1 }}
-      exit={{ opacity: 0 }}
-      className="fixed inset-0 z-50 bg-black/70 backdrop-blur-sm flex items-start justify-center overflow-y-auto py-10 px-4"
-      onClick={(e) => e.target === e.currentTarget && closeModal()}
-    >
-      <motion.div
-        initial={{ opacity: 0, y: 30 }}
-        animate={{ opacity: 1, y: 0 }}
-        exit={{ opacity: 0, y: 20 }}
-        className="bg-charcoal border border-gold/20 rounded-2xl w-full max-w-2xl shadow-2xl"
-      >
-        <div className="flex items-center justify-between p-6 border-b border-gold/10">
-          <h2 className="font-display text-xl font-bold text-cream">{editingRoom ? "Editar Quarto" : "Novo Quarto"}</h2>
-          <button onClick={closeModal} className="text-cream/40 hover:text-cream">
-            <X className="w-5 h-5" />
-          </button>
-        </div>
-        <form
-          onSubmit={(e) => {
-            e.preventDefault();
-            saveMutation.mutate();
-          }}
-          className="p-6 space-y-4"
-        >
-          <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-            <div className="sm:col-span-2">
-              <label className="block text-xs uppercase tracking-widest text-primary/70 mb-1.5">Nome *</label>
-              <input
-                className="w-full bg-black/50 border border-gold/20 rounded-lg px-4 py-3 text-cream text-sm focus:border-primary focus:outline-none transition"
-                value={form.name}
-                onChange={(e) => setForm({ ...form, name: e.target.value })}
-                placeholder="Ex: Suíte Master"
-                required
-              />
-            </div>
-            <div>
-              <label className="block text-xs uppercase tracking-widest text-primary/70 mb-1.5">Categoria</label>
-              <select
-                className="w-full bg-black/50 border border-gold/20 rounded-lg px-4 py-3 text-cream text-sm focus:border-primary focus:outline-none transition"
-                value={form.category}
-                onChange={(e) => setForm({ ...form, category: e.target.value })}
-              >
-                {CATEGORIES.map((c) => (
-                  <option key={c} value={c}>
-                    {c}
-                  </option>
-                ))}
-              </select>
-            </div>
-            <div>
-              <label className="block text-xs uppercase tracking-widest text-primary/70 mb-1.5">Camas</label>
-              <input
-                className="w-full bg-black/50 border border-gold/20 rounded-lg px-4 py-3 text-cream text-sm focus:border-primary focus:outline-none transition"
-                value={form.beds}
-                onChange={(e) => setForm({ ...form, beds: e.target.value })}
-                placeholder="Ex: 1 cama de casal"
-              />
-            </div>
-            <div>
-              <label className="block text-xs uppercase tracking-widest text-primary/70 mb-1.5">Capacidade</label>
-              <input
-                type="number"
-                min={1}
-                max={20}
-                className="w-full bg-black/50 border border-gold/20 rounded-lg px-4 py-3 text-cream text-sm focus:border-primary focus:outline-none transition"
-                value={form.capacity}
-                onChange={(e) => setForm({ ...form, capacity: Number(e.target.value) })}
-              />
-            </div>
-            <div>
-              <label className="block text-xs uppercase tracking-widest text-primary/70 mb-1.5">
-                Ordem de exibição
-              </label>
-              <input
-                type="number"
-                min={0}
-                className="w-full bg-black/50 border border-gold/20 rounded-lg px-4 py-3 text-cream text-sm focus:border-primary focus:outline-none transition"
-                value={form.display_order}
-                onChange={(e) => setForm({ ...form, display_order: Number(e.target.value) })}
-              />
-            </div>
-            <div>
-              <label className="block text-xs uppercase tracking-widest text-primary/70 mb-1.5">
-                Preço / noite (R$) *
-              </label>
-              <input
-                type="number"
-                min={0}
-                step="0.01"
-                className="w-full bg-black/50 border border-gold/20 rounded-lg px-4 py-3 text-cream text-sm focus:border-primary focus:outline-none transition"
-                value={form.price}
-                onChange={(e) => setForm({ ...form, price: Number(e.target.value) })}
-                required
-              />
-            </div>
-            <div>
-              <label className="block text-xs uppercase tracking-widest text-primary/70 mb-1.5">
-                Preço promocional (R$)
-              </label>
-              <input
-                type="number"
-                min={0}
-                step="0.01"
-                className="w-full bg-black/50 border border-gold/20 rounded-lg px-4 py-3 text-cream text-sm focus:border-primary focus:outline-none transition"
-                value={form.promotional_price}
-                onChange={(e) => setForm({ ...form, promotional_price: e.target.value })}
-                placeholder="Vazio = sem promoção"
-              />
-            </div>
-
-            {/* ── GALERIA DE FOTOS (upload + URL) ─────────────────────────── */}
-            <div className="sm:col-span-2">
-              <label className="block text-xs uppercase tracking-widest text-primary/70 mb-1.5">Galeria de fotos</label>
-
-              {/* Área de upload do PC */}
-              <div
-                onClick={() => !uploadingFile && fileInputRef.current?.click()}
-                className={`relative cursor-pointer border-2 border-dashed rounded-xl transition-all mb-3 ${
-                  uploadingFile ? "border-primary/40 bg-primary/5" : "border-gold/20 hover:border-primary/40"
-                }`}
-              >
-                {filePreviewUrl && uploadingFile ? (
-                  <div className="relative h-24 overflow-hidden rounded-xl">
-                    <img src={filePreviewUrl} alt="" className="w-full h-full object-cover opacity-50" />
-                    <div className="absolute inset-0 flex items-center justify-center">
-                      <Loader2 className="w-6 h-6 text-primary animate-spin" />
-                      <span className="ml-2 text-cream text-sm font-body">Enviando...</span>
-                    </div>
-                  </div>
-                ) : (
-                  <div className="h-20 flex items-center justify-center gap-3">
-                    <div className="w-8 h-8 rounded-lg bg-primary/10 border border-primary/20 flex items-center justify-center">
-                      <Upload className="w-4 h-4 text-primary" />
-                    </div>
-                    <div>
-                      <p className="text-cream/60 text-sm font-body">Clique para enviar foto do PC</p>
-                      <p className="text-cream/30 text-xs font-body">JPG, PNG, WebP · Máx 10 MB</p>
-                    </div>
-                  </div>
-                )}
-              </div>
-              <input ref={fileInputRef} type="file" accept="image/*" className="hidden" onChange={handleFileUpload} />
-
-              {/* Ou cole URL */}
-              <div className="flex gap-2">
-                <input
-                  className="flex-1 bg-black/50 border border-gold/20 rounded-lg px-4 py-3 text-cream text-sm focus:border-primary focus:outline-none transition"
-                  value={form.gallery_input}
-                  onChange={(e) => setForm({ ...form, gallery_input: e.target.value })}
-                  placeholder="Ou cole uma URL: https://exemplo.com/foto.jpg"
-                  onKeyDown={(e) => {
-                    if (e.key === "Enter") {
-                      e.preventDefault();
-                      addGalleryImage();
-                    }
-                  }}
-                />
-                <button
-                  type="button"
-                  onClick={addGalleryImage}
-                  className="px-4 py-2 bg-primary/20 hover:bg-primary/30 text-primary border border-primary/30 rounded-lg text-sm transition-all"
-                >
-                  <Plus className="w-4 h-4" />
-                </button>
-              </div>
-
-              {/* Thumbnails da galeria */}
-              {form.gallery.length > 0 && (
-                <div className="mt-3 grid grid-cols-3 sm:grid-cols-5 gap-2">
-                  {form.gallery.map((url, i) => (
-                    <div
-                      key={i}
-                      className={`relative group rounded-lg overflow-hidden border-2 transition ${
-                        url === form.image_url ? "border-primary" : "border-gold/20"
-                      }`}
-                    >
-                      <img src={url} alt="" className="w-full h-16 object-cover" />
-                      <div className="absolute inset-0 bg-black/70 opacity-0 group-hover:opacity-100 transition-opacity flex flex-col items-center justify-center gap-1 p-1">
-                        {url !== form.image_url && (
-                          <button
-                            type="button"
-                            onClick={() => setForm({ ...form, image_url: url })}
-                            className="text-xs text-primary font-body bg-black/80 px-1.5 py-0.5 rounded w-full text-center"
-                          >
-                            Capa
-                          </button>
-                        )}
-                        <button
-                          type="button"
-                          onClick={() => removeGalleryImage(url)}
-                          className="text-xs text-red-400 font-body bg-black/80 px-1.5 py-0.5 rounded w-full text-center"
-                        >
-                          Remover
-                        </button>
-                      </div>
-                      {url === form.image_url && (
-                        <span className="absolute top-0.5 left-0.5 text-xs bg-primary text-black px-1 py-0.5 rounded font-body leading-none">
-                          ✓
-                        </span>
-                      )}
-                    </div>
-                  ))}
-                </div>
-              )}
-            </div>
-
-            <div className="sm:col-span-2">
-              <label className="block text-xs uppercase tracking-widest text-primary/70 mb-1.5">Descrição</label>
-              <textarea
-                rows={3}
-                className="w-full bg-black/50 border border-gold/20 rounded-lg px-4 py-3 text-cream text-sm focus:border-primary focus:outline-none transition resize-none"
-                value={form.description}
-                onChange={(e) => setForm({ ...form, description: e.target.value })}
-                placeholder="Descreva o quarto..."
-              />
-            </div>
-            <div className="sm:col-span-2">
-              <label className="block text-xs uppercase tracking-widest text-primary/70 mb-1.5">
-                Comodidades <span className="normal-case text-cream/30">(separadas por vírgula)</span>
-              </label>
-              <input
-                className="w-full bg-black/50 border border-gold/20 rounded-lg px-4 py-3 text-cream text-sm focus:border-primary focus:outline-none transition"
-                value={form.amenities}
-                onChange={(e) => setForm({ ...form, amenities: e.target.value })}
-                placeholder="Wi-Fi, Ar-condicionado, TV, Frigobar"
-              />
-            </div>
-          </div>
-          <div className="flex gap-3 pt-2">
-            <button
-              type="button"
-              onClick={closeModal}
-              className="flex-1 border border-gold/20 text-cream/60 hover:text-cream rounded-lg py-3 text-sm font-body transition-all"
-            >
-              Cancelar
-            </button>
-            <button
-              type="submit"
-              disabled={saveMutation.isPending || uploadingFile}
-              className="flex-1 flex items-center justify-center gap-2 bg-gradient-to-r from-[#C9A84C] to-[#E5C97A] text-black font-semibold text-sm rounded-lg py-3 hover:scale-[1.01] transition-all disabled:opacity-50"
-            >
-              {saveMutation.isPending ? (
-                <>
-                  <Loader2 className="w-4 h-4 animate-spin" /> Salvando...
-                </>
-              ) : (
-                <>
-                  <Save className="w-4 h-4" />
-                  {editingRoom ? "Salvar alterações" : "Criar quarto"}
-                </>
-              )}
-            </button>
-          </div>
-        </form>
-      </motion.div>
-    </motion.div>
-  );
-
-  const DeleteConfirm = () => (
-    <motion.div
-      initial={{ opacity: 0 }}
-      animate={{ opacity: 1 }}
-      exit={{ opacity: 0 }}
-      className="fixed inset-0 z-50 bg-black/70 backdrop-blur-sm flex items-center justify-center px-4"
-    >
-      <motion.div
-        initial={{ scale: 0.9 }}
-        animate={{ scale: 1 }}
-        exit={{ scale: 0.9 }}
-        className="bg-charcoal border border-red-900/40 rounded-2xl p-8 max-w-sm w-full text-center"
-      >
-        <Trash2 className="w-10 h-10 text-red-400 mx-auto mb-4" />
-        <h3 className="font-display text-xl font-bold text-cream mb-2">Excluir quarto?</h3>
-        <p className="text-cream/50 text-sm font-body mb-6">Esta ação não pode ser desfeita.</p>
-        <div className="flex gap-3">
-          <button
-            onClick={() => setDeleteConfirm(null)}
-            className="flex-1 border border-gold/20 text-cream/60 rounded-lg py-2.5 text-sm transition hover:text-cream"
-          >
-            Cancelar
-          </button>
-          <button
-            onClick={() => deleteMutation.mutate(deleteConfirm!)}
-            disabled={deleteMutation.isPending}
-            className="flex-1 bg-red-600 hover:bg-red-500 text-white rounded-lg py-2.5 text-sm font-semibold transition disabled:opacity-50"
-          >
-            {deleteMutation.isPending ? "Excluindo..." : "Excluir"}
-          </button>
-        </div>
-      </motion.div>
-    </motion.div>
-  );
-
-  // ── Vista detalhe ──────────────────────────────────────────────────────────────
   if (view === "detail" && selectedRoom) {
     const room = rooms.find((r) => r.id === selectedRoom.id) ?? selectedRoom;
     const images = room.gallery?.length ? room.gallery : room.image_url ? [room.image_url] : [];
     return (
       <div className="min-h-screen bg-charcoal">
-        <Header />
+        <AdminHeader />
         <div className="p-6 md:p-10 max-w-4xl">
           <div className="flex items-center gap-2 mb-8">
             <button
@@ -650,11 +656,7 @@ const AdminQuartos = () => {
             <div>
               <div className="flex items-center gap-2 mb-2">
                 <span
-                  className={`text-xs px-2.5 py-1 rounded-full font-body ${
-                    room.status === "active"
-                      ? "bg-green-500/20 text-green-400 border border-green-500/30"
-                      : "bg-red-500/20 text-red-400 border border-red-500/30"
-                  }`}
+                  className={`text-xs px-2.5 py-1 rounded-full font-body ${room.status === "active" ? "bg-green-500/20 text-green-400 border border-green-500/30" : "bg-red-500/20 text-red-400 border border-red-500/30"}`}
                 >
                   {room.status === "active" ? "Ativo" : "Inativo"}
                 </span>
@@ -738,16 +740,40 @@ const AdminQuartos = () => {
             </div>
           </div>
         </div>
-        <AnimatePresence>{modalOpen && <Modal />}</AnimatePresence>
-        <AnimatePresence>{deleteConfirm && <DeleteConfirm />}</AnimatePresence>
+        <input ref={fileInputRef} type="file" accept="image/*" className="hidden" onChange={handleFileUpload} />
+        <AnimatePresence>
+          {modalOpen && (
+            <RoomModal
+              editingRoom={editingRoom}
+              form={form}
+              setForm={setForm}
+              uploadingFile={uploadingFile}
+              filePreviewUrl={filePreviewUrl}
+              fileInputRef={fileInputRef}
+              onClose={closeModal}
+              onSubmit={() => saveMutation.mutate()}
+              onAddGalleryImage={addGalleryImage}
+              onRemoveGalleryImage={removeGalleryImage}
+              isPending={saveMutation.isPending}
+            />
+          )}
+        </AnimatePresence>
+        <AnimatePresence>
+          {deleteConfirm && (
+            <DeleteConfirm
+              onCancel={() => setDeleteConfirm(null)}
+              onConfirm={() => deleteMutation.mutate(deleteConfirm!)}
+              isPending={deleteMutation.isPending}
+            />
+          )}
+        </AnimatePresence>
       </div>
     );
   }
 
-  // ── Vista lista ────────────────────────────────────────────────────────────────
   return (
     <div className="min-h-screen bg-charcoal">
-      <Header />
+      <AdminHeader />
       <div className="p-6 md:p-10">
         <div className="flex items-center justify-between mb-8">
           <div className="flex items-center gap-3">
@@ -770,7 +796,6 @@ const AdminQuartos = () => {
             <Plus className="w-4 h-4" /> Novo Quarto
           </button>
         </div>
-
         <div className="grid grid-cols-2 md:grid-cols-4 gap-4 mb-8">
           {[
             { label: "Total", value: rooms.length, color: "text-cream" },
@@ -788,7 +813,6 @@ const AdminQuartos = () => {
             </div>
           ))}
         </div>
-
         {isLoading ? (
           <div className="text-center py-20 text-cream/30 font-body">Carregando quartos...</div>
         ) : rooms.length === 0 ? (
@@ -809,9 +833,7 @@ const AdminQuartos = () => {
                   initial={{ opacity: 0, y: 16 }}
                   animate={{ opacity: 1, y: 0 }}
                   transition={{ delay: i * 0.05 }}
-                  className={`bg-charcoal-light border rounded-xl overflow-hidden ${
-                    room.status === "active" ? "border-gold/15" : "border-red-900/30 opacity-60"
-                  }`}
+                  className={`bg-charcoal-light border rounded-xl overflow-hidden ${room.status === "active" ? "border-gold/15" : "border-red-900/30 opacity-60"}`}
                 >
                   <div
                     className="cursor-pointer"
@@ -833,11 +855,7 @@ const AdminQuartos = () => {
                         </div>
                       )}
                       <span
-                        className={`absolute top-3 right-3 text-xs font-body px-2 py-1 rounded-full ${
-                          room.status === "active"
-                            ? "bg-green-500/20 text-green-400 border border-green-500/30"
-                            : "bg-red-500/20 text-red-400 border border-red-500/30"
-                        }`}
+                        className={`absolute top-3 right-3 text-xs font-body px-2 py-1 rounded-full ${room.status === "active" ? "bg-green-500/20 text-green-400 border border-green-500/30" : "bg-red-500/20 text-red-400 border border-red-500/30"}`}
                       >
                         {room.status === "active" ? "Ativo" : "Inativo"}
                       </span>
@@ -914,8 +932,33 @@ const AdminQuartos = () => {
           </div>
         )}
       </div>
-      <AnimatePresence>{modalOpen && <Modal />}</AnimatePresence>
-      <AnimatePresence>{deleteConfirm && <DeleteConfirm />}</AnimatePresence>
+      <input ref={fileInputRef} type="file" accept="image/*" className="hidden" onChange={handleFileUpload} />
+      <AnimatePresence>
+        {modalOpen && (
+          <RoomModal
+            editingRoom={editingRoom}
+            form={form}
+            setForm={setForm}
+            uploadingFile={uploadingFile}
+            filePreviewUrl={filePreviewUrl}
+            fileInputRef={fileInputRef}
+            onClose={closeModal}
+            onSubmit={() => saveMutation.mutate()}
+            onAddGalleryImage={addGalleryImage}
+            onRemoveGalleryImage={removeGalleryImage}
+            isPending={saveMutation.isPending}
+          />
+        )}
+      </AnimatePresence>
+      <AnimatePresence>
+        {deleteConfirm && (
+          <DeleteConfirm
+            onCancel={() => setDeleteConfirm(null)}
+            onConfirm={() => deleteMutation.mutate(deleteConfirm!)}
+            isPending={deleteMutation.isPending}
+          />
+        )}
+      </AnimatePresence>
     </div>
   );
 };
