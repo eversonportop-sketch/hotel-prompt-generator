@@ -369,7 +369,7 @@ const QuartoDetalhe = () => {
 
   return (
     <Layout>
-      <section className="section-padding bg-background">
+      <section className="py-20 bg-charcoal">
         <div className="container-hotel">
           <motion.div initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: 0.6 }}>
             {/* Breadcrumb */}
@@ -394,10 +394,10 @@ const QuartoDetalhe = () => {
               <div>
                 {/* Categoria + nome */}
                 <span className="text-xs text-primary font-body tracking-[0.3em] uppercase">{room.category}</span>
-                <h1 className="font-display text-3xl md:text-4xl font-bold text-foreground mt-2 mb-4">{room.name}</h1>
+                <h1 className="font-display text-3xl md:text-4xl font-bold text-cream mt-2 mb-4">{room.name}</h1>
 
                 {/* Specs */}
-                <div className="flex items-center gap-4 text-sm text-muted-foreground mb-6">
+                <div className="flex items-center gap-4 text-sm text-cream/50 mb-6">
                   <span className="flex items-center gap-1.5">
                     <Users className="w-4 h-4 text-primary" /> {room.capacity} pessoas
                   </span>
@@ -407,14 +407,12 @@ const QuartoDetalhe = () => {
                 </div>
 
                 {/* Descrição */}
-                {room.description && (
-                  <p className="text-muted-foreground font-body mb-6 leading-relaxed">{room.description}</p>
-                )}
+                {room.description && <p className="text-cream/50 font-body mb-6 leading-relaxed">{room.description}</p>}
 
                 {/* Comodidades */}
                 {room.amenities && (room.amenities as string[]).length > 0 && (
                   <div className="mb-6">
-                    <h3 className="font-display text-sm font-semibold text-foreground mb-3 tracking-wider uppercase text-primary/70">
+                    <h3 className="font-display text-sm font-semibold text-cream mb-3 tracking-wider uppercase text-primary/70">
                       Comodidades
                     </h3>
                     <div className="flex flex-wrap gap-2">
@@ -431,30 +429,28 @@ const QuartoDetalhe = () => {
                 )}
 
                 {/* Preço */}
-                <div className="mb-6 pb-6 border-b border-border">
+                <div className="mb-6 pb-6 border-b border-gold/15">
                   {room.promotional_price ? (
                     <div className="flex items-baseline gap-2">
                       <span className="text-4xl font-display font-bold text-primary">
                         R$ {Number(room.promotional_price).toFixed(0)}
                       </span>
-                      <span className="text-xl text-muted-foreground line-through">
-                        R$ {Number(room.price).toFixed(0)}
-                      </span>
-                      <span className="text-sm text-muted-foreground">/noite</span>
+                      <span className="text-xl text-cream/50 line-through">R$ {Number(room.price).toFixed(0)}</span>
+                      <span className="text-sm text-cream/50">/noite</span>
                     </div>
                   ) : (
                     <div>
                       <span className="text-4xl font-display font-bold text-primary">
                         R$ {Number(room.price).toFixed(0)}
                       </span>
-                      <span className="text-sm text-muted-foreground"> /noite</span>
+                      <span className="text-sm text-cream/50"> /noite</span>
                     </div>
                   )}
                 </div>
 
                 {/* Formulário de reserva */}
-                <div className="bg-card border border-border rounded-xl p-6 space-y-4">
-                  <h3 className="font-display text-lg font-semibold text-foreground">Fazer Reserva</h3>
+                <div className="bg-charcoal-light border border-gold/15 rounded-xl p-6 space-y-4">
+                  <h3 className="font-display text-lg font-semibold text-cream">Fazer Reserva</h3>
 
                   <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                     <div className="space-y-2">
@@ -463,10 +459,7 @@ const QuartoDetalhe = () => {
                         <PopoverTrigger asChild>
                           <Button
                             variant="outline"
-                            className={cn(
-                              "w-full justify-start text-left font-normal",
-                              !checkIn && "text-muted-foreground",
-                            )}
+                            className={cn("w-full justify-start text-left font-normal", !checkIn && "text-cream/50")}
                           >
                             <CalendarIcon className="mr-2 h-4 w-4" />
                             {checkIn ? format(checkIn, "dd/MM/yyyy") : "Selecionar"}
@@ -495,10 +488,7 @@ const QuartoDetalhe = () => {
                         <PopoverTrigger asChild>
                           <Button
                             variant="outline"
-                            className={cn(
-                              "w-full justify-start text-left font-normal",
-                              !checkOut && "text-muted-foreground",
-                            )}
+                            className={cn("w-full justify-start text-left font-normal", !checkOut && "text-cream/50")}
                           >
                             <CalendarIcon className="mr-2 h-4 w-4" />
                             {checkOut ? format(checkOut, "dd/MM/yyyy") : "Selecionar"}
@@ -537,10 +527,10 @@ const QuartoDetalhe = () => {
                   {nights > 0 && (
                     <div className="bg-secondary/50 rounded-lg p-3 text-sm font-body">
                       <div className="flex justify-between">
-                        <span className="text-muted-foreground">
+                        <span className="text-cream/50">
                           {nights} diária{nights > 1 ? "s" : ""} × R$ {effectivePrice.toFixed(0)}
                         </span>
-                        <span className="font-semibold text-foreground">R$ {(nights * effectivePrice).toFixed(2)}</span>
+                        <span className="font-semibold text-cream">R$ {(nights * effectivePrice).toFixed(2)}</span>
                       </div>
                     </div>
                   )}
