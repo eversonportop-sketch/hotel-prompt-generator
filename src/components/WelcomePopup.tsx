@@ -1,130 +1,195 @@
-import { useState, useEffect } from "react";
-import { useQuery, useMutation } from "@tanstack/react-query";
-import { supabase } from "@/integrations/supabase/client";
+import { useEffect, useState } from "react";
 import { motion, AnimatePresence } from "framer-motion";
-import { X, Sparkles, Send, CheckCircle2 } from "lucide-react";
-import { toast } from "sonner";
+import { X, Sparkles, Mail, Loader2, CheckCircle } from "lucide-react";
+import { useQuery } from "@tanstack/react-query";
+import { supabase } from "@/integrations/supabase/client";
+import hotelLogo from "@/assets/hotel-sb-logo.png";
+
+const STORAGE_KEY = "sb_hotel_popup_seen";
+const DELAY_MS = 2500;
+
+interface PopupConfig {
+  enabled: boolean;
+  title: string;
+  subtitle: string;
+  description: string;
+  button_text: string;
+  collect_email: boolean;
+  success_message: string;
+}
+
+const DEFAULT_CONFIG: PopupConfig = {
+  enabled: false,
+  title: "Bem-vindo ao SB Hotel",
+  subtitle: "Sleep Better",
+  description: "Experiência premium em hospedagem. Conforto, elegância e sofisticação em cada detalhe.",
+  button_text: "Conhecer o hotel",
+  collect_email: false,
+  success_message: "Obrigado! Em breve entraremos em contato.",
+};
 
 const WelcomePopup = () => {
-  const [open, setOpen] = useState(false);
+  const [visible, setVisible] = useState(false);
   const [email, setEmail] = useState("");
-  const [submitted, setSubmitted] = useState(false);
+  const [loading, setLoading] = useState(false);
+  const [done, setDone] = useState(false);
+  const [error, setError] = useState("");
 
   const { data: config } = useQuery({
     queryKey: ["popup-config"],
     queryFn: async () => {
-      const { data, error } = await supabase
-        .from("popup_config")
-        .select("*")
-        .limit(1)
-        .single();
-      if (error) throw error;
-      return data;
+      const { data } = await (supabase as any).from("popup_config").select("*").eq("id", 1).maybeSingle();
+      return (data as PopupConfig) || DEFAULT_CONFIG;
     },
   });
 
   useEffect(() => {
     if (!config?.enabled) return;
-    const dismissed = sessionStorage.getItem("sb_popup_dismissed");
-    if (dismissed) return;
-    const timer = setTimeout(() => setOpen(true), 2000);
+    const seen = sessionStorage.getItem(STORAGE_KEY);
+    if (seen) return;
+    const timer = setTimeout(() => setVisible(true), DELAY_MS);
     return () => clearTimeout(timer);
   }, [config]);
 
   const close = () => {
-    setOpen(false);
-    sessionStorage.setItem("sb_popup_dismissed", "1");
+    sessionStorage.setItem(STORAGE_KEY, "1");
+    setVisible(false);
   };
 
-  if (!config?.enabled) return null;
+  const handleSubmit = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!email) return;
+    setLoading(true);
+    setError("");
+    try {
+      await (supabase as any).from("newsletter_subscribers").insert({ email, source: "popup" });
+      setDone(true);
+      setTimeout(() => close(), 2500);
+    } catch {
+      setError("Erro ao cadastrar. Tente novamente.");
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const cfg = config || DEFAULT_CONFIG;
 
   return (
     <AnimatePresence>
-      {open && (
-        <motion.div
-          initial={{ opacity: 0 }}
-          animate={{ opacity: 1 }}
-          exit={{ opacity: 0 }}
-          className="fixed inset-0 z-[100] flex items-center justify-center p-4 bg-black/60 backdrop-blur-sm"
-          onClick={close}
-        >
+      {visible && (
+        <>
           <motion.div
-            initial={{ scale: 0.9, opacity: 0, y: 20 }}
-            animate={{ scale: 1, opacity: 1, y: 0 }}
-            exit={{ scale: 0.9, opacity: 0, y: 20 }}
-            transition={{ type: "spring", damping: 25, stiffness: 300 }}
-            onClick={(e) => e.stopPropagation()}
-            className="relative w-full max-w-md rounded-2xl border border-primary/20 bg-charcoal p-8 shadow-[0_0_60px_rgba(201,168,76,0.15)]"
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            exit={{ opacity: 0 }}
+            onClick={close}
+            className="fixed inset-0 z-50 bg-black/70 backdrop-blur-sm"
+          />
+
+          <motion.div
+            initial={{ opacity: 0, scale: 0.92, y: 24 }}
+            animate={{ opacity: 1, scale: 1, y: 0 }}
+            exit={{ opacity: 0, scale: 0.95, y: 16 }}
+            transition={{ type: "spring", damping: 24, stiffness: 280 }}
+            className="fixed inset-0 z-50 flex items-center justify-center px-4 pointer-events-none"
           >
-            <button onClick={close} className="absolute top-4 right-4 text-cream/30 hover:text-cream transition-colors">
-              <X className="w-5 h-5" />
-            </button>
+            <div
+              className="pointer-events-auto w-full max-w-md relative overflow-hidden rounded-2xl shadow-2xl"
+              style={{ background: "linear-gradient(160deg, #1a1710 0%, #0f0e0b 100%)" }}
+            >
+              {/* Glow */}
+              <div
+                className="absolute -top-20 left-1/2 -translate-x-1/2 w-72 h-72 rounded-full blur-3xl opacity-20"
+                style={{ background: "radial-gradient(circle, #C9A84C, transparent)" }}
+              />
+              {/* Grid */}
+              <div
+                className="absolute inset-0 opacity-[0.04]"
+                style={{
+                  backgroundImage:
+                    "linear-gradient(#C9A84C 1px, transparent 1px), linear-gradient(90deg, #C9A84C 1px, transparent 1px)",
+                  backgroundSize: "40px 40px",
+                }}
+              />
 
-            {submitted ? (
-              <div className="text-center py-4">
-                <CheckCircle2 className="w-12 h-12 text-primary mx-auto mb-4" />
-                <p className="text-cream font-display text-lg">
-                  {config.success_message || "Obrigado!"}
-                </p>
-              </div>
-            ) : (
-              <>
-                <div className="text-center mb-6">
-                  <Sparkles className="w-8 h-8 text-primary mx-auto mb-3" />
-                  {config.title && (
-                    <h2 className="font-display text-2xl font-bold text-cream mb-1">
-                      {config.title}
-                    </h2>
-                  )}
-                  {config.subtitle && (
-                    <p className="text-primary/80 text-sm font-body">{config.subtitle}</p>
-                  )}
-                  {config.description && (
-                    <p className="text-cream/50 text-sm font-body mt-3">{config.description}</p>
-                  )}
-                </div>
+              <button
+                onClick={close}
+                className="absolute top-4 right-4 z-10 w-8 h-8 rounded-full bg-white/5 hover:bg-white/10 flex items-center justify-center text-white/40 hover:text-white transition-all"
+              >
+                <X className="w-4 h-4" />
+              </button>
 
-                {config.collect_email ? (
-                  <form
-                    onSubmit={(e) => {
-                      e.preventDefault();
-                      if (!email.trim()) return;
-                      setSubmitted(true);
-                      toast.success(config.success_message || "Obrigado!");
-                      setTimeout(close, 2500);
-                    }}
-                    className="space-y-3"
-                  >
-                    <input
-                      type="email"
-                      value={email}
-                      onChange={(e) => setEmail(e.target.value)}
-                      placeholder="Seu melhor e-mail"
-                      required
-                      className="w-full rounded-xl border border-primary/20 bg-charcoal-light px-4 py-3 text-sm text-cream placeholder:text-cream/30 font-body focus:outline-none focus:border-primary/50 transition-colors"
-                    />
+              <div className="relative z-10 p-8 text-center">
+                <img src={hotelLogo} alt="SB Hotel" className="h-14 w-auto object-contain mx-auto mb-5" />
+
+                {!done ? (
+                  <>
+                    {cfg.subtitle && (
+                      <div className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full border border-primary/30 bg-primary/10 mb-4">
+                        <Sparkles className="w-3 h-3 text-primary" />
+                        <span className="text-primary text-xs font-body tracking-widest uppercase">{cfg.subtitle}</span>
+                      </div>
+                    )}
+
+                    <h2 className="font-display text-3xl font-bold text-cream mb-3 leading-tight">{cfg.title}</h2>
+
+                    {cfg.description && (
+                      <p className="text-cream/40 font-body text-sm leading-relaxed mb-6">{cfg.description}</p>
+                    )}
+
+                    {cfg.collect_email ? (
+                      <form onSubmit={handleSubmit} className="space-y-3">
+                        <div className="relative">
+                          <Mail className="absolute left-3.5 top-1/2 -translate-y-1/2 w-4 h-4 text-white/20" />
+                          <input
+                            type="email"
+                            required
+                            value={email}
+                            onChange={(e) => setEmail(e.target.value)}
+                            placeholder="seu@email.com"
+                            className="w-full pl-10 pr-4 py-3.5 bg-white/5 border border-white/10 rounded-xl text-cream text-sm placeholder:text-white/20 focus:border-primary/50 focus:outline-none transition"
+                          />
+                        </div>
+                        {error && <p className="text-red-400 text-xs font-body">{error}</p>}
+                        <button
+                          type="submit"
+                          disabled={loading}
+                          className="w-full py-3.5 rounded-xl font-body font-semibold text-sm tracking-wider uppercase flex items-center justify-center gap-2 transition-all hover:scale-[1.02] disabled:opacity-60"
+                          style={{ background: "linear-gradient(135deg, #C9A84C, #E5C97A)", color: "#0A0A0A" }}
+                        >
+                          {loading ? <Loader2 className="w-4 h-4 animate-spin" /> : <Sparkles className="w-4 h-4" />}
+                          {loading ? "Enviando..." : cfg.button_text}
+                        </button>
+                      </form>
+                    ) : (
+                      <button
+                        onClick={close}
+                        className="w-full py-3.5 rounded-xl font-body font-semibold text-sm tracking-wider uppercase flex items-center justify-center gap-2 transition-all hover:scale-[1.02]"
+                        style={{ background: "linear-gradient(135deg, #C9A84C, #E5C97A)", color: "#0A0A0A" }}
+                      >
+                        <Sparkles className="w-4 h-4" />
+                        {cfg.button_text}
+                      </button>
+                    )}
+
                     <button
-                      type="submit"
-                      className="w-full flex items-center justify-center gap-2 rounded-xl py-3 text-sm font-semibold font-body transition-all hover:scale-[1.01]"
-                      style={{ background: "linear-gradient(135deg,#C9A84C,#E5C97A)", color: "#000" }}
+                      onClick={close}
+                      className="mt-4 text-xs text-white/20 hover:text-white/40 font-body transition-colors"
                     >
-                      <Send className="w-4 h-4" />
-                      {config.button_text || "Enviar"}
+                      Fechar
                     </button>
-                  </form>
+                  </>
                 ) : (
-                  <button
-                    onClick={close}
-                    className="w-full flex items-center justify-center gap-2 rounded-xl py-3 text-sm font-semibold font-body transition-all hover:scale-[1.01]"
-                    style={{ background: "linear-gradient(135deg,#C9A84C,#E5C97A)", color: "#000" }}
-                  >
-                    {config.button_text || "Entendi"}
-                  </button>
+                  <motion.div initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} className="py-4">
+                    <CheckCircle className="w-14 h-14 text-emerald-400 mx-auto mb-4" />
+                    <h3 className="font-display text-2xl font-bold text-cream mb-2">Obrigado!</h3>
+                    <p className="text-cream/50 font-body text-sm">{cfg.success_message}</p>
+                  </motion.div>
                 )}
-              </>
-            )}
+              </div>
+            </div>
           </motion.div>
-        </motion.div>
+        </>
       )}
     </AnimatePresence>
   );
