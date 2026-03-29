@@ -22,10 +22,8 @@ import {
 } from "lucide-react";
 import { useQuery } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
-import hotelLogo from "@/assets/hotel-sb-logo.png";
 
 const adminModules = [
-  // Operacional — uso diário
   {
     icon: CalendarDays,
     label: "Reservas",
@@ -58,7 +56,6 @@ const adminModules = [
     color: "from-rose-900/30 to-rose-800/10",
     group: "Operacional",
   },
-  // Gestão
   {
     icon: BedDouble,
     label: "Quartos",
@@ -91,7 +88,6 @@ const adminModules = [
     color: "from-purple-900/30 to-purple-800/10",
     group: "Gestão",
   },
-  // Conteúdo
   {
     icon: Tag,
     label: "Promoções",
@@ -141,6 +137,7 @@ const adminModules = [
     group: "Conteúdo",
   },
 ];
+
 const statusLabels: Record<string, string> = {
   pending: "Pendente",
   confirmed: "Confirmada",
@@ -166,12 +163,6 @@ const fadeUp = (delay = 0) => ({
   animate: { opacity: 1, y: 0 },
   transition: { duration: 0.45, delay, ease: [0.22, 1, 0.36, 1] as [number, number, number, number] },
 });
-
-function formatDateFull(date: Date): string {
-  const days = ["Domingo", "Segunda", "Terça", "Quarta", "Quinta", "Sexta", "Sábado"];
-  const months = ["Jan", "Fev", "Mar", "Abr", "Mai", "Jun", "Jul", "Ago", "Set", "Out", "Nov", "Dez"];
-  return `${days[date.getDay()]}, ${date.getDate()} ${months[date.getMonth()]} ${date.getFullYear()}`;
-}
 
 function formatDateShort(date: Date): string {
   const months = ["Jan", "Fev", "Mar", "Abr", "Mai", "Jun", "Jul", "Ago", "Set", "Out", "Nov", "Dez"];
@@ -226,196 +217,202 @@ const AdminDashboard = () => {
   const todayActivity = reservations.filter((r: any) => r.check_in === today || r.check_out === today);
 
   const kpis = [
-    { label: "Quartos", value: totalRooms, icon: BedDouble, sub: "Total cadastrados" },
-    { label: "Reservas", value: totalReservations, icon: CalendarDays, sub: "Total de reservas" },
-    { label: "Check-ins Hoje", value: todayCheckins, icon: TrendingUp, sub: formatDateShort(new Date()) },
-    { label: "Clientes", value: totalProfiles, icon: Users, sub: "Clientes cadastrados" },
+    {
+      label: "Quartos",
+      value: totalRooms,
+      icon: BedDouble,
+      sub: "Total cadastrados",
+      color: "text-amber-400",
+      bg: "bg-amber-500/10",
+    },
+    {
+      label: "Reservas",
+      value: totalReservations,
+      icon: CalendarDays,
+      sub: "Total de reservas",
+      color: "text-emerald-400",
+      bg: "bg-emerald-500/10",
+    },
+    {
+      label: "Check-ins Hoje",
+      value: todayCheckins,
+      icon: TrendingUp,
+      sub: formatDateShort(new Date()),
+      color: "text-sky-400",
+      bg: "bg-sky-500/10",
+    },
+    {
+      label: "Clientes",
+      value: totalProfiles,
+      icon: Users,
+      sub: "Clientes cadastrados",
+      color: "text-purple-400",
+      bg: "bg-purple-500/10",
+    },
   ];
 
   return (
-    <div className="min-h-screen bg-charcoal text-cream">
-      {/* NAV */}
-      <header className="sticky top-0 z-30 backdrop-blur-md bg-charcoal/80 border-b border-white/5 px-6 py-3 flex items-center justify-between">
-        <div className="flex items-center gap-3">
-          <img src={hotelLogo} alt="Hotel SB" className="h-8 w-auto object-contain" />
-          <span className="text-white/20 text-xs tracking-[0.2em] uppercase font-body">Admin</span>
+    <div className="p-6 md:p-8 space-y-8 text-cream">
+      {/* Título */}
+      <motion.div {...fadeUp(0)} className="flex items-center gap-3">
+        <div className="p-2.5 rounded-xl bg-primary/10 border border-primary/15">
+          <LayoutDashboard className="w-5 h-5 text-primary" />
         </div>
-        <div className="flex items-center gap-4">
-          <span className="hidden sm:block text-xs text-white/25 font-body">{formatDateFull(new Date())}</span>
-          <Link
-            to="/"
-            className="flex items-center gap-1.5 text-xs text-white/40 hover:text-primary transition-colors font-body"
-          >
-            Ver site <ArrowRight className="w-3 h-3" />
-          </Link>
+        <div>
+          <h1 className="font-display text-2xl font-semibold text-cream leading-none">Dashboard</h1>
+          <p className="text-white/30 text-xs mt-0.5 font-body">Visão geral do hotel</p>
         </div>
-      </header>
+      </motion.div>
 
-      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8 space-y-8">
-        {/* TÍTULO */}
-        <motion.div {...fadeUp(0)} className="flex items-center gap-3">
-          <div className="p-2.5 rounded-xl bg-primary/10 border border-primary/15">
-            <LayoutDashboard className="w-5 h-5 text-primary" />
+      {/* KPIs */}
+      <div className="grid grid-cols-2 xl:grid-cols-4 gap-4">
+        {kpis.map((kpi, i) => (
+          <motion.div key={kpi.label} {...fadeUp(0.06 * i)}>
+            <div className="relative overflow-hidden rounded-xl bg-charcoal-light border border-white/5 p-5 hover:border-white/10 transition-all duration-300 cursor-default">
+              <div className={`w-9 h-9 rounded-lg ${kpi.bg} flex items-center justify-center mb-4`}>
+                <kpi.icon className={`w-4 h-4 ${kpi.color}`} />
+              </div>
+              <p className={`font-display text-4xl font-bold mb-1 tabular-nums ${kpi.color}`}>{kpi.value}</p>
+              <p className="text-xs font-semibold text-white/60 tracking-wide font-body">{kpi.label}</p>
+              <p className="text-xs text-white/25 mt-0.5 font-body">{kpi.sub}</p>
+            </div>
+          </motion.div>
+        ))}
+      </div>
+
+      {/* Status + Movimentação */}
+      <div className="grid grid-cols-1 lg:grid-cols-3 gap-4">
+        {/* Quartos */}
+        <motion.div {...fadeUp(0.18)} className="rounded-xl bg-charcoal-light border border-white/5 p-5">
+          <div className="flex items-center gap-2 mb-4">
+            <BedDouble className="w-3.5 h-3.5 text-primary" />
+            <h3 className="text-xs font-semibold uppercase tracking-widest text-white/35 font-body">
+              Status dos Quartos
+            </h3>
           </div>
-          <div>
-            <h1 className="font-display text-2xl font-semibold text-cream leading-none">Dashboard</h1>
-            <p className="text-white/30 text-xs mt-0.5 font-body">Visão geral do hotel</p>
-          </div>
+          {Object.keys(roomsByStatus).length === 0 ? (
+            <p className="text-white/20 text-sm font-body">Nenhum quarto cadastrado</p>
+          ) : (
+            <div className="space-y-2">
+              {Object.entries(roomsByStatus).map(([status, count]) => {
+                const cfg = statusConfig[status] || { bg: "bg-white/5", dot: "bg-white/30", text: "text-white/50" };
+                return (
+                  <div key={status} className={`flex items-center justify-between px-3 py-2.5 rounded-lg ${cfg.bg}`}>
+                    <div className="flex items-center gap-2.5">
+                      <span className={`w-1.5 h-1.5 rounded-full flex-shrink-0 ${cfg.dot}`} />
+                      <span className={`text-sm font-body ${cfg.text}`}>{statusLabels[status] || status}</span>
+                    </div>
+                    <span className={`text-sm font-bold font-body ${cfg.text}`}>{count}</span>
+                  </div>
+                );
+              })}
+            </div>
+          )}
         </motion.div>
 
-        {/* KPIs */}
-        <div className="grid grid-cols-2 xl:grid-cols-4 gap-4">
-          {kpis.map((kpi, i) => (
-            <motion.div key={kpi.label} {...fadeUp(0.06 * i)}>
-              <div className="relative overflow-hidden rounded-xl bg-charcoal-light border border-white/5 p-5 hover:border-primary/20 transition-all duration-300 group cursor-default">
-                <div className="absolute inset-0 bg-gradient-to-br from-primary/5 to-transparent opacity-0 group-hover:opacity-100 transition-opacity duration-300 pointer-events-none" />
-                <div className="p-2 rounded-lg bg-primary/10 w-fit mb-4">
-                  <kpi.icon className="w-4 h-4 text-primary" />
-                </div>
-                <p className="font-display text-4xl font-bold text-cream mb-1 tabular-nums">{kpi.value}</p>
-                <p className="text-xs font-semibold text-white/70 tracking-wide font-body">{kpi.label}</p>
-                <p className="text-xs text-white/25 mt-0.5 font-body">{kpi.sub}</p>
-              </div>
-            </motion.div>
-          ))}
-        </div>
-
-        {/* STATUS + MOVIMENTAÇÃO */}
-        <div className="grid grid-cols-1 lg:grid-cols-3 gap-4">
-          {/* Quartos */}
-          <motion.div {...fadeUp(0.18)} className="rounded-xl bg-charcoal-light border border-white/5 p-5">
-            <div className="flex items-center gap-2 mb-4">
-              <BedDouble className="w-3.5 h-3.5 text-primary" />
-              <h3 className="text-xs font-semibold uppercase tracking-widest text-white/35 font-body">
-                Status dos Quartos
-              </h3>
-            </div>
-            {Object.keys(roomsByStatus).length === 0 ? (
-              <p className="text-white/20 text-sm font-body">Nenhum quarto cadastrado</p>
-            ) : (
-              <div className="space-y-2">
-                {Object.entries(roomsByStatus).map(([status, count]) => {
-                  const cfg = statusConfig[status] || { bg: "bg-white/5", dot: "bg-white/30", text: "text-white/50" };
-                  return (
-                    <div key={status} className={`flex items-center justify-between px-3 py-2.5 rounded-lg ${cfg.bg}`}>
-                      <div className="flex items-center gap-2.5">
-                        <span className={`w-1.5 h-1.5 rounded-full flex-shrink-0 ${cfg.dot}`} />
-                        <span className={`text-sm font-body ${cfg.text}`}>{statusLabels[status] || status}</span>
-                      </div>
-                      <span className={`text-sm font-bold font-body ${cfg.text}`}>{count}</span>
+        {/* Reservas */}
+        <motion.div {...fadeUp(0.22)} className="rounded-xl bg-charcoal-light border border-white/5 p-5">
+          <div className="flex items-center gap-2 mb-4">
+            <CalendarDays className="w-3.5 h-3.5 text-primary" />
+            <h3 className="text-xs font-semibold uppercase tracking-widest text-white/35 font-body">
+              Status das Reservas
+            </h3>
+          </div>
+          {Object.keys(reservationsByStatus).length === 0 ? (
+            <p className="text-white/20 text-sm font-body">Nenhuma reserva encontrada</p>
+          ) : (
+            <div className="space-y-2">
+              {Object.entries(reservationsByStatus).map(([status, count]) => {
+                const cfg = statusConfig[status] || { bg: "bg-white/5", dot: "bg-white/30", text: "text-white/50" };
+                return (
+                  <div key={status} className={`flex items-center justify-between px-3 py-2.5 rounded-lg ${cfg.bg}`}>
+                    <div className="flex items-center gap-2.5">
+                      <span className={`w-1.5 h-1.5 rounded-full flex-shrink-0 ${cfg.dot}`} />
+                      <span className={`text-sm font-body ${cfg.text}`}>{statusLabels[status] || status}</span>
                     </div>
-                  );
-                })}
-              </div>
-            )}
-          </motion.div>
-
-          {/* Reservas */}
-          <motion.div {...fadeUp(0.22)} className="rounded-xl bg-charcoal-light border border-white/5 p-5">
-            <div className="flex items-center gap-2 mb-4">
-              <CalendarDays className="w-3.5 h-3.5 text-primary" />
-              <h3 className="text-xs font-semibold uppercase tracking-widest text-white/35 font-body">
-                Status das Reservas
-              </h3>
+                    <span className={`text-sm font-bold font-body ${cfg.text}`}>{count}</span>
+                  </div>
+                );
+              })}
             </div>
-            {Object.keys(reservationsByStatus).length === 0 ? (
-              <p className="text-white/20 text-sm font-body">Nenhuma reserva encontrada</p>
-            ) : (
-              <div className="space-y-2">
-                {Object.entries(reservationsByStatus).map(([status, count]) => {
-                  const cfg = statusConfig[status] || { bg: "bg-white/5", dot: "bg-white/30", text: "text-white/50" };
-                  return (
-                    <div key={status} className={`flex items-center justify-between px-3 py-2.5 rounded-lg ${cfg.bg}`}>
-                      <div className="flex items-center gap-2.5">
-                        <span className={`w-1.5 h-1.5 rounded-full flex-shrink-0 ${cfg.dot}`} />
-                        <span className={`text-sm font-body ${cfg.text}`}>{statusLabels[status] || status}</span>
-                      </div>
-                      <span className={`text-sm font-bold font-body ${cfg.text}`}>{count}</span>
-                    </div>
-                  );
-                })}
-              </div>
-            )}
-          </motion.div>
+          )}
+        </motion.div>
 
-          {/* Movimentação */}
-          <motion.div {...fadeUp(0.26)} className="rounded-xl bg-charcoal-light border border-white/5 p-5">
-            <div className="flex items-center gap-2 mb-4">
-              <Clock className="w-3.5 h-3.5 text-primary" />
-              <h3 className="text-xs font-semibold uppercase tracking-widest text-white/35 font-body">
-                Movimentação Hoje
-              </h3>
+        {/* Movimentação */}
+        <motion.div {...fadeUp(0.26)} className="rounded-xl bg-charcoal-light border border-white/5 p-5">
+          <div className="flex items-center gap-2 mb-4">
+            <Clock className="w-3.5 h-3.5 text-primary" />
+            <h3 className="text-xs font-semibold uppercase tracking-widest text-white/35 font-body">
+              Movimentação Hoje
+            </h3>
+          </div>
+          {todayActivity.length === 0 ? (
+            <div className="flex items-center justify-center h-16">
+              <p className="text-white/20 text-sm font-body">Nenhuma movimentação hoje</p>
             </div>
-            {todayActivity.length === 0 ? (
-              <div className="flex items-center justify-center h-16">
-                <p className="text-white/20 text-sm font-body">Nenhuma movimentação hoje</p>
-              </div>
-            ) : (
-              <div className="space-y-2">
-                {todayActivity.slice(0, 5).map((r: any) => {
-                  const isIn = r.check_in === today;
-                  return (
-                    <div
-                      key={r.id}
-                      className="flex items-center justify-between py-2 border-b border-white/5 last:border-0"
-                    >
-                      <div className="flex items-center gap-2">
-                        <span
-                          className={`flex items-center gap-1 px-2 py-0.5 rounded text-xs font-bold font-body ${
-                            isIn ? "bg-emerald-500/15 text-emerald-400" : "bg-sky-500/15 text-sky-400"
-                          }`}
-                        >
-                          {isIn ? <LogIn className="w-2.5 h-2.5" /> : <LogOut className="w-2.5 h-2.5" />}
-                          {isIn ? "IN" : "OUT"}
-                        </span>
-                        <span className="text-sm text-cream/70 font-body truncate max-w-[120px]">
-                          {(r.profiles as any)?.full_name || "—"}
-                        </span>
-                      </div>
-                      <span className="text-xs text-white/30 font-body">{(r.rooms as any)?.name || "—"}</span>
+          ) : (
+            <div className="space-y-2">
+              {todayActivity.slice(0, 5).map((r: any) => {
+                const isIn = r.check_in === today;
+                return (
+                  <div
+                    key={r.id}
+                    className="flex items-center justify-between py-2 border-b border-white/5 last:border-0"
+                  >
+                    <div className="flex items-center gap-2">
+                      <span
+                        className={`flex items-center gap-1 px-2 py-0.5 rounded text-xs font-bold font-body ${isIn ? "bg-emerald-500/15 text-emerald-400" : "bg-sky-500/15 text-sky-400"}`}
+                      >
+                        {isIn ? <LogIn className="w-2.5 h-2.5" /> : <LogOut className="w-2.5 h-2.5" />}
+                        {isIn ? "IN" : "OUT"}
+                      </span>
+                      <span className="text-sm text-cream/70 font-body truncate max-w-[120px]">
+                        {(r.profiles as any)?.full_name || "—"}
+                      </span>
                     </div>
-                  );
-                })}
-              </div>
-            )}
-          </motion.div>
-        </div>
-
-        {/* MÓDULOS por grupo */}
-        {(["Operacional", "Gestão", "Conteúdo"] as const).map((group, gi) => {
-          const groupMods = adminModules.filter((m) => m.group === group);
-          return (
-            <motion.div key={group} {...fadeUp(0.3 + gi * 0.08)}>
-              <h2 className="text-xs font-semibold uppercase tracking-widest text-white/25 font-body mb-3">{group}</h2>
-              <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 gap-3 mb-8">
-                {groupMods.map((mod, index) => (
-                  <motion.div key={mod.label} {...fadeUp(0.3 + gi * 0.08 + index * 0.04)}>
-                    <Link
-                      to={mod.href}
-                      className="flex flex-col gap-3 p-4 rounded-xl bg-charcoal-light border border-white/5 hover:border-primary/25 transition-all duration-200 group relative overflow-hidden"
-                    >
-                      <div
-                        className={`absolute inset-0 bg-gradient-to-br ${mod.color} opacity-0 group-hover:opacity-100 transition-opacity duration-300`}
-                      />
-                      <div className="relative">
-                        <div className="w-9 h-9 rounded-lg bg-primary/10 flex items-center justify-center mb-3 group-hover:bg-primary/20 transition-colors">
-                          <mod.icon className="w-4 h-4 text-primary" />
-                        </div>
-                        <p className="text-sm font-semibold text-cream leading-tight font-body">{mod.label}</p>
-                        <p className="text-xs text-white/30 mt-0.5 leading-snug font-body">{mod.description}</p>
-                      </div>
-                      <div className="relative flex items-center gap-1 text-xs text-primary/40 group-hover:text-primary transition-colors font-body">
-                        <span>Acessar</span>
-                        <ArrowRight className="w-3 h-3 group-hover:translate-x-0.5 transition-transform" />
-                      </div>
-                    </Link>
-                  </motion.div>
-                ))}
-              </div>
-            </motion.div>
-          );
-        })}
+                    <span className="text-xs text-white/30 font-body">{(r.rooms as any)?.name || "—"}</span>
+                  </div>
+                );
+              })}
+            </div>
+          )}
+        </motion.div>
       </div>
+
+      {/* Módulos por grupo */}
+      {(["Operacional", "Gestão", "Conteúdo"] as const).map((group, gi) => {
+        const groupMods = adminModules.filter((m) => m.group === group);
+        return (
+          <motion.div key={group} {...fadeUp(0.3 + gi * 0.08)}>
+            <h2 className="text-xs font-semibold uppercase tracking-widest text-white/25 font-body mb-3">{group}</h2>
+            <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 gap-3">
+              {groupMods.map((mod, index) => (
+                <motion.div key={mod.label} {...fadeUp(0.3 + gi * 0.08 + index * 0.04)}>
+                  <Link
+                    to={mod.href}
+                    className="flex flex-col gap-3 p-4 rounded-xl bg-charcoal-light border border-white/5 hover:border-primary/25 transition-all duration-200 group relative overflow-hidden"
+                  >
+                    <div
+                      className={`absolute inset-0 bg-gradient-to-br ${mod.color} opacity-0 group-hover:opacity-100 transition-opacity duration-300`}
+                    />
+                    <div className="relative">
+                      <div className="w-9 h-9 rounded-lg bg-primary/10 flex items-center justify-center mb-3 group-hover:bg-primary/20 transition-colors">
+                        <mod.icon className="w-4 h-4 text-primary" />
+                      </div>
+                      <p className="text-sm font-semibold text-cream leading-tight font-body">{mod.label}</p>
+                      <p className="text-xs text-white/30 mt-0.5 leading-snug font-body">{mod.description}</p>
+                    </div>
+                    <div className="relative flex items-center gap-1 text-xs text-primary/40 group-hover:text-primary transition-colors font-body">
+                      <span>Acessar</span>
+                      <ArrowRight className="w-3 h-3 group-hover:translate-x-0.5 transition-transform" />
+                    </div>
+                  </Link>
+                </motion.div>
+              ))}
+            </div>
+          </motion.div>
+        );
+      })}
     </div>
   );
 };
