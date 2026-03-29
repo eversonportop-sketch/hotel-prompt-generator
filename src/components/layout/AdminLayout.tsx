@@ -4,11 +4,8 @@ import { motion, AnimatePresence } from "framer-motion";
 import {
   LayoutDashboard,
   CalendarDays,
-  LogIn,
-  Receipt,
   UtensilsCrossed,
   BedDouble,
-  Users,
   Waves,
   PartyPopper,
   Tag,
@@ -29,42 +26,33 @@ const sidebarGroups = [
   {
     label: "Operacional",
     items: [
-      { icon: CalendarDays,    label: "Reservas",      href: "/admin/reservas" },
-      { icon: LogIn,           label: "Check-in",      href: "/admin/checkin" },
-      { icon: Receipt,         label: "Checkout",      href: "/admin/checkout" },
-      { icon: UtensilsCrossed, label: "Consumo",       href: "/admin/consumo" },
+      { icon: CalendarDays, label: "Reservas", href: "/admin/reservas" },
+      { icon: UtensilsCrossed, label: "Consumo", href: "/admin/consumo" },
     ],
   },
   {
     label: "Gestão",
     items: [
-      { icon: BedDouble,   label: "Quartos",   href: "/admin/quartos" },
-      { icon: Users,       label: "Clientes",  href: "/admin/clientes" },
-      { icon: Waves,       label: "Piscina",   href: "/admin/piscina" },
-      { icon: PartyPopper, label: "Salão",     href: "/admin/salao" },
+      { icon: BedDouble, label: "Quartos", href: "/admin/quartos" },
+      { icon: Waves, label: "Piscina", href: "/admin/piscina" },
+      { icon: PartyPopper, label: "Salão", href: "/admin/salao" },
     ],
   },
   {
     label: "Conteúdo",
     items: [
-      { icon: Tag,      label: "Promoções",     href: "/admin/promocoes" },
-      { icon: Image,    label: "Banners",       href: "/admin/banners" },
-      { icon: Image,    label: "Mídia",         href: "/admin/midia" },
-      { icon: Info,     label: "Informações",   href: "/admin/informacoes" },
+      { icon: Tag, label: "Promoções", href: "/admin/promocoes" },
+      { icon: Image, label: "Banners", href: "/admin/banners" },
+      { icon: Image, label: "Mídia", href: "/admin/midia" },
+      { icon: Info, label: "Informações", href: "/admin/informacoes" },
       { icon: Settings, label: "Configurações", href: "/admin/configuracoes" },
-      { icon: Sparkles, label: "Popup",         href: "/admin/popup" },
+      { icon: Sparkles, label: "Popup", href: "/admin/popup" },
     ],
   },
 ];
 
 // ─── Sidebar interna ──────────────────────────────────────────────────────────
-const SidebarContent = ({
-  collapsed,
-  onClose,
-}: {
-  collapsed: boolean;
-  onClose?: () => void;
-}) => {
+const SidebarContent = ({ collapsed, onClose }: { collapsed: boolean; onClose?: () => void }) => {
   const location = useLocation();
 
   return (
@@ -74,12 +62,8 @@ const SidebarContent = ({
         <img src={hotelLogo} alt="Hotel SB" className="h-8 w-8 object-contain flex-shrink-0" />
         {!collapsed && (
           <div className="flex flex-col min-w-0">
-            <span className="text-sm font-display font-semibold text-cream leading-tight truncate">
-              SB Hotel
-            </span>
-            <span className="text-[10px] text-white/25 uppercase tracking-[0.2em] font-body">
-              Admin
-            </span>
+            <span className="text-sm font-display font-semibold text-cream leading-tight truncate">SB Hotel</span>
+            <span className="text-[10px] text-white/25 uppercase tracking-[0.2em] font-body">Admin</span>
           </div>
         )}
       </div>
@@ -170,11 +154,7 @@ const AdminLayout = () => {
           onClick={() => setCollapsed(!collapsed)}
           className="flex-shrink-0 border-t border-white/5 p-3 flex items-center justify-end text-white/20 hover:text-cream transition-colors"
         >
-          {collapsed ? (
-            <ChevronRight className="w-4 h-4" />
-          ) : (
-            <ChevronLeft className="w-4 h-4" />
-          )}
+          {collapsed ? <ChevronRight className="w-4 h-4" /> : <ChevronLeft className="w-4 h-4" />}
         </button>
       </aside>
 
@@ -196,17 +176,13 @@ const AdminLayout = () => {
               transition={{ type: "spring", damping: 25, stiffness: 300 }}
               className="fixed inset-y-0 left-0 z-50 w-64 bg-charcoal-light border-r border-white/5 lg:hidden"
             >
-              {/* Close btn mobile */}
               <button
                 onClick={() => setMobileOpen(false)}
                 className="absolute top-3 right-3 text-white/30 hover:text-cream transition-colors"
               >
                 <X className="w-5 h-5" />
               </button>
-              <SidebarContent
-                collapsed={false}
-                onClose={() => setMobileOpen(false)}
-              />
+              <SidebarContent collapsed={false} onClose={() => setMobileOpen(false)} />
             </motion.aside>
           </>
         )}
@@ -216,19 +192,13 @@ const AdminLayout = () => {
       <div className="flex-1 flex flex-col min-w-0">
         {/* Top bar mobile */}
         <header className="flex lg:hidden items-center gap-3 px-4 py-3 border-b border-white/5 bg-charcoal/80 backdrop-blur-md sticky top-0 z-30">
-          <button
-            onClick={() => setMobileOpen(true)}
-            className="text-white/40 hover:text-cream transition-colors"
-          >
+          <button onClick={() => setMobileOpen(true)} className="text-white/40 hover:text-cream transition-colors">
             <Menu className="w-5 h-5" />
           </button>
           <img src={hotelLogo} alt="Hotel SB" className="h-6 w-auto object-contain" />
-          <span className="text-white/20 text-xs tracking-[0.2em] uppercase font-body">
-            Admin
-          </span>
+          <span className="text-white/20 text-xs tracking-[0.2em] uppercase font-body">Admin</span>
         </header>
 
-        {/* Cada página admin entra aqui */}
         <main className="flex-1 overflow-y-auto">
           <Outlet />
         </main>
