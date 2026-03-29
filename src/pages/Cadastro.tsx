@@ -1,6 +1,6 @@
 import Layout from "@/components/layout/Layout";
 import { motion } from "framer-motion";
-import { Link, useNavigate } from "react-router-dom";
+import { Link, useNavigate, useSearchParams } from "react-router-dom";
 import { useState } from "react";
 import { useAuth } from "@/hooks/useAuth";
 import { toast } from "sonner";
@@ -13,6 +13,8 @@ const Cadastro = () => {
   const [loading, setLoading] = useState(false);
   const { signUp } = useAuth();
   const navigate = useNavigate();
+  const [searchParams] = useSearchParams();
+  const redirectTo = searchParams.get("redirect");
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -27,7 +29,7 @@ const Cadastro = () => {
       toast.error(error.message || "Erro ao cadastrar.");
     } else {
       toast.success("Conta criada! Verifique seu e-mail para confirmar.");
-      navigate("/login");
+      navigate(redirectTo ? `/login?redirect=${encodeURIComponent(redirectTo)}` : "/login");
     }
   };
 
