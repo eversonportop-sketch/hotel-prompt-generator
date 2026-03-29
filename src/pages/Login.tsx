@@ -1,5 +1,5 @@
 import { motion } from "framer-motion";
-import { Link, useNavigate } from "react-router-dom";
+import { Link, useNavigate, useSearchParams } from "react-router-dom";
 import { useState } from "react";
 import { useAuth } from "@/hooks/useAuth";
 import { supabase } from "@/integrations/supabase/client";
@@ -14,6 +14,9 @@ const Login = () => {
   const [loading, setLoading] = useState(false);
   const { signIn } = useAuth();
   const navigate = useNavigate();
+  const [searchParams] = useSearchParams();
+  // URL para redirecionar após login (ex: /quartos/123 quando vem de uma reserva)
+  const redirectTo = searchParams.get("redirect");
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -27,19 +30,16 @@ const Login = () => {
     const {
       data: { user: loggedUser },
     } = await supabase.auth.getUser();
-    // fetch role from profiles table
     let role = "user";
     if (loggedUser) {
-      const { data: prof } = await supabase
-        .from("profiles")
-        .select("role")
-        .eq("id", loggedUser.id)
-        .single();
+      const { data: prof } = await supabase.from("profiles").select("role").eq("id", loggedUser.id).single();
       role = prof?.role ?? "user";
     }
     setLoading(false);
     toast.success("Login realizado com sucesso!");
-    if (role === "admin") navigate("/admin");
+    // Se veio de uma página específica (ex: tentou reservar), volta pra lá
+    if (redirectTo) navigate(redirectTo);
+    else if (role === "admin") navigate("/admin");
     else navigate("/portal");
   };
 
@@ -209,7 +209,10 @@ const Login = () => {
             {/* Cadastro */}
             <p className="text-center text-sm text-cream/30 font-body mt-6">
               Não tem uma conta?{" "}
-              <Link to="/cadastro" className="text-primary hover:text-primary/80 transition-colors">
+              <Link
+                to={redirectTo ? `/cadastro?redirect=${encodeURIComponent(redirectTo)}` : "/cadastro"}
+                className="text-primary hover:text-primary/80 transition-colors"
+              >
                 Cadastre-se
               </Link>
             </p>
