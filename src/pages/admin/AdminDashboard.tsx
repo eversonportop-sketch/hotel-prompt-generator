@@ -2,141 +2,20 @@ import { Link } from "react-router-dom";
 import { motion } from "framer-motion";
 import {
   BedDouble,
-  Info,
-  PartyPopper,
-  Waves,
-  Tag,
-  Image,
   Users,
-  Settings,
-  Sparkles,
   LayoutDashboard,
-  UtensilsCrossed,
   CalendarDays,
   TrendingUp,
   Clock,
-  ArrowRight,
   LogIn,
   LogOut,
-  Receipt,
+  ArrowRight,
+  CheckCircle2,
+  XCircle,
+  AlertCircle,
 } from "lucide-react";
 import { useQuery } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
-
-const adminModules = [
-  {
-    icon: CalendarDays,
-    label: "Reservas",
-    href: "/admin/reservas",
-    description: "Gestão de reservas",
-    color: "from-emerald-900/30 to-emerald-800/10",
-    group: "Operacional",
-  },
-  {
-    icon: LogIn,
-    label: "Check-in",
-    href: "/admin/checkin",
-    description: "Registrar entradas",
-    color: "from-sky-900/30 to-sky-800/10",
-    group: "Operacional",
-  },
-  {
-    icon: Receipt,
-    label: "Checkout",
-    href: "/admin/checkout",
-    description: "Fechar conta do hóspede",
-    color: "from-green-900/30 to-green-800/10",
-    group: "Operacional",
-  },
-  {
-    icon: UtensilsCrossed,
-    label: "Consumo",
-    href: "/admin/consumo",
-    description: "Frigobar e room service",
-    color: "from-rose-900/30 to-rose-800/10",
-    group: "Operacional",
-  },
-  {
-    icon: BedDouble,
-    label: "Quartos",
-    href: "/admin/quartos",
-    description: "Gerenciar acomodações",
-    color: "from-amber-900/30 to-amber-800/10",
-    group: "Gestão",
-  },
-  {
-    icon: Users,
-    label: "Clientes",
-    href: "/admin/clientes",
-    description: "Cadastro de clientes",
-    color: "from-teal-900/30 to-teal-800/10",
-    group: "Gestão",
-  },
-  {
-    icon: Waves,
-    label: "Piscina",
-    href: "/admin/piscina",
-    description: "Configurações da piscina",
-    color: "from-cyan-900/30 to-cyan-800/10",
-    group: "Gestão",
-  },
-  {
-    icon: PartyPopper,
-    label: "Salão",
-    href: "/admin/salao",
-    description: "Gerenciar salão de eventos",
-    color: "from-purple-900/30 to-purple-800/10",
-    group: "Gestão",
-  },
-  {
-    icon: Tag,
-    label: "Promoções",
-    href: "/admin/promocoes",
-    description: "Gerenciar promoções",
-    color: "from-orange-900/30 to-orange-800/10",
-    group: "Conteúdo",
-  },
-  {
-    icon: Image,
-    label: "Banners",
-    href: "/admin/banners",
-    description: "Banners do site",
-    color: "from-indigo-900/30 to-indigo-800/10",
-    group: "Conteúdo",
-  },
-  {
-    icon: Image,
-    label: "Mídia",
-    href: "/admin/midia",
-    description: "Galeria de imagens",
-    color: "from-pink-900/30 to-pink-800/10",
-    group: "Conteúdo",
-  },
-  {
-    icon: Info,
-    label: "Informações",
-    href: "/admin/informacoes",
-    description: "Dados úteis para hóspedes",
-    color: "from-yellow-900/30 to-yellow-800/10",
-    group: "Conteúdo",
-  },
-  {
-    icon: Settings,
-    label: "Configurações",
-    href: "/admin/configuracoes",
-    description: "Dados do hotel",
-    color: "from-slate-900/30 to-slate-800/10",
-    group: "Conteúdo",
-  },
-  {
-    icon: Sparkles,
-    label: "Popup",
-    href: "/admin/popup",
-    description: "Gerenciar popups do site",
-    color: "from-fuchsia-900/30 to-fuchsia-800/10",
-    group: "Conteúdo",
-  },
-];
 
 const statusLabels: Record<string, string> = {
   pending: "Pendente",
@@ -146,7 +25,6 @@ const statusLabels: Record<string, string> = {
   active: "Ativo",
   inactive: "Inativo",
 };
-
 const statusConfig: Record<string, { bg: string; dot: string; text: string }> = {
   pending: { bg: "bg-amber-500/10", dot: "bg-amber-400", text: "text-amber-300" },
   confirmed: { bg: "bg-emerald-500/10", dot: "bg-emerald-400", text: "text-emerald-300" },
@@ -159,12 +37,17 @@ const statusConfig: Record<string, { bg: string; dot: string; text: string }> = 
 const today = new Date().toISOString().split("T")[0];
 
 const fadeUp = (delay = 0) => ({
-  initial: { opacity: 0, y: 18 },
+  initial: { opacity: 0, y: 14 },
   animate: { opacity: 1, y: 0 },
-  transition: { duration: 0.45, delay, ease: [0.22, 1, 0.36, 1] as [number, number, number, number] },
+  transition: { duration: 0.4, delay, ease: [0.22, 1, 0.36, 1] as [number, number, number, number] },
 });
 
-function formatDateShort(date: Date): string {
+function formatDateFull(date: Date) {
+  const days = ["Domingo", "Segunda", "Terça", "Quarta", "Quinta", "Sexta", "Sábado"];
+  const months = ["Jan", "Fev", "Mar", "Abr", "Mai", "Jun", "Jul", "Ago", "Set", "Out", "Nov", "Dez"];
+  return `${days[date.getDay()]}, ${date.getDate()} ${months[date.getMonth()]} ${date.getFullYear()}`;
+}
+function formatDateShort(date: Date) {
   const months = ["Jan", "Fev", "Mar", "Abr", "Mai", "Jun", "Jul", "Ago", "Set", "Out", "Nov", "Dez"];
   return `${date.getDate().toString().padStart(2, "0")} ${months[date.getMonth()]} ${date.getFullYear()}`;
 }
@@ -184,7 +67,7 @@ const AdminDashboard = () => {
     queryFn: async () => {
       const { data, error } = await supabase
         .from("reservations")
-        .select("id, status, check_in, check_out, room_id, rooms(name), profiles(full_name)");
+        .select("id, status, check_in, check_out, rooms(name), profiles(full_name)");
       if (error) throw error;
       return data;
     },
@@ -200,95 +83,120 @@ const AdminDashboard = () => {
   });
 
   const totalRooms = rooms.length;
+  const activeRooms = (rooms as any[]).filter((r) => r.status === "active").length;
   const totalReservations = reservations.length;
-  const todayCheckins = reservations.filter((r: any) => r.check_in === today).length;
+  const confirmedReservations = (reservations as any[]).filter((r) => r.status === "confirmed").length;
+  const todayCheckins = (reservations as any[]).filter((r) => r.check_in === today).length;
+  const todayCheckouts = (reservations as any[]).filter((r) => r.check_out === today).length;
   const totalProfiles = profiles.length;
 
   const roomsByStatus: Record<string, number> = {};
-  rooms.forEach((r: any) => {
+  (rooms as any[]).forEach((r) => {
     roomsByStatus[r.status] = (roomsByStatus[r.status] || 0) + 1;
   });
 
   const reservationsByStatus: Record<string, number> = {};
-  reservations.forEach((r: any) => {
+  (reservations as any[]).forEach((r) => {
     reservationsByStatus[r.status] = (reservationsByStatus[r.status] || 0) + 1;
   });
 
-  const todayActivity = reservations.filter((r: any) => r.check_in === today || r.check_out === today);
+  const todayActivity = (reservations as any[]).filter((r) => r.check_in === today || r.check_out === today);
 
   const kpis = [
     {
-      label: "Quartos",
-      value: totalRooms,
+      label: "Quartos Ativos",
+      value: activeRooms,
+      total: `de ${totalRooms} total`,
       icon: BedDouble,
-      sub: "Total cadastrados",
       color: "text-amber-400",
       bg: "bg-amber-500/10",
+      border: "border-amber-500/20",
+      href: "/admin/quartos",
     },
     {
       label: "Reservas",
       value: totalReservations,
+      total: `${confirmedReservations} confirmadas`,
       icon: CalendarDays,
-      sub: "Total de reservas",
       color: "text-emerald-400",
       bg: "bg-emerald-500/10",
+      border: "border-emerald-500/20",
+      href: "/admin/reservas",
     },
     {
-      label: "Check-ins Hoje",
-      value: todayCheckins,
+      label: "Movimento Hoje",
+      value: todayCheckins + todayCheckouts,
+      total: `${todayCheckins} in · ${todayCheckouts} out`,
       icon: TrendingUp,
-      sub: formatDateShort(new Date()),
       color: "text-sky-400",
       bg: "bg-sky-500/10",
+      border: "border-sky-500/20",
+      href: "/admin/checkin",
     },
     {
       label: "Clientes",
       value: totalProfiles,
+      total: "cadastrados",
       icon: Users,
-      sub: "Clientes cadastrados",
       color: "text-purple-400",
       bg: "bg-purple-500/10",
+      border: "border-purple-500/20",
+      href: "/admin/clientes",
     },
   ];
 
   return (
-    <div className="p-6 md:p-8 space-y-8 text-cream">
-      {/* Título */}
-      <motion.div {...fadeUp(0)} className="flex items-center gap-3">
-        <div className="p-2.5 rounded-xl bg-primary/10 border border-primary/15">
-          <LayoutDashboard className="w-5 h-5 text-primary" />
-        </div>
-        <div>
-          <h1 className="font-display text-2xl font-semibold text-cream leading-none">Dashboard</h1>
-          <p className="text-white/30 text-xs mt-0.5 font-body">Visão geral do hotel</p>
+    <div className="p-6 md:p-8 space-y-6 text-cream">
+      {/* Cabeçalho */}
+      <motion.div {...fadeUp(0)} className="flex items-start justify-between">
+        <div className="flex items-center gap-3">
+          <div className="p-2.5 rounded-xl bg-primary/10 border border-primary/15">
+            <LayoutDashboard className="w-5 h-5 text-primary" />
+          </div>
+          <div>
+            <h1 className="font-display text-2xl font-semibold text-cream leading-none">Dashboard</h1>
+            <p className="text-white/30 text-xs mt-0.5 font-body">{formatDateFull(new Date())}</p>
+          </div>
         </div>
       </motion.div>
 
       {/* KPIs */}
       <div className="grid grid-cols-2 xl:grid-cols-4 gap-4">
         {kpis.map((kpi, i) => (
-          <motion.div key={kpi.label} {...fadeUp(0.06 * i)}>
-            <div className="relative overflow-hidden rounded-xl bg-charcoal-light border border-white/5 p-5 hover:border-white/10 transition-all duration-300 cursor-default">
+          <motion.div key={kpi.label} {...fadeUp(0.05 * i)}>
+            <Link
+              to={kpi.href}
+              className={`block relative overflow-hidden rounded-xl bg-charcoal-light border ${kpi.border} p-5 hover:brightness-110 transition-all duration-200 group`}
+            >
               <div className={`w-9 h-9 rounded-lg ${kpi.bg} flex items-center justify-center mb-4`}>
                 <kpi.icon className={`w-4 h-4 ${kpi.color}`} />
               </div>
               <p className={`font-display text-4xl font-bold mb-1 tabular-nums ${kpi.color}`}>{kpi.value}</p>
               <p className="text-xs font-semibold text-white/60 tracking-wide font-body">{kpi.label}</p>
-              <p className="text-xs text-white/25 mt-0.5 font-body">{kpi.sub}</p>
-            </div>
+              <p className="text-xs text-white/25 mt-0.5 font-body">{kpi.total}</p>
+              <ArrowRight className="absolute top-4 right-4 w-3.5 h-3.5 text-white/10 group-hover:text-white/30 transition-colors" />
+            </Link>
           </motion.div>
         ))}
       </div>
 
       {/* Status + Movimentação */}
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-4">
-        {/* Quartos */}
-        <motion.div {...fadeUp(0.18)} className="rounded-xl bg-charcoal-light border border-white/5 p-5">
-          <div className="flex items-center gap-2 mb-4">
-            <BedDouble className="w-3.5 h-3.5 text-primary" />
-            <h3 className="text-xs font-semibold uppercase tracking-widest text-white/35 font-body">
-              Status dos Quartos
-            </h3>
+        {/* Status Quartos */}
+        <motion.div {...fadeUp(0.2)} className="rounded-xl bg-charcoal-light border border-white/5 p-5">
+          <div className="flex items-center justify-between mb-4">
+            <div className="flex items-center gap-2">
+              <BedDouble className="w-3.5 h-3.5 text-primary" />
+              <h3 className="text-xs font-semibold uppercase tracking-widest text-white/30 font-body">
+                Status dos Quartos
+              </h3>
+            </div>
+            <Link
+              to="/admin/quartos"
+              className="text-[10px] text-primary/50 hover:text-primary font-body transition-colors"
+            >
+              Ver todos →
+            </Link>
           </div>
           {Object.keys(roomsByStatus).length === 0 ? (
             <p className="text-white/20 text-sm font-body">Nenhum quarto cadastrado</p>
@@ -310,13 +218,21 @@ const AdminDashboard = () => {
           )}
         </motion.div>
 
-        {/* Reservas */}
-        <motion.div {...fadeUp(0.22)} className="rounded-xl bg-charcoal-light border border-white/5 p-5">
-          <div className="flex items-center gap-2 mb-4">
-            <CalendarDays className="w-3.5 h-3.5 text-primary" />
-            <h3 className="text-xs font-semibold uppercase tracking-widest text-white/35 font-body">
-              Status das Reservas
-            </h3>
+        {/* Status Reservas */}
+        <motion.div {...fadeUp(0.24)} className="rounded-xl bg-charcoal-light border border-white/5 p-5">
+          <div className="flex items-center justify-between mb-4">
+            <div className="flex items-center gap-2">
+              <CalendarDays className="w-3.5 h-3.5 text-primary" />
+              <h3 className="text-xs font-semibold uppercase tracking-widest text-white/30 font-body">
+                Status das Reservas
+              </h3>
+            </div>
+            <Link
+              to="/admin/reservas"
+              className="text-[10px] text-primary/50 hover:text-primary font-body transition-colors"
+            >
+              Ver todas →
+            </Link>
           </div>
           {Object.keys(reservationsByStatus).length === 0 ? (
             <p className="text-white/20 text-sm font-body">Nenhuma reserva encontrada</p>
@@ -338,39 +254,56 @@ const AdminDashboard = () => {
           )}
         </motion.div>
 
-        {/* Movimentação */}
-        <motion.div {...fadeUp(0.26)} className="rounded-xl bg-charcoal-light border border-white/5 p-5">
+        {/* Movimentação Hoje */}
+        <motion.div {...fadeUp(0.28)} className="rounded-xl bg-charcoal-light border border-white/5 p-5">
           <div className="flex items-center gap-2 mb-4">
             <Clock className="w-3.5 h-3.5 text-primary" />
-            <h3 className="text-xs font-semibold uppercase tracking-widest text-white/35 font-body">
-              Movimentação Hoje
+            <h3 className="text-xs font-semibold uppercase tracking-widest text-white/30 font-body">
+              Movimentação Hoje · {formatDateShort(new Date())}
             </h3>
           </div>
-          {todayActivity.length === 0 ? (
-            <div className="flex items-center justify-center h-16">
-              <p className="text-white/20 text-sm font-body">Nenhuma movimentação hoje</p>
+
+          {/* mini contadores */}
+          <div className="grid grid-cols-2 gap-2 mb-4">
+            <div className="bg-emerald-500/10 rounded-lg px-3 py-2 flex items-center gap-2">
+              <LogIn className="w-3.5 h-3.5 text-emerald-400" />
+              <div>
+                <p className="text-emerald-400 font-bold text-lg font-display leading-none">{todayCheckins}</p>
+                <p className="text-emerald-400/60 text-[10px] font-body">Check-ins</p>
+              </div>
             </div>
+            <div className="bg-sky-500/10 rounded-lg px-3 py-2 flex items-center gap-2">
+              <LogOut className="w-3.5 h-3.5 text-sky-400" />
+              <div>
+                <p className="text-sky-400 font-bold text-lg font-display leading-none">{todayCheckouts}</p>
+                <p className="text-sky-400/60 text-[10px] font-body">Checkouts</p>
+              </div>
+            </div>
+          </div>
+
+          {todayActivity.length === 0 ? (
+            <p className="text-white/20 text-sm font-body text-center py-2">Nenhuma movimentação hoje</p>
           ) : (
             <div className="space-y-2">
-              {todayActivity.slice(0, 5).map((r: any) => {
+              {todayActivity.slice(0, 4).map((r: any) => {
                 const isIn = r.check_in === today;
                 return (
                   <div
                     key={r.id}
-                    className="flex items-center justify-between py-2 border-b border-white/5 last:border-0"
+                    className="flex items-center justify-between py-1.5 border-b border-white/5 last:border-0"
                   >
                     <div className="flex items-center gap-2">
                       <span
-                        className={`flex items-center gap-1 px-2 py-0.5 rounded text-xs font-bold font-body ${isIn ? "bg-emerald-500/15 text-emerald-400" : "bg-sky-500/15 text-sky-400"}`}
+                        className={`flex items-center gap-1 px-1.5 py-0.5 rounded text-[10px] font-bold font-body ${isIn ? "bg-emerald-500/15 text-emerald-400" : "bg-sky-500/15 text-sky-400"}`}
                       >
                         {isIn ? <LogIn className="w-2.5 h-2.5" /> : <LogOut className="w-2.5 h-2.5" />}
                         {isIn ? "IN" : "OUT"}
                       </span>
-                      <span className="text-sm text-cream/70 font-body truncate max-w-[120px]">
-                        {(r.profiles as any)?.full_name || "—"}
+                      <span className="text-sm text-cream/70 font-body truncate max-w-[100px]">
+                        {r.profiles?.full_name || "—"}
                       </span>
                     </div>
-                    <span className="text-xs text-white/30 font-body">{(r.rooms as any)?.name || "—"}</span>
+                    <span className="text-xs text-white/30 font-body">{r.rooms?.name || "—"}</span>
                   </div>
                 );
               })}
@@ -379,40 +312,63 @@ const AdminDashboard = () => {
         </motion.div>
       </div>
 
-      {/* Módulos por grupo */}
-      {(["Operacional", "Gestão", "Conteúdo"] as const).map((group, gi) => {
-        const groupMods = adminModules.filter((m) => m.group === group);
-        return (
-          <motion.div key={group} {...fadeUp(0.3 + gi * 0.08)}>
-            <h2 className="text-xs font-semibold uppercase tracking-widest text-white/25 font-body mb-3">{group}</h2>
-            <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 gap-3">
-              {groupMods.map((mod, index) => (
-                <motion.div key={mod.label} {...fadeUp(0.3 + gi * 0.08 + index * 0.04)}>
-                  <Link
-                    to={mod.href}
-                    className="flex flex-col gap-3 p-4 rounded-xl bg-charcoal-light border border-white/5 hover:border-primary/25 transition-all duration-200 group relative overflow-hidden"
-                  >
-                    <div
-                      className={`absolute inset-0 bg-gradient-to-br ${mod.color} opacity-0 group-hover:opacity-100 transition-opacity duration-300`}
-                    />
-                    <div className="relative">
-                      <div className="w-9 h-9 rounded-lg bg-primary/10 flex items-center justify-center mb-3 group-hover:bg-primary/20 transition-colors">
-                        <mod.icon className="w-4 h-4 text-primary" />
-                      </div>
-                      <p className="text-sm font-semibold text-cream leading-tight font-body">{mod.label}</p>
-                      <p className="text-xs text-white/30 mt-0.5 leading-snug font-body">{mod.description}</p>
-                    </div>
-                    <div className="relative flex items-center gap-1 text-xs text-primary/40 group-hover:text-primary transition-colors font-body">
-                      <span>Acessar</span>
-                      <ArrowRight className="w-3 h-3 group-hover:translate-x-0.5 transition-transform" />
-                    </div>
-                  </Link>
-                </motion.div>
-              ))}
-            </div>
-          </motion.div>
-        );
-      })}
+      {/* Atalhos rápidos operacionais */}
+      <motion.div {...fadeUp(0.32)}>
+        <p className="text-[10px] font-semibold uppercase tracking-widest text-white/20 font-body mb-3">
+          Acesso Rápido
+        </p>
+        <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
+          {[
+            {
+              label: "Reservas",
+              sub: "Gestão de reservas",
+              href: "/admin/reservas",
+              icon: CalendarDays,
+              color: "text-emerald-400",
+              bg: "bg-emerald-500/10",
+            },
+            {
+              label: "Check-in",
+              sub: "Registrar entradas",
+              href: "/admin/checkin",
+              icon: LogIn,
+              color: "text-sky-400",
+              bg: "bg-sky-500/10",
+            },
+            {
+              label: "Checkout",
+              sub: "Fechar conta",
+              href: "/admin/checkout",
+              icon: LogOut,
+              color: "text-amber-400",
+              bg: "bg-amber-500/10",
+            },
+            {
+              label: "Clientes",
+              sub: "Cadastro de clientes",
+              href: "/admin/clientes",
+              icon: Users,
+              color: "text-purple-400",
+              bg: "bg-purple-500/10",
+            },
+          ].map((item, i) => (
+            <motion.div key={item.href} {...fadeUp(0.32 + i * 0.04)}>
+              <Link
+                to={item.href}
+                className="flex items-center gap-3 p-4 rounded-xl bg-charcoal-light border border-white/5 hover:border-white/15 transition-all duration-200 group"
+              >
+                <div className={`w-8 h-8 rounded-lg ${item.bg} flex items-center justify-center flex-shrink-0`}>
+                  <item.icon className={`w-4 h-4 ${item.color}`} />
+                </div>
+                <div className="min-w-0">
+                  <p className="text-sm font-semibold text-cream font-body leading-tight">{item.label}</p>
+                  <p className="text-xs text-white/25 font-body mt-0.5">{item.sub}</p>
+                </div>
+              </Link>
+            </motion.div>
+          ))}
+        </div>
+      </motion.div>
     </div>
   );
 };
