@@ -1,189 +1,603 @@
 import { useState } from "react";
-import { Link } from "react-router-dom";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
-import { motion } from "framer-motion";
-import { Button } from "@/components/ui/button";
-import { Input } from "@/components/ui/input";
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
-import { ArrowLeft, CalendarDays, Search } from "lucide-react";
-import { format } from "date-fns";
+import { motion, AnimatePresence } from "framer-motion";
+import { CalendarDays, Search, Plus, X, Loader2, BedDouble, User, Users, Save, CalendarIcon } from "lucide-react";
+import { format, differenceInDays, addDays } from "date-fns";
+import { Calendar } from "@/components/ui/calendar";
+import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
+import { cn } from "@/lib/utils";
 import { toast } from "sonner";
-import hotelLogo from "@/assets/hotel-sb-logo.png";
 
-const statusLabels: Record<string, string> = {
+interface Profile {
+  id: string;
+  full_name: string | null;
+  email: string | null;
+  phone: string | null;
+  cpf: string | null;
+}
+interface Room {
+  id: string;
+  name: string;
+  category: string;
+  price: number;
+  promotional_price: number | null;
+  capacity: number;
+}
+interface Reservation {
+  id: string;
+  check_in: string;
+  check_out: string;
+  guests_count: number;
+  total_price: number;
+  status: string;
+  notes: string | null;
+  rooms: { name: string; category: string } | null;
+  profiles: { full_name: string | null } | null;
+}
+
+const STATUS_LABELS: Record<string, string> = {
   pending: "Pendente",
   confirmed: "Confirmada",
   canceled: "Cancelada",
   completed: "Concluída",
 };
+const STATUS_COLORS: Record<string, string> = {
+  pending: "bg-yellow-500/15 text-yellow-400 border-yellow-500/25",
+  confirmed: "bg-green-500/15 text-green-400 border-green-500/25",
+  canceled: "bg-red-500/15 text-red-400 border-red-500/25",
+  completed: "bg-blue-500/15 text-blue-400 border-blue-500/25",
+};
 
-const statusColors: Record<string, string> = {
-  pending: "bg-yellow-500/20 text-yellow-400",
-  confirmed: "bg-green-500/20 text-green-400",
-  canceled: "bg-red-500/20 text-red-400",
-  completed: "bg-blue-500/20 text-blue-400",
+const emptyForm = {
+  profile_id: "",
+  room_id: "",
+  check_in: undefined as Date | undefined,
+  check_out: undefined as Date | undefined,
+  guests_count: 1,
+  notes: "",
 };
 
 const AdminReservas = () => {
-  const queryClient = useQueryClient();
-  const [searchTerm, setSearchTerm] = useState("");
+  const qc = useQueryClient();
+  const [search, setSearch] = useState("");
   const [statusFilter, setStatusFilter] = useState("all");
+  const [modalOpen, setModalOpen] = useState(false);
+  const [form, setForm] = useState({ ...emptyForm });
+  const [clientSearch, setClientSearch] = useState("");
+  const [saving, setSaving] = useState(false);
 
   const { data: reservations = [], isLoading } = useQuery({
     queryKey: ["admin-reservations"],
     queryFn: async () => {
       const { data, error } = await supabase
         .from("reservations")
-        .select("*, rooms(name, category), profiles(full_name)")
+        .select("*, rooms(name, category), profiles!reservations_profile_id_fkey(full_name)")
         .order("created_at", { ascending: false });
       if (error) throw error;
-      return data;
+      return data as Reservation[];
     },
   });
 
-  const updateStatusMutation = useMutation({
+  const { data: profiles = [] } = useQuery({
+    queryKey: ["admin-clients"],
+    queryFn: async () => {
+      const { data, error } = await supabase
+        .from("profiles")
+        .select("id, full_name, email, phone, cpf")
+        .order("full_name");
+      if (error) throw error;
+      return data as Profile[];
+    },
+  });
+
+  const { data: rooms = [] } = useQuery({
+    queryKey: ["admin-rooms-active"],
+    queryFn: async () => {
+      const { data, error } = await supabase
+        .from("rooms")
+        .select("id, name, category, price, promotional_price, capacity")
+        .eq("status", "active")
+        .order("display_order");
+      if (error) throw error;
+      return data as Room[];
+    },
+  });
+
+  const updateStatus = useMutation({
     mutationFn: async ({ id, status }: { id: string; status: string }) => {
-      const { error } = await supabase
-        .from("reservations")
-        .update({ status })
-        .eq("id", id);
+      const { error } = await supabase.from("reservations").update({ status }).eq("id", id);
       if (error) throw error;
     },
     onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ["admin-reservations"] });
+      qc.invalidateQueries({ queryKey: ["admin-reservations"] });
       toast.success("Status atualizado!");
     },
     onError: () => toast.error("Erro ao atualizar status."),
   });
 
-  const filtered = reservations.filter((r: any) => {
-    const matchesStatus = statusFilter === "all" || r.status === statusFilter;
-    const clientName = (r.profiles as any)?.full_name || "";
-    const roomName = (r.rooms as any)?.name || "";
-    const matchesSearch =
-      !searchTerm ||
-      clientName.toLowerCase().includes(searchTerm.toLowerCase()) ||
-      roomName.toLowerCase().includes(searchTerm.toLowerCase());
-    return matchesStatus && matchesSearch;
+  const handleSave = async () => {
+    if (!form.profile_id) {
+      toast.error("Selecione um cliente.");
+      return;
+    }
+    if (!form.room_id) {
+      toast.error("Selecione um quarto.");
+      return;
+    }
+    if (!form.check_in || !form.check_out) {
+      toast.error("Selecione as datas.");
+      return;
+    }
+    const nights = differenceInDays(form.check_out, form.check_in);
+    if (nights < 1) {
+      toast.error("Check-out deve ser após o check-in.");
+      return;
+    }
+    const room = rooms.find((r) => r.id === form.room_id)!;
+    const total = nights * Number(room.promotional_price || room.price);
+    setSaving(true);
+    try {
+      const { data: available, error: availErr } = await supabase.rpc("check_room_availability", {
+        p_room_id: form.room_id,
+        p_check_in: format(form.check_in, "yyyy-MM-dd"),
+        p_check_out: format(form.check_out, "yyyy-MM-dd"),
+      });
+      if (availErr) throw availErr;
+      if (!available) {
+        toast.error("Quarto indisponível para essas datas.");
+        setSaving(false);
+        return;
+      }
+      const { error } = await supabase.from("reservations").insert({
+        profile_id: form.profile_id,
+        client_id: form.profile_id,
+        room_id: form.room_id,
+        check_in: format(form.check_in, "yyyy-MM-dd"),
+        check_out: format(form.check_out, "yyyy-MM-dd"),
+        guests_count: form.guests_count,
+        total_price: total,
+        status: "confirmed",
+        notes: form.notes || null,
+      });
+      if (error) throw error;
+      toast.success("Reserva criada e confirmada!");
+      qc.invalidateQueries({ queryKey: ["admin-reservations"] });
+      setModalOpen(false);
+      setForm({ ...emptyForm });
+      setClientSearch("");
+    } catch (err: any) {
+      toast.error(err.message || "Erro ao criar reserva.");
+    } finally {
+      setSaving(false);
+    }
+  };
+
+  const filtered = reservations.filter((r) => {
+    const matchStatus = statusFilter === "all" || r.status === statusFilter;
+    const q = search.toLowerCase();
+    const clientName = (r.profiles as any)?.full_name ?? "";
+    const roomName = (r.rooms as any)?.name ?? "";
+    return matchStatus && (!q || clientName.toLowerCase().includes(q) || roomName.toLowerCase().includes(q));
   });
 
+  const filteredClients = profiles.filter((p) => {
+    const q = clientSearch.toLowerCase();
+    return (
+      !q ||
+      p.full_name?.toLowerCase().includes(q) ||
+      p.email?.toLowerCase().includes(q) ||
+      p.phone?.includes(q) ||
+      p.cpf?.includes(q)
+    );
+  });
+
+  const selectedClient = profiles.find((p) => p.id === form.profile_id);
+  const selectedRoom = rooms.find((r) => r.id === form.room_id);
+  const nights = form.check_in && form.check_out ? differenceInDays(form.check_out, form.check_in) : 0;
+  const totalPreview =
+    selectedRoom && nights > 0 ? nights * Number(selectedRoom.promotional_price || selectedRoom.price) : 0;
+  const today = new Date();
+
+  const kpis = [
+    { label: "Total", value: reservations.length, color: "text-cream", border: "border-white/10", bg: "bg-white/5" },
+    {
+      label: "Confirmadas",
+      value: reservations.filter((r) => r.status === "confirmed").length,
+      color: "text-green-400",
+      border: "border-green-500/20",
+      bg: "bg-green-500/10",
+    },
+    {
+      label: "Pendentes",
+      value: reservations.filter((r) => r.status === "pending").length,
+      color: "text-yellow-400",
+      border: "border-yellow-500/20",
+      bg: "bg-yellow-500/10",
+    },
+    {
+      label: "Concluídas",
+      value: reservations.filter((r) => r.status === "completed").length,
+      color: "text-blue-400",
+      border: "border-blue-500/20",
+      bg: "bg-blue-500/10",
+    },
+  ];
+
   return (
-    <div className="min-h-screen bg-charcoal">
-      <header className="bg-charcoal-light border-b border-gold/10 px-6 py-4 flex items-center justify-between">
+    <div className="p-6 md:p-8 space-y-6 text-cream">
+      <div className="flex items-center justify-between">
         <div className="flex items-center gap-3">
-          <img src={hotelLogo} alt="Hotel SB" className="h-10 w-auto object-contain" />
-          <span className="text-cream/40 text-xs font-body">Admin</span>
+          <div className="p-2.5 rounded-xl bg-emerald-500/10 border border-emerald-500/20">
+            <CalendarDays className="w-5 h-5 text-emerald-400" />
+          </div>
+          <div>
+            <h1 className="font-display text-2xl font-semibold text-cream leading-none">Reservas</h1>
+            <p className="text-white/30 text-xs mt-0.5 font-body">Gestão de reservas</p>
+          </div>
         </div>
-        <Link to="/" className="text-cream/50 text-sm font-body hover:text-primary transition-colors">
-          Ver Site →
-        </Link>
-      </header>
-
-      <div className="p-6 md:p-10">
-        <motion.div initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: 0.5 }}>
-          <div className="flex items-center gap-3 mb-8">
-            <Link to="/admin" className="text-cream/50 hover:text-primary transition-colors">
-              <ArrowLeft className="w-5 h-5" />
-            </Link>
-            <CalendarDays className="w-6 h-6 text-primary" />
-            <h1 className="font-display text-2xl font-bold text-cream">Reservas</h1>
-          </div>
-
-          {/* Filters */}
-          <div className="flex flex-col sm:flex-row gap-3 mb-6">
-            <div className="relative flex-1">
-              <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-cream/30" />
-              <Input
-                placeholder="Buscar por cliente ou quarto..."
-                value={searchTerm}
-                onChange={(e) => setSearchTerm(e.target.value)}
-                className="pl-10 bg-charcoal-light border-gold/10 text-cream placeholder:text-cream/30"
-              />
-            </div>
-            <Select value={statusFilter} onValueChange={setStatusFilter}>
-              <SelectTrigger className="w-[180px] bg-charcoal-light border-gold/10 text-cream">
-                <SelectValue placeholder="Status" />
-              </SelectTrigger>
-              <SelectContent>
-                <SelectItem value="all">Todos</SelectItem>
-                <SelectItem value="pending">Pendente</SelectItem>
-                <SelectItem value="confirmed">Confirmada</SelectItem>
-                <SelectItem value="canceled">Cancelada</SelectItem>
-                <SelectItem value="completed">Concluída</SelectItem>
-              </SelectContent>
-            </Select>
-          </div>
-
-          {/* Table */}
-          <div className="bg-charcoal-light border border-gold/10 rounded-lg overflow-hidden">
-            {isLoading ? (
-              <div className="p-8 text-center text-cream/40 font-body">Carregando...</div>
-            ) : filtered.length === 0 ? (
-              <div className="p-8 text-center text-cream/40 font-body">Nenhuma reserva encontrada.</div>
-            ) : (
-              <Table>
-                <TableHeader>
-                  <TableRow className="border-gold/10 hover:bg-transparent">
-                    <TableHead className="text-cream/60">Cliente</TableHead>
-                    <TableHead className="text-cream/60">Quarto</TableHead>
-                    <TableHead className="text-cream/60">Check-in</TableHead>
-                    <TableHead className="text-cream/60">Check-out</TableHead>
-                    <TableHead className="text-cream/60">Hóspedes</TableHead>
-                    <TableHead className="text-cream/60">Total</TableHead>
-                    <TableHead className="text-cream/60">Status</TableHead>
-                    <TableHead className="text-cream/60">Ações</TableHead>
-                  </TableRow>
-                </TableHeader>
-                <TableBody>
-                  {filtered.map((r: any) => (
-                    <TableRow key={r.id} className="border-gold/10 hover:bg-charcoal/50">
-                      <TableCell className="text-cream font-body text-sm">
-                        {(r.profiles as any)?.full_name || "—"}
-                      </TableCell>
-                      <TableCell className="text-cream font-body text-sm">
-                        {(r.rooms as any)?.name || "—"}
-                      </TableCell>
-                      <TableCell className="text-cream/70 font-body text-sm">
-                        {format(new Date(r.check_in), "dd/MM/yyyy")}
-                      </TableCell>
-                      <TableCell className="text-cream/70 font-body text-sm">
-                        {format(new Date(r.check_out), "dd/MM/yyyy")}
-                      </TableCell>
-                      <TableCell className="text-cream/70 font-body text-sm">{r.guests_count}</TableCell>
-                      <TableCell className="text-primary font-display font-semibold">
-                        R$ {Number(r.total_price).toFixed(2)}
-                      </TableCell>
-                      <TableCell>
-                        <span className={`px-2 py-1 rounded-full text-xs font-body ${statusColors[r.status] || ""}`}>
-                          {statusLabels[r.status] || r.status}
-                        </span>
-                      </TableCell>
-                      <TableCell>
-                        <Select
-                          value={r.status}
-                          onValueChange={(val) => updateStatusMutation.mutate({ id: r.id, status: val })}
-                        >
-                          <SelectTrigger className="w-[130px] h-8 text-xs bg-charcoal border-gold/10 text-cream">
-                            <SelectValue />
-                          </SelectTrigger>
-                          <SelectContent>
-                            <SelectItem value="pending">Pendente</SelectItem>
-                            <SelectItem value="confirmed">Confirmada</SelectItem>
-                            <SelectItem value="canceled">Cancelada</SelectItem>
-                            <SelectItem value="completed">Concluída</SelectItem>
-                          </SelectContent>
-                        </Select>
-                      </TableCell>
-                    </TableRow>
-                  ))}
-                </TableBody>
-              </Table>
-            )}
-          </div>
-        </motion.div>
+        <button
+          onClick={() => {
+            setForm({ ...emptyForm });
+            setClientSearch("");
+            setModalOpen(true);
+          }}
+          className="flex items-center gap-2 px-4 py-2.5 rounded-lg text-black text-sm font-body font-semibold hover:brightness-110 transition-all"
+          style={{ background: "linear-gradient(135deg,#C9A84C,#E5C97A)" }}
+        >
+          <Plus className="w-4 h-4" /> Nova Reserva
+        </button>
       </div>
+
+      <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
+        {kpis.map((k) => (
+          <div key={k.label} className={`${k.bg} border ${k.border} rounded-xl p-4`}>
+            <p className="text-white/30 text-xs font-body uppercase tracking-wider mb-1">{k.label}</p>
+            <p className={`font-display text-3xl font-bold ${k.color}`}>{k.value}</p>
+          </div>
+        ))}
+      </div>
+
+      <div className="flex flex-col sm:flex-row gap-3">
+        <div className="relative flex-1">
+          <Search className="absolute left-3.5 top-1/2 -translate-y-1/2 w-4 h-4 text-white/25" />
+          <input
+            className="w-full pl-10 pr-4 py-2.5 bg-charcoal-light border border-white/5 rounded-xl text-cream text-sm focus:border-primary/40 focus:outline-none transition placeholder:text-white/20 font-body"
+            placeholder="Buscar por cliente ou quarto..."
+            value={search}
+            onChange={(e) => setSearch(e.target.value)}
+          />
+        </div>
+        <select
+          value={statusFilter}
+          onChange={(e) => setStatusFilter(e.target.value)}
+          className="bg-charcoal-light border border-white/5 rounded-xl px-4 py-2.5 text-cream text-sm font-body focus:outline-none focus:border-primary/40 transition"
+        >
+          <option value="all">Todos os status</option>
+          <option value="pending">Pendente</option>
+          <option value="confirmed">Confirmada</option>
+          <option value="canceled">Cancelada</option>
+          <option value="completed">Concluída</option>
+        </select>
+      </div>
+
+      {isLoading ? (
+        <div className="flex items-center justify-center py-20 text-white/20 font-body gap-2">
+          <Loader2 className="w-4 h-4 animate-spin" /> Carregando...
+        </div>
+      ) : filtered.length === 0 ? (
+        <div className="text-center py-20">
+          <CalendarDays className="w-12 h-12 text-primary/20 mx-auto mb-4" />
+          <p className="text-white/30 font-body">Nenhuma reserva encontrada.</p>
+        </div>
+      ) : (
+        <div className="bg-charcoal-light border border-white/5 rounded-xl overflow-x-auto">
+          <table className="w-full">
+            <thead>
+              <tr className="border-b border-white/5">
+                {["Cliente", "Quarto", "Check-in", "Check-out", "Hóspedes", "Total", "Status", "Ações"].map((h) => (
+                  <th
+                    key={h}
+                    className="text-left px-5 py-3.5 text-[10px] uppercase tracking-widest text-white/25 font-body"
+                  >
+                    {h}
+                  </th>
+                ))}
+              </tr>
+            </thead>
+            <tbody>
+              {filtered.map((r, i) => (
+                <motion.tr
+                  key={r.id}
+                  initial={{ opacity: 0 }}
+                  animate={{ opacity: 1 }}
+                  transition={{ delay: i * 0.025 }}
+                  className="border-b border-white/5 last:border-0 hover:bg-white/[0.02] transition-colors"
+                >
+                  <td className="px-5 py-4">
+                    <span className="text-cream text-sm font-body">
+                      {(r.profiles as any)?.full_name || <span className="text-white/25">—</span>}
+                    </span>
+                  </td>
+                  <td className="px-5 py-4">
+                    <span className="text-cream/70 text-sm font-body">{(r.rooms as any)?.name || "—"}</span>
+                  </td>
+                  <td className="px-5 py-4">
+                    <span className="text-white/50 text-sm font-body">
+                      {format(new Date(r.check_in + "T12:00:00"), "dd/MM/yyyy")}
+                    </span>
+                  </td>
+                  <td className="px-5 py-4">
+                    <span className="text-white/50 text-sm font-body">
+                      {format(new Date(r.check_out + "T12:00:00"), "dd/MM/yyyy")}
+                    </span>
+                  </td>
+                  <td className="px-5 py-4">
+                    <span className="text-white/50 text-sm font-body">{r.guests_count}</span>
+                  </td>
+                  <td className="px-5 py-4">
+                    <span className="text-primary font-display font-semibold">
+                      R$ {Number(r.total_price).toFixed(2)}
+                    </span>
+                  </td>
+                  <td className="px-5 py-4">
+                    <span
+                      className={`inline-flex text-xs px-2.5 py-1 rounded-full border font-body ${STATUS_COLORS[r.status] || "bg-white/10 text-white/40 border-white/10"}`}
+                    >
+                      {STATUS_LABELS[r.status] || r.status}
+                    </span>
+                  </td>
+                  <td className="px-5 py-4">
+                    <select
+                      value={r.status}
+                      onChange={(e) => updateStatus.mutate({ id: r.id, status: e.target.value })}
+                      className="bg-charcoal border border-white/10 rounded-lg px-2 py-1.5 text-cream text-xs font-body focus:outline-none focus:border-primary/50 transition"
+                    >
+                      <option value="pending">Pendente</option>
+                      <option value="confirmed">Confirmada</option>
+                      <option value="canceled">Cancelada</option>
+                      <option value="completed">Concluída</option>
+                    </select>
+                  </td>
+                </motion.tr>
+              ))}
+            </tbody>
+          </table>
+        </div>
+      )}
+
+      <AnimatePresence>
+        {modalOpen && (
+          <>
+            <motion.div
+              key="bd"
+              initial={{ opacity: 0 }}
+              animate={{ opacity: 1 }}
+              exit={{ opacity: 0 }}
+              className="fixed inset-0 z-50 bg-black/70 backdrop-blur-sm"
+              onClick={() => setModalOpen(false)}
+            />
+            <motion.div
+              key="modal"
+              initial={{ opacity: 0, scale: 0.95, y: 20 }}
+              animate={{ opacity: 1, scale: 1, y: 0 }}
+              exit={{ opacity: 0, scale: 0.95, y: 20 }}
+              transition={{ duration: 0.2 }}
+              className="fixed inset-0 z-50 flex items-center justify-center p-4 pointer-events-none"
+            >
+              <div
+                className="bg-[#111114] border border-white/10 rounded-2xl w-full max-w-xl shadow-2xl pointer-events-auto overflow-hidden flex flex-col max-h-[90vh]"
+                onClick={(e) => e.stopPropagation()}
+              >
+                <div className="flex items-center justify-between px-6 py-5 border-b border-white/5 shrink-0">
+                  <div className="flex items-center gap-2">
+                    <CalendarDays className="w-4 h-4 text-primary" />
+                    <h2 className="font-display text-lg font-semibold text-cream">Nova Reserva</h2>
+                  </div>
+                  <button
+                    onClick={() => setModalOpen(false)}
+                    className="text-white/25 hover:text-cream transition-colors"
+                  >
+                    <X className="w-5 h-5" />
+                  </button>
+                </div>
+                <div className="px-6 py-5 space-y-5 overflow-y-auto flex-1">
+                  <div>
+                    <label className="flex items-center gap-1.5 text-xs text-white/40 font-body uppercase tracking-wider mb-2">
+                      <User className="w-3 h-3" /> Cliente
+                    </label>
+                    {selectedClient ? (
+                      <div className="flex items-center justify-between bg-primary/10 border border-primary/25 rounded-lg px-4 py-3">
+                        <div>
+                          <p className="text-cream text-sm font-body font-medium">{selectedClient.full_name}</p>
+                          <p className="text-white/40 text-xs font-body mt-0.5">
+                            {selectedClient.email || selectedClient.phone || selectedClient.cpf}
+                          </p>
+                        </div>
+                        <button
+                          onClick={() => setForm((f) => ({ ...f, profile_id: "" }))}
+                          className="text-white/30 hover:text-red-400 transition-colors"
+                        >
+                          <X className="w-4 h-4" />
+                        </button>
+                      </div>
+                    ) : (
+                      <div className="space-y-2">
+                        <div className="relative">
+                          <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-3.5 h-3.5 text-white/25" />
+                          <input
+                            placeholder="Buscar por nome, email, CPF ou telefone..."
+                            value={clientSearch}
+                            onChange={(e) => setClientSearch(e.target.value)}
+                            className="w-full pl-9 pr-4 py-2.5 bg-[#1a1a1f] border border-white/10 rounded-lg text-cream text-sm font-body focus:outline-none focus:border-primary/50 transition placeholder:text-white/20"
+                          />
+                        </div>
+                        <div className="bg-[#1a1a1f] border border-white/5 rounded-lg max-h-40 overflow-y-auto divide-y divide-white/5">
+                          {filteredClients.length === 0 ? (
+                            <p className="text-white/20 text-xs font-body text-center py-4">
+                              {clientSearch ? "Nenhum cliente encontrado" : "Nenhum cliente cadastrado"}
+                            </p>
+                          ) : (
+                            filteredClients.map((p) => (
+                              <button
+                                key={p.id}
+                                onClick={() => {
+                                  setForm((f) => ({ ...f, profile_id: p.id }));
+                                  setClientSearch("");
+                                }}
+                                className="w-full text-left px-4 py-2.5 hover:bg-white/5 transition-colors"
+                              >
+                                <p className="text-cream text-sm font-body">{p.full_name ?? "Sem nome"}</p>
+                                <p className="text-white/30 text-xs font-body">{p.email || p.phone || p.cpf || "—"}</p>
+                              </button>
+                            ))
+                          )}
+                        </div>
+                      </div>
+                    )}
+                  </div>
+                  <div>
+                    <label className="flex items-center gap-1.5 text-xs text-white/40 font-body uppercase tracking-wider mb-2">
+                      <BedDouble className="w-3 h-3" /> Quarto
+                    </label>
+                    <div className="space-y-2 max-h-44 overflow-y-auto pr-1">
+                      {rooms.map((room) => (
+                        <button
+                          key={room.id}
+                          onClick={() => setForm((f) => ({ ...f, room_id: room.id, guests_count: 1 }))}
+                          className={`w-full text-left px-4 py-3 rounded-lg border transition-all ${form.room_id === room.id ? "border-primary/50 bg-primary/10" : "border-white/10 bg-[#1a1a1f] hover:border-white/20"}`}
+                        >
+                          <div className="flex items-center justify-between">
+                            <div>
+                              <p className="text-cream text-sm font-body font-medium">{room.name}</p>
+                              <p className="text-white/30 text-xs font-body mt-0.5">
+                                {room.category} · até {room.capacity} hóspedes
+                              </p>
+                            </div>
+                            <div className="text-right">
+                              <p className="text-primary font-display font-semibold text-sm">
+                                R$ {Number(room.promotional_price || room.price).toFixed(0)}
+                              </p>
+                              <p className="text-white/25 text-xs font-body">/noite</p>
+                            </div>
+                          </div>
+                        </button>
+                      ))}
+                    </div>
+                  </div>
+                  <div className="grid grid-cols-2 gap-3">
+                    {(
+                      [
+                        ["Check-in", "check_in", today],
+                        ["Check-out", "check_out", form.check_in ? addDays(form.check_in, 1) : addDays(today, 1)],
+                      ] as const
+                    ).map(([label, key, minDate]) => (
+                      <div key={key}>
+                        <label className="flex items-center gap-1.5 text-xs text-white/40 font-body uppercase tracking-wider mb-2">
+                          <CalendarIcon className="w-3 h-3" /> {label}
+                        </label>
+                        <Popover>
+                          <PopoverTrigger asChild>
+                            <button
+                              className={cn(
+                                "w-full flex items-center gap-2 px-3 py-2.5 bg-[#1a1a1f] border border-white/10 rounded-lg text-sm font-body hover:border-white/20 transition",
+                                form[key] ? "text-cream" : "text-white/25",
+                              )}
+                            >
+                              <CalendarIcon className="w-3.5 h-3.5" />
+                              {form[key] ? format(form[key]!, "dd/MM/yyyy") : "Selecionar"}
+                            </button>
+                          </PopoverTrigger>
+                          <PopoverContent className="w-auto p-0" align="start">
+                            <Calendar
+                              mode="single"
+                              selected={form[key]}
+                              onSelect={(d) => setForm((f) => ({ ...f, [key]: d }))}
+                              disabled={(date) => date < (minDate as Date)}
+                              initialFocus
+                              className="p-3 pointer-events-auto"
+                            />
+                          </PopoverContent>
+                        </Popover>
+                      </div>
+                    ))}
+                  </div>
+                  <div>
+                    <label className="flex items-center gap-1.5 text-xs text-white/40 font-body uppercase tracking-wider mb-2">
+                      <Users className="w-3 h-3" /> Hóspedes
+                    </label>
+                    <input
+                      type="number"
+                      min={1}
+                      max={selectedRoom?.capacity ?? 10}
+                      value={form.guests_count}
+                      onChange={(e) =>
+                        setForm((f) => ({
+                          ...f,
+                          guests_count: Math.max(
+                            1,
+                            Math.min(selectedRoom?.capacity ?? 10, parseInt(e.target.value) || 1),
+                          ),
+                        }))
+                      }
+                      className="w-full bg-[#1a1a1f] border border-white/10 rounded-lg px-3 py-2.5 text-cream text-sm font-body focus:outline-none focus:border-primary/50 transition"
+                    />
+                    {selectedRoom && (
+                      <p className="text-white/25 text-xs font-body mt-1">Máximo: {selectedRoom.capacity} hóspedes</p>
+                    )}
+                  </div>
+                  <div>
+                    <label className="text-xs text-white/40 font-body uppercase tracking-wider block mb-2">
+                      Observações (opcional)
+                    </label>
+                    <textarea
+                      rows={2}
+                      placeholder="Ex: pedido especial, mobilidade reduzida..."
+                      value={form.notes}
+                      onChange={(e) => setForm((f) => ({ ...f, notes: e.target.value }))}
+                      className="w-full bg-[#1a1a1f] border border-white/10 rounded-lg px-3 py-2.5 text-cream text-sm font-body focus:outline-none focus:border-primary/50 transition placeholder:text-white/15 resize-none"
+                    />
+                  </div>
+                  {totalPreview > 0 && (
+                    <div className="bg-primary/8 border border-primary/20 rounded-xl p-4">
+                      <div className="flex justify-between text-sm font-body text-white/50 mb-1">
+                        <span>
+                          {nights} {nights === 1 ? "diária" : "diárias"} × R${" "}
+                          {Number(selectedRoom!.promotional_price || selectedRoom!.price).toFixed(0)}
+                        </span>
+                        <span>R$ {totalPreview.toFixed(2)}</span>
+                      </div>
+                      <div className="flex justify-between items-center border-t border-primary/15 pt-2 mt-2">
+                        <span className="font-display text-cream font-semibold">Total</span>
+                        <span className="font-display text-primary text-xl font-bold">
+                          R$ {totalPreview.toFixed(2)}
+                        </span>
+                      </div>
+                    </div>
+                  )}
+                </div>
+                <div className="flex items-center justify-end gap-3 px-6 py-4 border-t border-white/5 shrink-0">
+                  <button
+                    onClick={() => setModalOpen(false)}
+                    className="px-4 py-2 text-sm text-white/40 hover:text-cream font-body transition-colors"
+                  >
+                    Cancelar
+                  </button>
+                  <button
+                    onClick={handleSave}
+                    disabled={saving}
+                    className="flex items-center gap-2 px-5 py-2.5 rounded-lg text-black text-sm font-body font-semibold hover:brightness-110 transition-all disabled:opacity-50"
+                    style={{ background: "linear-gradient(135deg,#C9A84C,#E5C97A)" }}
+                  >
+                    {saving ? <Loader2 className="w-4 h-4 animate-spin" /> : <Save className="w-4 h-4" />}
+                    {saving ? "Salvando..." : "Confirmar Reserva"}
+                  </button>
+                </div>
+              </div>
+            </motion.div>
+          </>
+        )}
+      </AnimatePresence>
     </div>
   );
 };
