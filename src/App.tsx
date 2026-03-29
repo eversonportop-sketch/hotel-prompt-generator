@@ -17,6 +17,8 @@ import Galeria from "./pages/Galeria";
 import Contato from "./pages/Contato";
 import Login from "./pages/Login";
 import Cadastro from "./pages/Cadastro";
+import Portal from "./pages/Portal";
+import Cardapio from "./pages/Cardapio";
 
 import AdminDashboard from "./pages/admin/AdminDashboard";
 import AdminReservas from "./pages/admin/AdminReservas";
@@ -55,8 +57,10 @@ const App = () => (
               <Route path="/promocoes" element={<Promocoes />} />
               <Route path="/galeria" element={<Galeria />} />
               <Route path="/contato" element={<Contato />} />
+              <Route path="/cardapio" element={<Cardapio />} />
               <Route path="/login" element={<Login />} />
               <Route path="/cadastro" element={<Cadastro />} />
+              <Route path="/portal" element={<Portal />} />
 
               {/* ── Admin — todas as páginas dentro do AdminLayout ── */}
               <Route path="/admin" element={<AdminLayout />}>
