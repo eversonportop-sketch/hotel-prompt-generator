@@ -9,6 +9,7 @@ import {
   Image,
   Users,
   Settings,
+  Sparkles,
   LayoutDashboard,
   UtensilsCrossed,
   CalendarDays,
@@ -129,6 +130,14 @@ const adminModules = [
     href: "/admin/configuracoes",
     description: "Dados do hotel",
     color: "from-slate-900/30 to-slate-800/10",
+    group: "Conteúdo",
+  },
+  {
+    icon: Sparkles,
+    label: "Popup",
+    href: "/admin/popup",
+    description: "Gerenciar popups do site",
+    color: "from-fuchsia-900/30 to-fuchsia-800/10",
     group: "Conteúdo",
   },
 ];
