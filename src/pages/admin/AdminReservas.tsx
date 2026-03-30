@@ -51,6 +51,7 @@ interface Reservation {
   notes: string | null;
   profile_id: string | null;
   client_id: string | null;
+  guest_id: string | null;
   rooms: { id: string; name: string; category: string } | null;
   profiles: { full_name: string | null } | null;
 }
