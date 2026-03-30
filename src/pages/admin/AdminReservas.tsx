@@ -339,6 +339,7 @@ const AdminReservas = () => {
     setEditingId(r.id);
     setForm({
       profile_id: r.profile_id || r.client_id || "",
+      guest_id: r.guest_id || "",
       room_id: (r.rooms as any)?.id || "",
       check_in: new Date(r.check_in + "T12:00:00"),
       check_out: new Date(r.check_out + "T12:00:00"),
