@@ -213,7 +213,7 @@ const AdminReservas = () => {
     setSaving(true);
     try {
       const payload = {
-        profile_id: form.client_id,
+        guest_id: form.client_id,
         client_id: form.client_id,
         room_id: form.room_id,
         check_in: format(form.check_in, "yyyy-MM-dd"),
@@ -258,7 +258,7 @@ const AdminReservas = () => {
     setModalOpen(true);
   };
   const openEdit = (r: Reservation) => {
-    const cid = r.profile_id || r.client_id || "";
+    const cid = r.guest_id || r.client_id || "";
     setEditingId(r.id);
     setForm({
       client_id: cid,
@@ -268,7 +268,7 @@ const AdminReservas = () => {
       guests_count: r.guests_count,
       notes: r.notes || "",
     });
-    setSelectedName((r.profiles as any)?.full_name || "");
+    setSelectedName((r.guests as any)?.full_name || (r.profiles as any)?.full_name || "");
     setClientSearch("");
     setModalOpen(true);
   };
@@ -283,19 +283,19 @@ const AdminReservas = () => {
   const filtered = reservations.filter((r) => {
     const matchStatus = statusFilter === "all" || r.status === statusFilter;
     const q = search.toLowerCase();
-    const cn = (r.profiles as any)?.full_name ?? "";
+    const cn = (r.guests as any)?.full_name ?? (r.profiles as any)?.full_name ?? "";
     const rn = (r.rooms as any)?.name ?? "";
     return matchStatus && (!q || cn.toLowerCase().includes(q) || rn.toLowerCase().includes(q));
   });
 
-  const filteredProfiles = profiles.filter((p) => {
+  const filteredGuests = guestsList.filter((g) => {
     const q = clientSearch.toLowerCase();
     return (
       !q ||
-      p.full_name?.toLowerCase().includes(q) ||
-      p.email?.toLowerCase().includes(q) ||
-      p.phone?.includes(q) ||
-      p.cpf?.includes(q)
+      g.full_name?.toLowerCase().includes(q) ||
+      g.email?.toLowerCase().includes(q) ||
+      g.phone?.includes(q) ||
+      g.cpf?.includes(q)
     );
   });
 
