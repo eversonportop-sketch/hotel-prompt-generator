@@ -10,9 +10,6 @@ import {
   LogIn,
   LogOut,
   ArrowRight,
-  CheckCircle2,
-  XCircle,
-  AlertCircle,
 } from "lucide-react";
 import { useQuery } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
