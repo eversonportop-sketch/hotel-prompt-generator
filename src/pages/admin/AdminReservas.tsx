@@ -51,7 +51,6 @@ interface Reservation {
   notes: string | null;
   profile_id: string | null;
   client_id: string | null;
-  guest_id: string | null;
   rooms: { id: string; name: string; category: string } | null;
   profiles: { full_name: string | null } | null;
 }
@@ -340,7 +339,6 @@ const AdminReservas = () => {
     setEditingId(r.id);
     setForm({
       profile_id: r.profile_id || r.client_id || "",
-      guest_id: r.guest_id || "",
       room_id: (r.rooms as any)?.id || "",
       check_in: new Date(r.check_in + "T12:00:00"),
       check_out: new Date(r.check_out + "T12:00:00"),
@@ -633,20 +631,35 @@ const AdminReservas = () => {
                 </div>
 
                 <div className="px-6 py-5 space-y-5 overflow-y-auto flex-1">
-                  {/* Cliente */}
-                  <div>
-                    <label className="flex items-center gap-1.5 text-xs text-white/40 font-body uppercase tracking-wider mb-2">
-                      <User className="w-3 h-3" /> Cliente
-                    </label>
+                  {/* ── CLIENTE ─────────────────────────────────────────── */}
+                  <div className="space-y-3">
+                    <div className="flex items-center justify-between">
+                      <label className="flex items-center gap-1.5 text-xs text-white/40 font-body uppercase tracking-wider">
+                        <User className="w-3 h-3" /> Cliente
+                      </label>
+                      {!selectedClient && !selectedGuest && !newClientMode && (
+                        <button
+                          onClick={() => setNewClientMode(true)}
+                          className="flex items-center gap-1.5 text-xs text-primary/70 hover:text-primary font-body transition-colors"
+                        >
+                          <UserPlus className="w-3 h-3" /> Cadastrar novo
+                        </button>
+                      )}
+                    </div>
+
+                    {/* Cliente selecionado */}
                     {selectedClient || selectedGuest ? (
-                      <div className="flex items-center justify-between bg-primary/10 border border-primary/25 rounded-lg px-4 py-3">
-                        <div>
-                          <p className="text-cream text-sm font-body font-medium">
+                      <div className="flex items-center gap-3 bg-primary/8 border border-primary/20 rounded-xl px-4 py-3">
+                        <div className="w-8 h-8 rounded-full bg-primary/20 border border-primary/30 flex items-center justify-center shrink-0">
+                          <User className="w-4 h-4 text-primary/70" />
+                        </div>
+                        <div className="flex-1 min-w-0">
+                          <p className="text-cream text-sm font-body font-semibold truncate">
                             {selectedClient?.full_name || selectedGuest?.full_name}
                           </p>
-                          <p className="text-white/40 text-xs font-body mt-0.5">
+                          <p className="text-white/35 text-xs font-body mt-0.5 truncate">
                             {selectedClient
-                              ? selectedClient.email || selectedClient.phone || selectedClient.cpf
+                              ? selectedClient.email || selectedClient.phone || selectedClient.cpf || "—"
                               : selectedGuest?.email ||
                                 selectedGuest?.phone ||
                                 selectedGuest?.cpf ||
@@ -658,90 +671,87 @@ const AdminReservas = () => {
                             setForm((f) => ({ ...f, profile_id: "", guest_id: "" }));
                             setSelectedGuest(null);
                           }}
-                          className="text-white/30 hover:text-red-400 transition-colors"
+                          className="p-1 rounded-lg text-white/20 hover:text-red-400 hover:bg-red-500/10 transition-all"
                         >
-                          <X className="w-4 h-4" />
+                          <X className="w-3.5 h-3.5" />
                         </button>
                       </div>
-                    ) : newClientMode ? (
-                      /* ── Formulário novo cliente ── */
-                      <div className="bg-[#1a1a1f] border border-primary/20 rounded-lg p-4 space-y-3">
-                        <div className="flex items-center justify-between mb-1">
-                          <p className="text-xs text-primary font-body font-semibold uppercase tracking-wider">
-                            Novo Cliente
-                          </p>
+                    ) : /* Formulário novo cliente */
+                    newClientMode ? (
+                      <div className="border border-white/8 rounded-xl overflow-hidden">
+                        <div className="flex items-center justify-between px-4 py-3 bg-white/3 border-b border-white/5">
+                          <div className="flex items-center gap-2">
+                            <UserPlus className="w-3.5 h-3.5 text-primary/60" />
+                            <span className="text-xs text-white/50 font-body uppercase tracking-wider font-semibold">
+                              Novo Cliente
+                            </span>
+                          </div>
                           <button
                             onClick={() => setNewClientMode(false)}
-                            className="text-white/25 hover:text-cream transition-colors"
+                            className="p-1 rounded-lg text-white/20 hover:text-cream hover:bg-white/5 transition-all"
                           >
-                            <X className="w-4 h-4" />
+                            <X className="w-3.5 h-3.5" />
                           </button>
                         </div>
-                        <input
-                          placeholder="Nome completo *"
-                          value={newClientForm.full_name}
-                          onChange={(e) => setNewClientForm((f) => ({ ...f, full_name: e.target.value }))}
-                          className="w-full bg-[#111114] border border-white/10 rounded-lg px-3 py-2 text-cream text-sm font-body focus:outline-none focus:border-primary/50 transition placeholder:text-white/20"
-                        />
-                        <div className="grid grid-cols-2 gap-2">
+                        <div className="p-4 space-y-3">
+                          <input
+                            placeholder="Nome completo *"
+                            value={newClientForm.full_name}
+                            onChange={(e) => setNewClientForm((f) => ({ ...f, full_name: e.target.value }))}
+                            className="w-full bg-[#0d0d10] border border-white/8 rounded-lg px-3 py-2.5 text-cream text-sm font-body focus:outline-none focus:border-primary/40 transition placeholder:text-white/15"
+                          />
+                          <div className="grid grid-cols-2 gap-2.5">
+                            <input
+                              placeholder="Telefone"
+                              value={newClientForm.phone}
+                              onChange={(e) => setNewClientForm((f) => ({ ...f, phone: e.target.value }))}
+                              className="w-full bg-[#0d0d10] border border-white/8 rounded-lg px-3 py-2.5 text-cream text-sm font-body focus:outline-none focus:border-primary/40 transition placeholder:text-white/15"
+                            />
+                            <input
+                              placeholder="CPF"
+                              value={newClientForm.cpf}
+                              onChange={(e) => setNewClientForm((f) => ({ ...f, cpf: e.target.value }))}
+                              className="w-full bg-[#0d0d10] border border-white/8 rounded-lg px-3 py-2.5 text-cream text-sm font-body focus:outline-none focus:border-primary/40 transition placeholder:text-white/15"
+                            />
+                          </div>
                           <input
                             placeholder="Email"
                             type="email"
                             value={newClientForm.email}
                             onChange={(e) => setNewClientForm((f) => ({ ...f, email: e.target.value }))}
-                            className="w-full bg-[#111114] border border-white/10 rounded-lg px-3 py-2 text-cream text-sm font-body focus:outline-none focus:border-primary/50 transition placeholder:text-white/20"
+                            className="w-full bg-[#0d0d10] border border-white/8 rounded-lg px-3 py-2.5 text-cream text-sm font-body focus:outline-none focus:border-primary/40 transition placeholder:text-white/15"
                           />
-                          <input
-                            placeholder="Telefone"
-                            value={newClientForm.phone}
-                            onChange={(e) => setNewClientForm((f) => ({ ...f, phone: e.target.value }))}
-                            className="w-full bg-[#111114] border border-white/10 rounded-lg px-3 py-2 text-cream text-sm font-body focus:outline-none focus:border-primary/50 transition placeholder:text-white/20"
-                          />
-                        </div>
-                        <input
-                          placeholder="CPF (opcional)"
-                          value={newClientForm.cpf}
-                          onChange={(e) => setNewClientForm((f) => ({ ...f, cpf: e.target.value }))}
-                          className="w-full bg-[#111114] border border-white/10 rounded-lg px-3 py-2 text-cream text-sm font-body focus:outline-none focus:border-primary/50 transition placeholder:text-white/20"
-                        />
-                        <button
-                          onClick={handleCreateClient}
-                          disabled={savingClient}
-                          className="w-full flex items-center justify-center gap-2 py-2 rounded-lg text-black text-sm font-body font-semibold hover:brightness-110 transition-all disabled:opacity-50"
-                          style={{ background: "linear-gradient(135deg,#C9A84C,#E5C97A)" }}
-                        >
-                          {savingClient ? (
-                            <Loader2 className="w-3.5 h-3.5 animate-spin" />
-                          ) : (
-                            <UserPlus className="w-3.5 h-3.5" />
-                          )}
-                          {savingClient ? "Cadastrando..." : "Cadastrar Cliente"}
-                        </button>
-                      </div>
-                    ) : (
-                      <div className="space-y-2">
-                        <div className="flex gap-2">
-                          <div className="relative flex-1">
-                            <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-3.5 h-3.5 text-white/25" />
-                            <input
-                              placeholder="Buscar por nome, email, CPF ou telefone..."
-                              value={clientSearch}
-                              onChange={(e) => setClientSearch(e.target.value)}
-                              className="w-full pl-9 pr-4 py-2.5 bg-[#1a1a1f] border border-white/10 rounded-lg text-cream text-sm font-body focus:outline-none focus:border-primary/50 transition placeholder:text-white/20"
-                            />
-                          </div>
                           <button
-                            onClick={() => setNewClientMode(true)}
-                            title="Cadastrar novo cliente"
-                            className="flex items-center gap-1.5 px-3 py-2 rounded-lg border border-primary/30 text-primary text-xs font-body font-semibold hover:bg-primary/10 transition-all whitespace-nowrap"
+                            onClick={handleCreateClient}
+                            disabled={savingClient}
+                            className="w-full flex items-center justify-center gap-2 py-2.5 rounded-lg text-black text-sm font-body font-semibold hover:brightness-110 transition-all disabled:opacity-50"
+                            style={{ background: "linear-gradient(135deg,#C9A84C,#E5C97A)" }}
                           >
-                            <UserPlus className="w-3.5 h-3.5" /> Novo
+                            {savingClient ? (
+                              <Loader2 className="w-3.5 h-3.5 animate-spin" />
+                            ) : (
+                              <UserPlus className="w-3.5 h-3.5" />
+                            )}
+                            {savingClient ? "Cadastrando..." : "Salvar Cliente"}
                           </button>
                         </div>
-                        <div className="bg-[#1a1a1f] border border-white/5 rounded-lg max-h-40 overflow-y-auto divide-y divide-white/5">
+                      </div>
+                    ) : (
+                      /* Busca de clientes */
+                      <div className="border border-white/8 rounded-xl overflow-hidden">
+                        <div className="relative">
+                          <Search className="absolute left-3.5 top-1/2 -translate-y-1/2 w-3.5 h-3.5 text-white/20 pointer-events-none" />
+                          <input
+                            placeholder="Buscar cliente por nome, email, CPF ou telefone..."
+                            value={clientSearch}
+                            onChange={(e) => setClientSearch(e.target.value)}
+                            className="w-full pl-10 pr-4 py-3 bg-[#0d0d10] text-cream text-sm font-body focus:outline-none border-b border-white/5 transition placeholder:text-white/15"
+                          />
+                        </div>
+                        <div className="max-h-44 overflow-y-auto divide-y divide-white/4">
                           {(() => {
                             const q = clientSearch.toLowerCase();
-                            const matchedProfiles = profiles.filter(
+                            const mp = profiles.filter(
                               (p) =>
                                 !q ||
                                 p.full_name?.toLowerCase().includes(q) ||
@@ -749,7 +759,7 @@ const AdminReservas = () => {
                                 p.phone?.includes(q) ||
                                 p.cpf?.includes(q),
                             );
-                            const matchedGuests = guests.filter(
+                            const mg = guests.filter(
                               (g) =>
                                 !q ||
                                 g.full_name?.toLowerCase().includes(q) ||
@@ -757,16 +767,18 @@ const AdminReservas = () => {
                                 g.phone?.includes(q) ||
                                 g.cpf?.includes(q),
                             );
-                            const total = matchedProfiles.length + matchedGuests.length;
-                            if (total === 0)
+                            if (mp.length + mg.length === 0)
                               return (
-                                <p className="text-white/20 text-xs font-body text-center py-4">
-                                  {clientSearch ? "Nenhum cliente encontrado" : "Nenhum cliente cadastrado"}
-                                </p>
+                                <div className="flex flex-col items-center py-6 gap-2">
+                                  <User className="w-6 h-6 text-white/10" />
+                                  <p className="text-white/20 text-xs font-body">
+                                    {clientSearch ? "Nenhum cliente encontrado" : "Nenhum cliente cadastrado"}
+                                  </p>
+                                </div>
                               );
                             return (
                               <>
-                                {matchedProfiles.map((p) => (
+                                {mp.map((p) => (
                                   <button
                                     key={p.id}
                                     onClick={() => {
@@ -774,15 +786,22 @@ const AdminReservas = () => {
                                       setSelectedGuest(null);
                                       setClientSearch("");
                                     }}
-                                    className="w-full text-left px-4 py-2.5 hover:bg-white/5 transition-colors"
+                                    className="w-full flex items-center gap-3 px-4 py-3 hover:bg-white/4 transition-colors text-left group"
                                   >
-                                    <p className="text-cream text-sm font-body">{p.full_name ?? "Sem nome"}</p>
-                                    <p className="text-white/30 text-xs font-body">
-                                      {p.email || p.phone || p.cpf || "—"}
-                                    </p>
+                                    <div className="w-7 h-7 rounded-full bg-white/5 border border-white/8 flex items-center justify-center shrink-0 group-hover:border-primary/30 transition-colors">
+                                      <User className="w-3 h-3 text-white/30 group-hover:text-primary/60 transition-colors" />
+                                    </div>
+                                    <div className="min-w-0">
+                                      <p className="text-cream/80 text-sm font-body font-medium truncate">
+                                        {p.full_name ?? "Sem nome"}
+                                      </p>
+                                      <p className="text-white/25 text-xs font-body truncate">
+                                        {p.email || p.phone || p.cpf || "—"}
+                                      </p>
+                                    </div>
                                   </button>
                                 ))}
-                                {matchedGuests.map((g) => (
+                                {mg.map((g) => (
                                   <button
                                     key={g.id}
                                     onClick={() => {
@@ -790,14 +809,19 @@ const AdminReservas = () => {
                                       setSelectedGuest(g);
                                       setClientSearch("");
                                     }}
-                                    className="w-full text-left px-4 py-2.5 hover:bg-white/5 transition-colors"
+                                    className="w-full flex items-center gap-3 px-4 py-3 hover:bg-white/4 transition-colors text-left group"
                                   >
-                                    <p className="text-cream text-sm font-body">{g.full_name}</p>
-                                    <p className="text-white/30 text-xs font-body">
-                                      {g.email || g.phone || g.cpf || (
-                                        <span className="italic">Cadastrado pelo admin</span>
-                                      )}
-                                    </p>
+                                    <div className="w-7 h-7 rounded-full bg-primary/8 border border-primary/15 flex items-center justify-center shrink-0 group-hover:border-primary/40 transition-colors">
+                                      <UserPlus className="w-3 h-3 text-primary/40 group-hover:text-primary/70 transition-colors" />
+                                    </div>
+                                    <div className="min-w-0">
+                                      <p className="text-cream/80 text-sm font-body font-medium truncate">
+                                        {g.full_name}
+                                      </p>
+                                      <p className="text-white/25 text-xs font-body truncate">
+                                        {g.email || g.phone || g.cpf || "Admin"}
+                                      </p>
+                                    </div>
                                   </button>
                                 ))}
                               </>
