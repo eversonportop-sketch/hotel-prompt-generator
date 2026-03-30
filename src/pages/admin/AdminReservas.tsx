@@ -164,12 +164,12 @@ const AdminReservas = () => {
   const { data: guests = [] } = useQuery({
     queryKey: ["admin-guests"],
     queryFn: async () => {
-      const { data, error } = await supabase
+      const { data, error } = await (supabase as any)
         .from("guests")
         .select("id, full_name, email, phone, cpf")
         .order("full_name");
       if (error) throw error;
-      return data as Guest[];
+      return (data as unknown as Guest[]) || [];
     },
   });
 
@@ -221,7 +221,7 @@ const AdminReservas = () => {
     setSavingClient(true);
     try {
       // Insere na tabela guests (sem FK com auth.users)
-      const { data, error } = await supabase
+      const { data, error } = await (supabase as any)
         .from("guests")
         .insert({
           full_name: newClientForm.full_name.trim(),
@@ -233,9 +233,9 @@ const AdminReservas = () => {
         .single();
       if (error) throw error;
       await qc.invalidateQueries({ queryKey: ["admin-guests"] });
-      // Marca como guest selecionado
-      setForm((f) => ({ ...f, profile_id: "", guest_id: data.id }));
-      setSelectedGuest(data);
+      const guestData = data as unknown as Guest;
+      setForm((f) => ({ ...f, profile_id: "", guest_id: guestData.id }));
+      setSelectedGuest(guestData);
       setNewClientMode(false);
       setNewClientForm({ full_name: "", email: "", phone: "", cpf: "" });
       toast.success("Cliente cadastrado!");
@@ -339,6 +339,7 @@ const AdminReservas = () => {
     setEditingId(r.id);
     setForm({
       profile_id: r.profile_id || r.client_id || "",
+      guest_id: "",
       room_id: (r.rooms as any)?.id || "",
       check_in: new Date(r.check_in + "T12:00:00"),
       check_out: new Date(r.check_out + "T12:00:00"),
