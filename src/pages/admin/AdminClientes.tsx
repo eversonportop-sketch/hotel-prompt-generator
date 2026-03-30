@@ -7,34 +7,27 @@ import {
   Search,
   Phone,
   Mail,
-  Crown,
   User,
   Plus,
   X,
   Save,
   Loader2,
-  MapPin,
   FileText,
   History,
   BedDouble,
   ShoppingCart,
-  TrendingUp,
 } from "lucide-react";
 import { format } from "date-fns";
 import { ptBR } from "date-fns/locale";
 import { toast } from "sonner";
 
-interface Profile {
+interface Guest {
   id: string;
-  full_name: string | null;
+  full_name: string;
+  email: string | null;
   phone: string | null;
-  role: string;
+  cpf: string | null;
   created_at: string;
-  cpf?: string | null;
-  email?: string | null;
-  address?: string | null;
-  city?: string | null;
-  state?: string | null;
 }
 
 const emptyForm = {
@@ -42,62 +35,53 @@ const emptyForm = {
   email: "",
   cpf: "",
   phone: "",
-  address: "",
-  city: "",
-  state: "",
-  role: "guest",
 };
 
 const AdminClientes = () => {
   const [search, setSearch] = useState("");
   const [modalOpen, setModalOpen] = useState(false);
-  const [editProfile, setEditProfile] = useState<Profile | null>(null);
+  const [editGuest, setEditGuest] = useState<Guest | null>(null);
   const [form, setForm] = useState(emptyForm);
   const [saving, setSaving] = useState(false);
-  const [historyClient, setHistoryClient] = useState<Profile | null>(null);
+  const [historyClient, setHistoryClient] = useState<Guest | null>(null);
 
   const qc = useQueryClient();
 
-  const { data: profiles = [], isLoading } = useQuery({
-    queryKey: ["admin-clients"],
+  const { data: guests = [], isLoading } = useQuery({
+    queryKey: ["admin-guests"],
     queryFn: async () => {
-      const { data, error } = await supabase.from("profiles").select("*").order("created_at", { ascending: false });
+      const { data, error } = await (supabase as any)
+        .from("guests")
+        .select("*")
+        .order("created_at", { ascending: false });
       if (error) throw error;
-      return data as Profile[];
+      return data as Guest[];
     },
   });
 
-  const filtered = profiles.filter((p) => {
+  const filtered = guests.filter((g) => {
     const q = search.toLowerCase();
     return (
-      p.full_name?.toLowerCase().includes(q) ||
-      p.phone?.toLowerCase().includes(q) ||
-      p.email?.toLowerCase().includes(q) ||
-      p.cpf?.includes(q)
+      g.full_name?.toLowerCase().includes(q) ||
+      g.phone?.toLowerCase().includes(q) ||
+      g.email?.toLowerCase().includes(q) ||
+      g.cpf?.includes(q)
     );
   });
 
-  const total = profiles.length;
-  const admins = profiles.filter((p) => p.role === "admin").length;
-  const clients = total - admins;
-
   const openNew = () => {
-    setEditProfile(null);
+    setEditGuest(null);
     setForm(emptyForm);
     setModalOpen(true);
   };
 
-  const openEdit = (p: Profile) => {
-    setEditProfile(p);
+  const openEdit = (g: Guest) => {
+    setEditGuest(g);
     setForm({
-      full_name: p.full_name || "",
-      email: p.email || "",
-      cpf: p.cpf || "",
-      phone: p.phone || "",
-      address: p.address || "",
-      city: p.city || "",
-      state: p.state || "",
-      role: p.role || "guest",
+      full_name: g.full_name || "",
+      email: g.email || "",
+      cpf: g.cpf || "",
+      phone: g.phone || "",
     });
     setModalOpen(true);
   };
@@ -109,41 +93,29 @@ const AdminClientes = () => {
     }
     setSaving(true);
     try {
-      if (editProfile) {
-        // Atualizar perfil existente
-        const { error } = await supabase
-          .from("profiles")
+      if (editGuest) {
+        const { error } = await (supabase as any)
+          .from("guests")
           .update({
             full_name: form.full_name,
             phone: form.phone || null,
             cpf: form.cpf || null,
             email: form.email || null,
-            address: form.address || null,
-            city: form.city || null,
-            state: form.state || null,
-            role: form.role,
           })
-          .eq("id", editProfile.id);
+          .eq("id", editGuest.id);
         if (error) throw error;
         toast.success("Cliente atualizado!");
       } else {
-        // Criar novo cliente direto na tabela profiles (sem auth)
-        const newId = crypto.randomUUID();
-        const { error } = await supabase.from("profiles").insert({
-          id: newId,
+        const { error } = await (supabase as any).from("guests").insert({
           full_name: form.full_name,
           phone: form.phone || null,
           cpf: form.cpf || null,
           email: form.email || null,
-          address: form.address || null,
-          city: form.city || null,
-          state: form.state || null,
-          role: form.role,
         });
         if (error) throw error;
         toast.success("Cliente cadastrado!");
       }
-      qc.invalidateQueries({ queryKey: ["admin-clients"] });
+      qc.invalidateQueries({ queryKey: ["admin-guests"] });
       setModalOpen(false);
     } catch (err: any) {
       toast.error(err.message || "Erro ao salvar");
@@ -184,12 +156,13 @@ const AdminClientes = () => {
           </div>
           <div>
             <h1 className="font-display text-2xl font-semibold text-cream leading-none">Clientes</h1>
-            <p className="text-white/30 text-xs mt-0.5 font-body">Cadastro e gestão de hóspedes</p>
+            <p className="text-white/30 text-xs mt-0.5 font-body">Cadastro de hóspedes presenciais</p>
           </div>
         </div>
         <button
           onClick={openNew}
-          className="flex items-center gap-2 px-4 py-2.5 rounded-lg bg-primary text-white text-sm font-body font-medium hover:brightness-110 transition-all"
+          className="flex items-center gap-2 px-4 py-2.5 rounded-lg text-black text-sm font-body font-semibold hover:brightness-110 transition-all"
+          style={{ background: "linear-gradient(135deg,#C9A84C,#E5C97A)" }}
         >
           <Plus className="w-4 h-4" />
           Novo Cliente
@@ -197,29 +170,17 @@ const AdminClientes = () => {
       </div>
 
       {/* KPIs */}
-      <div className="grid grid-cols-3 gap-4">
-        {[
-          { label: "Total", value: total, color: "text-cream", bg: "bg-white/5", border: "border-white/10" },
-          {
-            label: "Hóspedes",
-            value: clients,
-            color: "text-purple-400",
-            bg: "bg-purple-500/10",
-            border: "border-purple-500/20",
-          },
-          {
-            label: "Admins",
-            value: admins,
-            color: "text-amber-400",
-            bg: "bg-amber-500/10",
-            border: "border-amber-500/20",
-          },
-        ].map((s) => (
-          <div key={s.label} className={`${s.bg} border ${s.border} rounded-xl p-4`}>
-            <p className="text-white/30 text-xs font-body uppercase tracking-wider mb-1">{s.label}</p>
-            <p className={`font-display text-3xl font-bold ${s.color}`}>{s.value}</p>
-          </div>
-        ))}
+      <div className="grid grid-cols-2 gap-4">
+        <div className="bg-white/5 border border-white/10 rounded-xl p-4">
+          <p className="text-white/30 text-xs font-body uppercase tracking-wider mb-1">Total</p>
+          <p className="font-display text-3xl font-bold text-cream">{guests.length}</p>
+        </div>
+        <div className="bg-purple-500/10 border border-purple-500/20 rounded-xl p-4">
+          <p className="text-white/30 text-xs font-body uppercase tracking-wider mb-1">Cadastrados Hoje</p>
+          <p className="font-display text-3xl font-bold text-purple-400">
+            {guests.filter((g) => g.created_at?.startsWith(new Date().toISOString().split("T")[0])).length}
+          </p>
+        </div>
       </div>
 
       {/* Busca */}
@@ -248,28 +209,17 @@ const AdminClientes = () => {
           <table className="w-full">
             <thead>
               <tr className="border-b border-white/5">
-                <th className="text-left px-5 py-3.5 text-[10px] uppercase tracking-widest text-white/25 font-body">
-                  Cliente
-                </th>
-                <th className="text-left px-5 py-3.5 text-[10px] uppercase tracking-widest text-white/25 font-body hidden md:table-cell">
-                  Contato
-                </th>
-                <th className="text-left px-5 py-3.5 text-[10px] uppercase tracking-widest text-white/25 font-body hidden lg:table-cell">
-                  CPF
-                </th>
-                <th className="text-left px-5 py-3.5 text-[10px] uppercase tracking-widest text-white/25 font-body hidden md:table-cell">
-                  Cadastro
-                </th>
-                <th className="text-left px-5 py-3.5 text-[10px] uppercase tracking-widest text-white/25 font-body">
-                  Perfil
-                </th>
+                <th className="text-left px-5 py-3.5 text-[10px] uppercase tracking-widest text-white/25 font-body">Cliente</th>
+                <th className="text-left px-5 py-3.5 text-[10px] uppercase tracking-widest text-white/25 font-body hidden md:table-cell">Contato</th>
+                <th className="text-left px-5 py-3.5 text-[10px] uppercase tracking-widest text-white/25 font-body hidden lg:table-cell">CPF</th>
+                <th className="text-left px-5 py-3.5 text-[10px] uppercase tracking-widest text-white/25 font-body hidden md:table-cell">Cadastro</th>
                 <th className="px-5 py-3.5" />
               </tr>
             </thead>
             <tbody>
-              {filtered.map((p, i) => (
+              {filtered.map((g, i) => (
                 <motion.tr
-                  key={p.id}
+                  key={g.id}
                   initial={{ opacity: 0 }}
                   animate={{ opacity: 1 }}
                   transition={{ delay: i * 0.03 }}
@@ -279,67 +229,46 @@ const AdminClientes = () => {
                     <div className="flex items-center gap-3">
                       <div className="w-9 h-9 rounded-full bg-primary/10 border border-primary/20 flex items-center justify-center shrink-0">
                         <span className="text-primary text-sm font-display font-bold">
-                          {(p.full_name ?? "?")[0].toUpperCase()}
+                          {(g.full_name ?? "?")[0].toUpperCase()}
                         </span>
                       </div>
                       <div>
-                        <p className="text-cream text-sm font-body font-medium">{p.full_name ?? "Sem nome"}</p>
-                        {p.email && <p className="text-white/30 text-xs font-body">{p.email}</p>}
+                        <p className="text-cream text-sm font-body font-medium">{g.full_name}</p>
+                        {g.email && <p className="text-white/30 text-xs font-body">{g.email}</p>}
                       </div>
                     </div>
                   </td>
                   <td className="px-5 py-4 hidden md:table-cell">
-                    <div className="flex flex-col gap-1">
-                      {p.phone ? (
-                        <span className="text-white/50 text-sm font-body flex items-center gap-1.5">
-                          <Phone className="w-3 h-3" />
-                          {p.phone}
-                        </span>
-                      ) : (
-                        <span className="text-white/20 text-sm">—</span>
-                      )}
-                      {p.city && (
-                        <span className="text-white/30 text-xs font-body flex items-center gap-1">
-                          <MapPin className="w-3 h-3" />
-                          {p.city}
-                          {p.state ? `, ${p.state}` : ""}
-                        </span>
-                      )}
-                    </div>
+                    {g.phone ? (
+                      <span className="text-white/50 text-sm font-body flex items-center gap-1.5">
+                        <Phone className="w-3 h-3" />
+                        {g.phone}
+                      </span>
+                    ) : (
+                      <span className="text-white/20 text-sm">—</span>
+                    )}
                   </td>
                   <td className="px-5 py-4 hidden lg:table-cell">
                     <span className="text-white/40 text-sm font-body">
-                      {p.cpf || <span className="text-white/20">—</span>}
+                      {g.cpf || <span className="text-white/20">—</span>}
                     </span>
                   </td>
                   <td className="px-5 py-4 hidden md:table-cell">
                     <span className="text-white/40 text-sm font-body">
-                      {format(new Date(p.created_at), "dd MMM yyyy", { locale: ptBR })}
-                    </span>
-                  </td>
-                  <td className="px-5 py-4">
-                    <span
-                      className={`inline-flex items-center gap-1 text-xs px-2.5 py-1 rounded-full font-body ${
-                        p.role === "admin"
-                          ? "bg-amber-500/10 text-amber-400 border border-amber-500/20"
-                          : "bg-purple-500/10 text-purple-400 border border-purple-500/20"
-                      }`}
-                    >
-                      {p.role === "admin" ? <Crown className="w-3 h-3" /> : <User className="w-3 h-3" />}
-                      {p.role === "admin" ? "Admin" : "Hóspede"}
+                      {format(new Date(g.created_at), "dd MMM yyyy", { locale: ptBR })}
                     </span>
                   </td>
                   <td className="px-5 py-4">
                     <div className="flex items-center gap-3">
                       <button
-                        onClick={() => setHistoryClient(p)}
+                        onClick={() => setHistoryClient(g)}
                         className="text-xs text-white/25 hover:text-blue-400 font-body transition-colors flex items-center gap-1"
                       >
                         <History className="w-3 h-3" />
                         Histórico
                       </button>
                       <button
-                        onClick={() => openEdit(p)}
+                        onClick={() => openEdit(g)}
                         className="text-xs text-white/25 hover:text-primary font-body transition-colors"
                       >
                         Editar
@@ -377,56 +306,27 @@ const AdminClientes = () => {
                 className="bg-[#111114] border border-white/10 rounded-2xl w-full max-w-lg shadow-2xl pointer-events-auto overflow-hidden"
                 onClick={(e) => e.stopPropagation()}
               >
-                {/* Header modal */}
                 <div className="flex items-center justify-between px-6 py-5 border-b border-white/5">
                   <div className="flex items-center gap-2">
                     <Users className="w-4 h-4 text-primary" />
                     <h2 className="font-display text-lg font-semibold text-cream">
-                      {editProfile ? "Editar Cliente" : "Novo Cliente"}
+                      {editGuest ? "Editar Cliente" : "Novo Cliente"}
                     </h2>
                   </div>
-                  <button
-                    onClick={() => setModalOpen(false)}
-                    className="text-white/25 hover:text-cream transition-colors"
-                  >
+                  <button onClick={() => setModalOpen(false)} className="text-white/25 hover:text-cream transition-colors">
                     <X className="w-5 h-5" />
                   </button>
                 </div>
 
-                {/* Campos */}
                 <div className="px-6 py-5 space-y-4 max-h-[65vh] overflow-y-auto">
                   {field("Nome completo", "full_name", "João da Silva", <User className="w-3 h-3" />)}
                   {field("E-mail", "email", "joao@email.com", <Mail className="w-3 h-3" />, "email")}
-
                   <div className="grid grid-cols-2 gap-3">
                     {field("CPF", "cpf", "000.000.000-00", <FileText className="w-3 h-3" />)}
                     {field("Telefone", "phone", "(51) 99999-9999", <Phone className="w-3 h-3" />, "tel")}
                   </div>
-
-                  {field("Endereço", "address", "Rua das Flores, 123", <MapPin className="w-3 h-3" />)}
-
-                  <div className="grid grid-cols-2 gap-3">
-                    {field("Cidade", "city", "Butiá", <MapPin className="w-3 h-3" />)}
-                    {field("Estado", "state", "RS", <MapPin className="w-3 h-3" />)}
-                  </div>
-
-                  {/* Perfil */}
-                  <div>
-                    <label className="flex items-center gap-1.5 text-xs text-white/40 font-body uppercase tracking-wider mb-1.5">
-                      <Crown className="w-3 h-3" /> Perfil
-                    </label>
-                    <select
-                      value={form.role}
-                      onChange={(e) => setForm((f) => ({ ...f, role: e.target.value }))}
-                      className="w-full bg-[#1a1a1f] border border-white/10 rounded-lg px-3 py-2.5 text-cream text-sm font-body focus:outline-none focus:border-primary/50 transition"
-                    >
-                      <option value="guest">Hóspede</option>
-                      <option value="admin">Admin</option>
-                    </select>
-                  </div>
                 </div>
 
-                {/* Footer modal */}
                 <div className="flex items-center justify-end gap-3 px-6 py-4 border-t border-white/5">
                   <button
                     onClick={() => setModalOpen(false)}
@@ -437,10 +337,11 @@ const AdminClientes = () => {
                   <button
                     onClick={handleSave}
                     disabled={saving}
-                    className="flex items-center gap-2 px-5 py-2.5 rounded-lg bg-primary text-white text-sm font-body font-medium hover:brightness-110 transition-all disabled:opacity-50"
+                    className="flex items-center gap-2 px-5 py-2.5 rounded-lg text-black text-sm font-body font-semibold hover:brightness-110 transition-all disabled:opacity-50"
+                    style={{ background: "linear-gradient(135deg,#C9A84C,#E5C97A)" }}
                   >
                     {saving ? <Loader2 className="w-4 h-4 animate-spin" /> : <Save className="w-4 h-4" />}
-                    {editProfile ? "Salvar Alterações" : "Cadastrar Cliente"}
+                    {editGuest ? "Salvar Alterações" : "Cadastrar Cliente"}
                   </button>
                 </div>
               </div>
@@ -471,24 +372,26 @@ const statusColors: Record<string, string> = {
   canceled: "bg-red-500/15 text-red-400 border-red-500/20",
 };
 
-const ClientHistoryModal = ({ client, onClose }: { client: Profile; onClose: () => void }) => {
+const ClientHistoryModal = ({ client, onClose }: { client: Guest; onClose: () => void }) => {
   const [tab, setTab] = useState<"reservas" | "consumo">("reservas");
 
+  // Busca reservas vinculadas por guest_id
   const { data: reservations = [], isLoading } = useQuery({
-    queryKey: ["client-history", client.id],
+    queryKey: ["guest-history", client.id],
     queryFn: async () => {
       const { data, error } = await supabase
         .from("reservations")
-        .select("*, rooms(name, category)")
-        .eq("client_id", client.id)
+        .select("*, rooms(name, category, price)")
+        .eq("guest_id", client.id)
         .order("check_in", { ascending: false });
       if (error) throw error;
       return data;
     },
   });
 
+  // Busca consumo vinculado às reservas do cliente
   const { data: orders = [] } = useQuery({
-    queryKey: ["client-orders", client.id],
+    queryKey: ["guest-orders", client.id],
     queryFn: async () => {
       if (!reservations.length) return [];
       const ids = reservations.map((r: any) => r.id);
@@ -535,7 +438,7 @@ const ClientHistoryModal = ({ client, onClose }: { client: Profile; onClose: () 
               </span>
             </div>
             <div>
-              <h2 className="font-display text-lg font-semibold text-cream">{client.full_name ?? "Cliente"}</h2>
+              <h2 className="font-display text-lg font-semibold text-cream">{client.full_name}</h2>
               <p className="text-white/30 text-xs font-body">Histórico completo</p>
             </div>
           </div>
@@ -614,8 +517,13 @@ const ClientHistoryModal = ({ client, onClose }: { client: Profile; onClose: () 
                   <div key={r.id} className="bg-white/[0.03] border border-white/5 rounded-xl p-4">
                     <div className="flex items-start justify-between mb-3">
                       <div>
-                        <p className="text-cream font-body font-medium text-sm">{(r.rooms as any)?.name ?? "Quarto"}</p>
+                        <p className="text-cream font-body font-medium text-sm">
+                          {(r.rooms as any)?.name ?? "Quarto"}
+                        </p>
                         <p className="text-white/30 text-xs font-body mt-0.5">
+                          {(r.rooms as any)?.category} · R$ {Number((r.rooms as any)?.price || 0).toFixed(0)}/noite
+                        </p>
+                        <p className="text-white/25 text-xs font-body mt-0.5">
                           {format(new Date(r.check_in + "T12:00:00"), "dd MMM yyyy", { locale: ptBR })}
                           {" → "}
                           {format(new Date(r.check_out + "T12:00:00"), "dd MMM yyyy", { locale: ptBR })}
@@ -646,7 +554,6 @@ const ClientHistoryModal = ({ client, onClose }: { client: Profile; onClose: () 
                         Total: R$ {(Number(r.total_price) + consumoRes).toFixed(2).replace(".", ",")}
                       </span>
                     </div>
-                    {/* Consumos dessa reserva */}
                     {roomOrders.length > 0 && (
                       <div className="mt-3 pt-3 border-t border-white/5 space-y-1.5">
                         {roomOrders.map((o: any) => (
@@ -690,7 +597,6 @@ const ClientHistoryModal = ({ client, onClose }: { client: Profile; onClose: () 
           )}
         </div>
 
-        {/* Footer com total */}
         {tab === "consumo" && orders.length > 0 && (
           <div className="px-6 py-4 border-t border-white/5 flex justify-between items-center">
             <span className="text-white/30 text-sm font-body">Total em consumo</span>

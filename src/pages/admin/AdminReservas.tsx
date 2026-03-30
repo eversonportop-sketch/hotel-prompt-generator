@@ -27,9 +27,9 @@ import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover
 import { cn } from "@/lib/utils";
 import { toast } from "sonner";
 
-interface Profile {
+interface Guest {
   id: string;
-  full_name: string | null;
+  full_name: string;
   email: string | null;
   phone: string | null;
   cpf: string | null;
@@ -52,7 +52,9 @@ interface Reservation {
   notes: string | null;
   client_id: string | null;
   profile_id: string | null;
+  guest_id: string | null;
   rooms: { id?: string; name: string; category: string } | null;
+  guests: { full_name: string } | null;
   profiles: { full_name: string | null } | null;
 }
 
@@ -119,38 +121,34 @@ const AdminReservas = () => {
       const { data, error } = await supabase
         .from("reservations")
         .select(
-          "id,check_in,check_out,guests_count,total_price,status,notes,client_id,profile_id,rooms(id,name,category),profiles!reservations_profile_id_fkey(full_name)",
+          "id,check_in,check_out,guests_count,total_price,status,notes,client_id,profile_id,guest_id,rooms(id,name,category)",
         )
         .order("created_at", { ascending: false });
       if (error) throw error;
-      const orphans = (data || []).filter((r: any) => !r.profiles?.full_name && r.client_id);
-      if (orphans.length) {
-        const ids = [...new Set(orphans.map((r: any) => r.client_id as string))];
-        const { data: pd } = await supabase.from("profiles").select("id,full_name").in("id", ids);
-        const map: Record<string, string> = {};
-        (pd || []).forEach((p: any) => {
-          map[p.id] = p.full_name;
-        });
-        (data || []).forEach((r: any) => {
-          if (!r.profiles?.full_name && r.client_id && map[r.client_id]) r.profiles = { full_name: map[r.client_id] };
+      // Enrich with guest names
+      const allData = (data || []) as any[];
+      const guestIds = [...new Set(allData.filter((r) => r.guest_id).map((r) => r.guest_id as string))];
+      if (guestIds.length) {
+        const { data: gd } = await (supabase as any).from("guests").select("id,full_name").in("id", guestIds);
+        const gMap: Record<string, string> = {};
+        (gd || []).forEach((g: any) => { gMap[g.id] = g.full_name; });
+        allData.forEach((r) => {
+          if (r.guest_id && gMap[r.guest_id]) r.guests = { full_name: gMap[r.guest_id] };
         });
       }
-      return (data || []) as Reservation[];
+      return allData as Reservation[];
     },
   });
 
-  const { data: profiles = [] } = useQuery({
-    queryKey: ["admin-clients-select"],
+  const { data: guestsList = [] } = useQuery({
+    queryKey: ["admin-guests-select"],
     queryFn: async () => {
-      const { data, error } = await supabase
-        .from("profiles")
+      const { data, error } = await (supabase as any)
+        .from("guests")
         .select("id,full_name,email,phone,cpf")
-        .not("full_name", "is", null)
-        .neq("full_name", "")
-        .neq("role", "admin")
         .order("full_name");
       if (error) throw error;
-      return data as Profile[];
+      return data as Guest[];
     },
   });
 
@@ -215,7 +213,7 @@ const AdminReservas = () => {
     setSaving(true);
     try {
       const payload = {
-        profile_id: form.client_id,
+        guest_id: form.client_id,
         client_id: form.client_id,
         room_id: form.room_id,
         check_in: format(form.check_in, "yyyy-MM-dd"),
@@ -260,7 +258,7 @@ const AdminReservas = () => {
     setModalOpen(true);
   };
   const openEdit = (r: Reservation) => {
-    const cid = r.profile_id || r.client_id || "";
+    const cid = r.guest_id || r.client_id || "";
     setEditingId(r.id);
     setForm({
       client_id: cid,
@@ -270,7 +268,7 @@ const AdminReservas = () => {
       guests_count: r.guests_count,
       notes: r.notes || "",
     });
-    setSelectedName((r.profiles as any)?.full_name || "");
+    setSelectedName((r.guests as any)?.full_name || (r.profiles as any)?.full_name || "");
     setClientSearch("");
     setModalOpen(true);
   };
@@ -285,19 +283,19 @@ const AdminReservas = () => {
   const filtered = reservations.filter((r) => {
     const matchStatus = statusFilter === "all" || r.status === statusFilter;
     const q = search.toLowerCase();
-    const cn = (r.profiles as any)?.full_name ?? "";
+    const cn = (r.guests as any)?.full_name ?? (r.profiles as any)?.full_name ?? "";
     const rn = (r.rooms as any)?.name ?? "";
     return matchStatus && (!q || cn.toLowerCase().includes(q) || rn.toLowerCase().includes(q));
   });
 
-  const filteredProfiles = profiles.filter((p) => {
+  const filteredGuests = guestsList.filter((g) => {
     const q = clientSearch.toLowerCase();
     return (
       !q ||
-      p.full_name?.toLowerCase().includes(q) ||
-      p.email?.toLowerCase().includes(q) ||
-      p.phone?.includes(q) ||
-      p.cpf?.includes(q)
+      g.full_name?.toLowerCase().includes(q) ||
+      g.email?.toLowerCase().includes(q) ||
+      g.phone?.includes(q) ||
+      g.cpf?.includes(q)
     );
   });
 
@@ -440,7 +438,7 @@ const AdminReservas = () => {
             </thead>
             <tbody>
               {filtered.map((r, i) => {
-                const clientName = (r.profiles as any)?.full_name;
+                const clientName = (r.guests as any)?.full_name || (r.profiles as any)?.full_name;
                 const roomName = (r.rooms as any)?.name;
                 const roomCat = (r.rooms as any)?.category;
                 const n = differenceInDays(new Date(r.check_out + "T12:00:00"), new Date(r.check_in + "T12:00:00"));
@@ -606,7 +604,7 @@ const AdminReservas = () => {
                           />
                         </div>
                         <div className="max-h-44 overflow-y-auto divide-y divide-white/4">
-                          {filteredProfiles.length === 0 ? (
+                          {filteredGuests.length === 0 ? (
                             <div className="flex flex-col items-center py-7 gap-3">
                               <UserPlus className="w-7 h-7 text-white/10" />
                               <p className="text-white/25 text-xs font-body text-center">
@@ -618,7 +616,7 @@ const AdminReservas = () => {
                               </p>
                             </div>
                           ) : (
-                            filteredProfiles.map((p) => (
+                            filteredGuests.map((p) => (
                               <button
                                 key={p.id}
                                 onClick={() => {

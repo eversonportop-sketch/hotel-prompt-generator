@@ -10,9 +10,6 @@ import {
   LogIn,
   LogOut,
   ArrowRight,
-  CheckCircle2,
-  XCircle,
-  AlertCircle,
 } from "lucide-react";
 import { useQuery } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
@@ -312,63 +309,6 @@ const AdminDashboard = () => {
         </motion.div>
       </div>
 
-      {/* Atalhos rápidos operacionais */}
-      <motion.div {...fadeUp(0.32)}>
-        <p className="text-[10px] font-semibold uppercase tracking-widest text-white/20 font-body mb-3">
-          Acesso Rápido
-        </p>
-        <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
-          {[
-            {
-              label: "Reservas",
-              sub: "Gestão de reservas",
-              href: "/admin/reservas",
-              icon: CalendarDays,
-              color: "text-emerald-400",
-              bg: "bg-emerald-500/10",
-            },
-            {
-              label: "Check-in",
-              sub: "Registrar entradas",
-              href: "/admin/checkin",
-              icon: LogIn,
-              color: "text-sky-400",
-              bg: "bg-sky-500/10",
-            },
-            {
-              label: "Checkout",
-              sub: "Fechar conta",
-              href: "/admin/checkout",
-              icon: LogOut,
-              color: "text-amber-400",
-              bg: "bg-amber-500/10",
-            },
-            {
-              label: "Clientes",
-              sub: "Cadastro de clientes",
-              href: "/admin/clientes",
-              icon: Users,
-              color: "text-purple-400",
-              bg: "bg-purple-500/10",
-            },
-          ].map((item, i) => (
-            <motion.div key={item.href} {...fadeUp(0.32 + i * 0.04)}>
-              <Link
-                to={item.href}
-                className="flex items-center gap-3 p-4 rounded-xl bg-charcoal-light border border-white/5 hover:border-white/15 transition-all duration-200 group"
-              >
-                <div className={`w-8 h-8 rounded-lg ${item.bg} flex items-center justify-center flex-shrink-0`}>
-                  <item.icon className={`w-4 h-4 ${item.color}`} />
-                </div>
-                <div className="min-w-0">
-                  <p className="text-sm font-semibold text-cream font-body leading-tight">{item.label}</p>
-                  <p className="text-xs text-white/25 font-body mt-0.5">{item.sub}</p>
-                </div>
-              </Link>
-            </motion.div>
-          ))}
-        </div>
-      </motion.div>
     </div>
   );
 };
