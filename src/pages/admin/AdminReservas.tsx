@@ -604,7 +604,7 @@ const AdminReservas = () => {
                           />
                         </div>
                         <div className="max-h-44 overflow-y-auto divide-y divide-white/4">
-                          {filteredProfiles.length === 0 ? (
+                          {filteredGuests.length === 0 ? (
                             <div className="flex flex-col items-center py-7 gap-3">
                               <UserPlus className="w-7 h-7 text-white/10" />
                               <p className="text-white/25 text-xs font-body text-center">
@@ -616,7 +616,7 @@ const AdminReservas = () => {
                               </p>
                             </div>
                           ) : (
-                            filteredProfiles.map((p) => (
+                            filteredGuests.map((p) => (
                               <button
                                 key={p.id}
                                 onClick={() => {
