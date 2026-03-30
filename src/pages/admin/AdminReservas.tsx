@@ -27,9 +27,9 @@ import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover
 import { cn } from "@/lib/utils";
 import { toast } from "sonner";
 
-interface Profile {
+interface Guest {
   id: string;
-  full_name: string | null;
+  full_name: string;
   email: string | null;
   phone: string | null;
   cpf: string | null;
@@ -52,7 +52,9 @@ interface Reservation {
   notes: string | null;
   client_id: string | null;
   profile_id: string | null;
+  guest_id: string | null;
   rooms: { id?: string; name: string; category: string } | null;
+  guests: { full_name: string } | null;
   profiles: { full_name: string | null } | null;
 }
 
