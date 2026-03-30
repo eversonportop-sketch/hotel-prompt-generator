@@ -564,7 +564,7 @@ export type Database = {
         Row: {
           check_in: string
           check_out: string
-          client_id: string
+          client_id: string | null
           created_at: string
           guest_id: string | null
           guests_count: number
@@ -579,7 +579,7 @@ export type Database = {
         Insert: {
           check_in: string
           check_out: string
-          client_id: string
+          client_id?: string | null
           created_at?: string
           guest_id?: string | null
           guests_count?: number
@@ -594,7 +594,7 @@ export type Database = {
         Update: {
           check_in?: string
           check_out?: string
-          client_id?: string
+          client_id?: string | null
           created_at?: string
           guest_id?: string | null
           guests_count?: number
