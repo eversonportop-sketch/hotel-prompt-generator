@@ -4,8 +4,12 @@ import { motion, AnimatePresence } from "framer-motion";
 import {
   LayoutDashboard,
   CalendarDays,
+  LogIn,
+  LogOut as LogOutIcon,
+  Receipt,
   UtensilsCrossed,
   BedDouble,
+  Users,
   Waves,
   PartyPopper,
   Tag,
@@ -30,6 +34,8 @@ const sidebarGroups = [
     label: "Operacional",
     items: [
       { icon: CalendarDays, label: "Reservas", href: "/admin/reservas" },
+      { icon: LogIn, label: "Check-in", href: "/admin/checkin" },
+      { icon: LogOutIcon, label: "Checkout", href: "/admin/checkout" },
       { icon: UtensilsCrossed, label: "Consumo", href: "/admin/consumo" },
     ],
   },
@@ -37,6 +43,7 @@ const sidebarGroups = [
     label: "Gestão",
     items: [
       { icon: BedDouble, label: "Quartos", href: "/admin/quartos" },
+      { icon: Users, label: "Clientes", href: "/admin/clientes" },
       { icon: Waves, label: "Piscina", href: "/admin/piscina" },
       { icon: PartyPopper, label: "Salão", href: "/admin/salao" },
     ],
