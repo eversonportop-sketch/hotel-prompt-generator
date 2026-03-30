@@ -62,10 +62,10 @@ const STATUS_LABELS: Record<string, string> = {
   completed: "Concluída",
 };
 const STATUS_COLORS: Record<string, string> = {
-  pending: "bg-yellow-500/15 text-yellow-400 border-yellow-500/25",
-  confirmed: "bg-green-500/15 text-green-400 border-green-500/25",
-  canceled: "bg-red-500/15 text-red-400 border-red-500/25",
-  completed: "bg-blue-500/15 text-blue-400 border-blue-500/25",
+  pending: "bg-yellow-900/40 text-yellow-300/80 border-yellow-700/30",
+  confirmed: "bg-emerald-900/40 text-emerald-300/80 border-emerald-700/30",
+  canceled: "bg-red-900/40 text-red-300/80 border-red-700/30",
+  completed: "bg-slate-700/40 text-slate-300/80 border-slate-600/30",
 };
 
 interface Guest {
@@ -164,12 +164,12 @@ const AdminReservas = () => {
   const { data: guests = [] } = useQuery({
     queryKey: ["admin-guests"],
     queryFn: async () => {
-      const { data, error } = await (supabase as any)
+      const { data, error } = await supabase
         .from("guests")
         .select("id, full_name, email, phone, cpf")
         .order("full_name");
       if (error) throw error;
-      return (data as unknown as Guest[]) || [];
+      return data as Guest[];
     },
   });
 
@@ -221,7 +221,7 @@ const AdminReservas = () => {
     setSavingClient(true);
     try {
       // Insere na tabela guests (sem FK com auth.users)
-      const { data, error } = await (supabase as any)
+      const { data, error } = await supabase
         .from("guests")
         .insert({
           full_name: newClientForm.full_name.trim(),
@@ -233,9 +233,9 @@ const AdminReservas = () => {
         .single();
       if (error) throw error;
       await qc.invalidateQueries({ queryKey: ["admin-guests"] });
-      const guestData = data as unknown as Guest;
-      setForm((f) => ({ ...f, profile_id: "", guest_id: guestData.id }));
-      setSelectedGuest(guestData);
+      // Marca como guest selecionado
+      setForm((f) => ({ ...f, profile_id: "", guest_id: data.id }));
+      setSelectedGuest(data);
       setNewClientMode(false);
       setNewClientForm({ full_name: "", email: "", phone: "", cpf: "" });
       toast.success("Cliente cadastrado!");
@@ -339,7 +339,6 @@ const AdminReservas = () => {
     setEditingId(r.id);
     setForm({
       profile_id: r.profile_id || r.client_id || "",
-      guest_id: "",
       room_id: (r.rooms as any)?.id || "",
       check_in: new Date(r.check_in + "T12:00:00"),
       check_out: new Date(r.check_out + "T12:00:00"),
@@ -548,7 +547,8 @@ const AdminReservas = () => {
                       <select
                         value={r.status}
                         onChange={(e) => updateStatus.mutate({ id: r.id, status: e.target.value })}
-                        className={`rounded-lg px-2 py-1.5 text-xs font-body border focus:outline-none transition cursor-pointer ${STATUS_COLORS[r.status] || "bg-white/10 text-white/40 border-white/10"}`}
+                        className={`rounded-lg px-2 py-1.5 text-xs font-body border focus:outline-none transition cursor-pointer appearance-none ${STATUS_COLORS[r.status] || "bg-white/10 text-white/40 border-white/10"}`}
+                        style={{ backgroundColor: "inherit" }}
                       >
                         <option value="pending">Pendente</option>
                         <option value="confirmed">Confirmada</option>
