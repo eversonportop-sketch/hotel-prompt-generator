@@ -146,6 +146,8 @@ const AdminClientes = () => {
     // Navega para reservas passando o cliente via state
     navigate("/admin/reservas", { state: { preselectedGuest: g } });
   };
+
+  const field = (
     label: string,
     key: keyof typeof emptyForm,
     placeholder: string,
@@ -230,10 +232,18 @@ const AdminClientes = () => {
           <table className="w-full">
             <thead>
               <tr className="border-b border-white/5">
-                <th className="text-left px-5 py-3.5 text-[10px] uppercase tracking-widest text-white/25 font-body">Cliente</th>
-                <th className="text-left px-5 py-3.5 text-[10px] uppercase tracking-widest text-white/25 font-body hidden md:table-cell">Contato</th>
-                <th className="text-left px-5 py-3.5 text-[10px] uppercase tracking-widest text-white/25 font-body hidden lg:table-cell">CPF</th>
-                <th className="text-left px-5 py-3.5 text-[10px] uppercase tracking-widest text-white/25 font-body hidden md:table-cell">Cadastro</th>
+                <th className="text-left px-5 py-3.5 text-[10px] uppercase tracking-widest text-white/25 font-body">
+                  Cliente
+                </th>
+                <th className="text-left px-5 py-3.5 text-[10px] uppercase tracking-widest text-white/25 font-body hidden md:table-cell">
+                  Contato
+                </th>
+                <th className="text-left px-5 py-3.5 text-[10px] uppercase tracking-widest text-white/25 font-body hidden lg:table-cell">
+                  CPF
+                </th>
+                <th className="text-left px-5 py-3.5 text-[10px] uppercase tracking-widest text-white/25 font-body hidden md:table-cell">
+                  Cadastro
+                </th>
                 <th className="px-5 py-3.5" />
               </tr>
             </thead>
@@ -351,7 +361,10 @@ const AdminClientes = () => {
                       {editGuest ? "Editar Cliente" : "Novo Cliente"}
                     </h2>
                   </div>
-                  <button onClick={() => setModalOpen(false)} className="text-white/25 hover:text-cream transition-colors">
+                  <button
+                    onClick={() => setModalOpen(false)}
+                    className="text-white/25 hover:text-cream transition-colors"
+                  >
                     <X className="w-5 h-5" />
                   </button>
                 </div>
@@ -609,9 +622,7 @@ const ClientHistoryModal = ({ client, onClose }: { client: Guest; onClose: () =>
                   <div key={r.id} className="bg-white/[0.03] border border-white/5 rounded-xl p-4">
                     <div className="flex items-start justify-between mb-3">
                       <div>
-                        <p className="text-cream font-body font-medium text-sm">
-                          {(r.rooms as any)?.name ?? "Quarto"}
-                        </p>
+                        <p className="text-cream font-body font-medium text-sm">{(r.rooms as any)?.name ?? "Quarto"}</p>
                         <p className="text-white/30 text-xs font-body mt-0.5">
                           {(r.rooms as any)?.category} · R$ {Number((r.rooms as any)?.price || 0).toFixed(0)}/noite
                         </p>
