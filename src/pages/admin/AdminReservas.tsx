@@ -121,38 +121,34 @@ const AdminReservas = () => {
       const { data, error } = await supabase
         .from("reservations")
         .select(
-          "id,check_in,check_out,guests_count,total_price,status,notes,client_id,profile_id,rooms(id,name,category),profiles!reservations_profile_id_fkey(full_name)",
+          "id,check_in,check_out,guests_count,total_price,status,notes,client_id,profile_id,guest_id,rooms(id,name,category)",
         )
         .order("created_at", { ascending: false });
       if (error) throw error;
-      const orphans = (data || []).filter((r: any) => !r.profiles?.full_name && r.client_id);
-      if (orphans.length) {
-        const ids = [...new Set(orphans.map((r: any) => r.client_id as string))];
-        const { data: pd } = await supabase.from("profiles").select("id,full_name").in("id", ids);
-        const map: Record<string, string> = {};
-        (pd || []).forEach((p: any) => {
-          map[p.id] = p.full_name;
-        });
-        (data || []).forEach((r: any) => {
-          if (!r.profiles?.full_name && r.client_id && map[r.client_id]) r.profiles = { full_name: map[r.client_id] };
+      // Enrich with guest names
+      const allData = (data || []) as any[];
+      const guestIds = [...new Set(allData.filter((r) => r.guest_id).map((r) => r.guest_id as string))];
+      if (guestIds.length) {
+        const { data: gd } = await (supabase as any).from("guests").select("id,full_name").in("id", guestIds);
+        const gMap: Record<string, string> = {};
+        (gd || []).forEach((g: any) => { gMap[g.id] = g.full_name; });
+        allData.forEach((r) => {
+          if (r.guest_id && gMap[r.guest_id]) r.guests = { full_name: gMap[r.guest_id] };
         });
       }
-      return (data || []) as Reservation[];
+      return allData as Reservation[];
     },
   });
 
-  const { data: profiles = [] } = useQuery({
-    queryKey: ["admin-clients-select"],
+  const { data: guestsList = [] } = useQuery({
+    queryKey: ["admin-guests-select"],
     queryFn: async () => {
-      const { data, error } = await supabase
-        .from("profiles")
+      const { data, error } = await (supabase as any)
+        .from("guests")
         .select("id,full_name,email,phone,cpf")
-        .not("full_name", "is", null)
-        .neq("full_name", "")
-        .neq("role", "admin")
         .order("full_name");
       if (error) throw error;
-      return data as Profile[];
+      return data as Guest[];
     },
   });
 
