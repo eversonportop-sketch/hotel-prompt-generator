@@ -1,6 +1,7 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
+import { useLocation } from "react-router-dom";
 import { motion, AnimatePresence } from "framer-motion";
 import {
   CalendarDays,
@@ -112,6 +113,7 @@ const emptyNewClient = {
 
 const AdminReservas = () => {
   const qc = useQueryClient();
+  const location = useLocation();
   const [search, setSearch] = useState("");
   const [statusFilter, setStatusFilter] = useState("all");
   const [modalOpen, setModalOpen] = useState(false);
@@ -123,6 +125,22 @@ const AdminReservas = () => {
   const [deleteId, setDeleteId] = useState<string | null>(null);
   const [clientMode, setClientMode] = useState<"search" | "new">("search");
   const [newClient, setNewClient] = useState({ ...emptyNewClient });
+
+  // Abre modal com cliente pré-selecionado vindo da página de Clientes
+  useEffect(() => {
+    const state = location.state as { preselectedGuest?: { id: string; full_name: string } } | null;
+    if (state?.preselectedGuest) {
+      setEditingId(null);
+      setForm({ ...emptyForm, client_id: state.preselectedGuest.id });
+      setSelectedName(state.preselectedGuest.full_name);
+      setClientMode("search");
+      setNewClient({ ...emptyNewClient });
+      setClientSearch("");
+      setModalOpen(true);
+      // Limpa o state para não reabrir ao voltar
+      window.history.replaceState({}, "");
+    }
+  }, [location.state]);
 
   const { data: reservations = [], isLoading } = useQuery({
     queryKey: ["admin-reservations"],
