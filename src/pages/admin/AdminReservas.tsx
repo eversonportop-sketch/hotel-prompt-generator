@@ -16,6 +16,7 @@ import {
   Trash2,
   Pencil,
   FileText,
+  UserPlus,
 } from "lucide-react";
 import { format, differenceInDays, addDays } from "date-fns";
 import { Calendar } from "@/components/ui/calendar";
@@ -94,6 +95,11 @@ const AdminReservas = () => {
   const [form, setForm] = useState({ ...emptyForm });
   const [clientSearch, setClientSearch] = useState("");
   const [saving, setSaving] = useState(false);
+
+  // Novo cliente inline
+  const [newClientMode, setNewClientMode] = useState(false);
+  const [newClientForm, setNewClientForm] = useState({ full_name: "", email: "", phone: "", cpf: "" });
+  const [savingClient, setSavingClient] = useState(false);
 
   // Confirmação de exclusão
   const [deleteConfirm, setDeleteConfirm] = useState<string | null>(null);
@@ -183,6 +189,40 @@ const AdminReservas = () => {
     },
     onError: () => toast.error("Erro ao excluir reserva."),
   });
+
+  /* ── Criar novo cliente inline ───────────────────────────────────────────── */
+  const handleCreateClient = async () => {
+    if (!newClientForm.full_name.trim()) {
+      toast.error("Informe o nome do cliente.");
+      return;
+    }
+    setSavingClient(true);
+    try {
+      // Insere direto na tabela profiles (sem criar usuário no Auth)
+      const { data, error } = await supabase
+        .from("profiles")
+        .insert({
+          id: crypto.randomUUID(),
+          full_name: newClientForm.full_name.trim(),
+          email: newClientForm.email.trim() || null,
+          phone: newClientForm.phone.trim() || null,
+          cpf: newClientForm.cpf.trim() || null,
+          role: "guest",
+        })
+        .select()
+        .single();
+      if (error) throw error;
+      await qc.invalidateQueries({ queryKey: ["admin-clients"] });
+      setForm((f) => ({ ...f, profile_id: data.id }));
+      setNewClientMode(false);
+      setNewClientForm({ full_name: "", email: "", phone: "", cpf: "" });
+      toast.success("Cliente cadastrado!");
+    } catch (err: any) {
+      toast.error(err.message || "Erro ao cadastrar cliente.");
+    } finally {
+      setSavingClient(false);
+    }
+  };
 
   /* ── Salvar (criar ou editar) ─────────────────────────────────────────────── */
   const handleSave = async () => {
@@ -290,6 +330,8 @@ const AdminReservas = () => {
     setEditingId(null);
     setForm({ ...emptyForm });
     setClientSearch("");
+    setNewClientMode(false);
+    setNewClientForm({ full_name: "", email: "", phone: "", cpf: "" });
   };
 
   /* ── Filtros ──────────────────────────────────────────────────────────────── */
@@ -583,16 +625,80 @@ const AdminReservas = () => {
                           <X className="w-4 h-4" />
                         </button>
                       </div>
+                    ) : newClientMode ? (
+                      /* ── Formulário novo cliente ── */
+                      <div className="bg-[#1a1a1f] border border-primary/20 rounded-lg p-4 space-y-3">
+                        <div className="flex items-center justify-between mb-1">
+                          <p className="text-xs text-primary font-body font-semibold uppercase tracking-wider">
+                            Novo Cliente
+                          </p>
+                          <button
+                            onClick={() => setNewClientMode(false)}
+                            className="text-white/25 hover:text-cream transition-colors"
+                          >
+                            <X className="w-4 h-4" />
+                          </button>
+                        </div>
+                        <input
+                          placeholder="Nome completo *"
+                          value={newClientForm.full_name}
+                          onChange={(e) => setNewClientForm((f) => ({ ...f, full_name: e.target.value }))}
+                          className="w-full bg-[#111114] border border-white/10 rounded-lg px-3 py-2 text-cream text-sm font-body focus:outline-none focus:border-primary/50 transition placeholder:text-white/20"
+                        />
+                        <div className="grid grid-cols-2 gap-2">
+                          <input
+                            placeholder="Email"
+                            type="email"
+                            value={newClientForm.email}
+                            onChange={(e) => setNewClientForm((f) => ({ ...f, email: e.target.value }))}
+                            className="w-full bg-[#111114] border border-white/10 rounded-lg px-3 py-2 text-cream text-sm font-body focus:outline-none focus:border-primary/50 transition placeholder:text-white/20"
+                          />
+                          <input
+                            placeholder="Telefone"
+                            value={newClientForm.phone}
+                            onChange={(e) => setNewClientForm((f) => ({ ...f, phone: e.target.value }))}
+                            className="w-full bg-[#111114] border border-white/10 rounded-lg px-3 py-2 text-cream text-sm font-body focus:outline-none focus:border-primary/50 transition placeholder:text-white/20"
+                          />
+                        </div>
+                        <input
+                          placeholder="CPF (opcional)"
+                          value={newClientForm.cpf}
+                          onChange={(e) => setNewClientForm((f) => ({ ...f, cpf: e.target.value }))}
+                          className="w-full bg-[#111114] border border-white/10 rounded-lg px-3 py-2 text-cream text-sm font-body focus:outline-none focus:border-primary/50 transition placeholder:text-white/20"
+                        />
+                        <button
+                          onClick={handleCreateClient}
+                          disabled={savingClient}
+                          className="w-full flex items-center justify-center gap-2 py-2 rounded-lg text-black text-sm font-body font-semibold hover:brightness-110 transition-all disabled:opacity-50"
+                          style={{ background: "linear-gradient(135deg,#C9A84C,#E5C97A)" }}
+                        >
+                          {savingClient ? (
+                            <Loader2 className="w-3.5 h-3.5 animate-spin" />
+                          ) : (
+                            <UserPlus className="w-3.5 h-3.5" />
+                          )}
+                          {savingClient ? "Cadastrando..." : "Cadastrar Cliente"}
+                        </button>
+                      </div>
                     ) : (
                       <div className="space-y-2">
-                        <div className="relative">
-                          <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-3.5 h-3.5 text-white/25" />
-                          <input
-                            placeholder="Buscar por nome, email, CPF ou telefone..."
-                            value={clientSearch}
-                            onChange={(e) => setClientSearch(e.target.value)}
-                            className="w-full pl-9 pr-4 py-2.5 bg-[#1a1a1f] border border-white/10 rounded-lg text-cream text-sm font-body focus:outline-none focus:border-primary/50 transition placeholder:text-white/20"
-                          />
+                        <div className="flex gap-2">
+                          <div className="relative flex-1">
+                            <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-3.5 h-3.5 text-white/25" />
+                            <input
+                              placeholder="Buscar por nome, email, CPF ou telefone..."
+                              value={clientSearch}
+                              onChange={(e) => setClientSearch(e.target.value)}
+                              className="w-full pl-9 pr-4 py-2.5 bg-[#1a1a1f] border border-white/10 rounded-lg text-cream text-sm font-body focus:outline-none focus:border-primary/50 transition placeholder:text-white/20"
+                            />
+                          </div>
+                          <button
+                            onClick={() => setNewClientMode(true)}
+                            title="Cadastrar novo cliente"
+                            className="flex items-center gap-1.5 px-3 py-2 rounded-lg border border-primary/30 text-primary text-xs font-body font-semibold hover:bg-primary/10 transition-all whitespace-nowrap"
+                          >
+                            <UserPlus className="w-3.5 h-3.5" /> Novo
+                          </button>
                         </div>
                         <div className="bg-[#1a1a1f] border border-white/5 rounded-lg max-h-40 overflow-y-auto divide-y divide-white/5">
                           {filteredClients.length === 0 ? (
