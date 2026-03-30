@@ -1,6 +1,7 @@
 import { useState } from "react";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
+import { useNavigate } from "react-router-dom";
 import { motion, AnimatePresence } from "framer-motion";
 import {
   Users,
@@ -16,6 +17,8 @@ import {
   History,
   BedDouble,
   ShoppingCart,
+  CalendarPlus,
+  Trash2,
 } from "lucide-react";
 import { format } from "date-fns";
 import { ptBR } from "date-fns/locale";
@@ -44,6 +47,8 @@ const AdminClientes = () => {
   const [form, setForm] = useState(emptyForm);
   const [saving, setSaving] = useState(false);
   const [historyClient, setHistoryClient] = useState<Guest | null>(null);
+  const [deleteId, setDeleteId] = useState<string | null>(null);
+  const navigate = useNavigate();
 
   const qc = useQueryClient();
 
@@ -124,7 +129,23 @@ const AdminClientes = () => {
     }
   };
 
-  const field = (
+  const deleteGuest = useMutation({
+    mutationFn: async (id: string) => {
+      const { error } = await (supabase as any).from("guests").delete().eq("id", id);
+      if (error) throw error;
+    },
+    onSuccess: () => {
+      qc.invalidateQueries({ queryKey: ["admin-guests"] });
+      toast.success("Cliente excluído.");
+      setDeleteId(null);
+    },
+    onError: () => toast.error("Erro ao excluir cliente."),
+  });
+
+  const handleNewReservation = (g: Guest) => {
+    // Navega para reservas passando o cliente via state
+    navigate("/admin/reservas", { state: { preselectedGuest: g } });
+  };
     label: string,
     key: keyof typeof emptyForm,
     placeholder: string,
@@ -259,19 +280,36 @@ const AdminClientes = () => {
                     </span>
                   </td>
                   <td className="px-5 py-4">
-                    <div className="flex items-center gap-3">
+                    <div className="flex items-center gap-2">
+                      <button
+                        onClick={() => handleNewReservation(g)}
+                        className="flex items-center gap-1 text-xs text-white/25 hover:text-primary font-body transition-colors px-2 py-1 rounded-lg hover:bg-primary/10"
+                        title="Nova Reserva"
+                      >
+                        <CalendarPlus className="w-3.5 h-3.5" />
+                        <span className="hidden lg:inline">Reserva</span>
+                      </button>
                       <button
                         onClick={() => setHistoryClient(g)}
-                        className="text-xs text-white/25 hover:text-blue-400 font-body transition-colors flex items-center gap-1"
+                        className="flex items-center gap-1 text-xs text-white/25 hover:text-blue-400 font-body transition-colors px-2 py-1 rounded-lg hover:bg-blue-500/10"
+                        title="Histórico"
                       >
-                        <History className="w-3 h-3" />
-                        Histórico
+                        <History className="w-3.5 h-3.5" />
+                        <span className="hidden lg:inline">Histórico</span>
                       </button>
                       <button
                         onClick={() => openEdit(g)}
-                        className="text-xs text-white/25 hover:text-primary font-body transition-colors"
+                        className="text-xs text-white/25 hover:text-amber-400 font-body transition-colors px-2 py-1 rounded-lg hover:bg-amber-500/10"
+                        title="Editar"
                       >
                         Editar
+                      </button>
+                      <button
+                        onClick={() => setDeleteId(g.id)}
+                        className="text-xs text-white/20 hover:text-red-400 font-body transition-colors px-2 py-1 rounded-lg hover:bg-red-500/10"
+                        title="Excluir"
+                      >
+                        <Trash2 className="w-3.5 h-3.5" />
                       </button>
                     </div>
                   </td>
@@ -342,6 +380,60 @@ const AdminClientes = () => {
                   >
                     {saving ? <Loader2 className="w-4 h-4 animate-spin" /> : <Save className="w-4 h-4" />}
                     {editGuest ? "Salvar Alterações" : "Cadastrar Cliente"}
+                  </button>
+                </div>
+              </div>
+            </motion.div>
+          </>
+        )}
+      </AnimatePresence>
+
+      {/* Modal Excluir */}
+      <AnimatePresence>
+        {deleteId && (
+          <>
+            <motion.div
+              key="del-bg"
+              initial={{ opacity: 0 }}
+              animate={{ opacity: 1 }}
+              exit={{ opacity: 0 }}
+              className="fixed inset-0 z-50 bg-black/60 backdrop-blur-sm"
+              onClick={() => setDeleteId(null)}
+            />
+            <motion.div
+              key="del-modal"
+              initial={{ opacity: 0, scale: 0.95 }}
+              animate={{ opacity: 1, scale: 1 }}
+              exit={{ opacity: 0, scale: 0.95 }}
+              transition={{ duration: 0.15 }}
+              className="fixed inset-0 z-50 flex items-center justify-center p-4 pointer-events-none"
+            >
+              <div
+                className="bg-[#111114] border border-white/10 rounded-2xl w-full max-w-sm shadow-2xl pointer-events-auto p-6 space-y-4"
+                onClick={(e) => e.stopPropagation()}
+              >
+                <div className="flex items-center gap-3">
+                  <div className="p-2.5 rounded-xl bg-red-500/10 border border-red-500/20">
+                    <Trash2 className="w-5 h-5 text-red-400" />
+                  </div>
+                  <div>
+                    <h3 className="font-display text-base font-semibold text-cream">Excluir cliente?</h3>
+                    <p className="text-white/30 text-xs font-body mt-0.5">O histórico de reservas será mantido.</p>
+                  </div>
+                </div>
+                <div className="flex gap-3">
+                  <button
+                    onClick={() => setDeleteId(null)}
+                    className="flex-1 py-2.5 text-sm text-white/40 hover:text-cream font-body border border-white/10 rounded-xl transition-colors"
+                  >
+                    Cancelar
+                  </button>
+                  <button
+                    onClick={() => deleteGuest.mutate(deleteId!)}
+                    disabled={deleteGuest.isPending}
+                    className="flex-1 py-2.5 text-sm font-body font-semibold rounded-xl bg-red-500/15 hover:bg-red-500/25 text-red-400 border border-red-500/25 transition-colors disabled:opacity-50"
+                  >
+                    {deleteGuest.isPending ? "Excluindo..." : "Confirmar"}
                   </button>
                 </div>
               </div>
