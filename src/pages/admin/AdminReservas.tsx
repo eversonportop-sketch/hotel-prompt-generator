@@ -250,7 +250,6 @@ const AdminReservas = () => {
 
       const payload = {
         guest_id: guestId,
-        client_id: guestId,
         room_id: form.room_id,
         check_in: format(form.check_in, "yyyy-MM-dd"),
         check_out: format(form.check_out, "yyyy-MM-dd"),
