@@ -68,8 +68,17 @@ const STATUS_COLORS: Record<string, string> = {
   completed: "bg-blue-500/15 text-blue-400 border-blue-500/25",
 };
 
+interface Guest {
+  id: string;
+  full_name: string;
+  email: string | null;
+  phone: string | null;
+  cpf: string | null;
+}
+
 const emptyForm = {
   profile_id: "",
+  guest_id: "",
   room_id: "",
   check_in: undefined as Date | undefined,
   check_out: undefined as Date | undefined,
@@ -95,6 +104,7 @@ const AdminReservas = () => {
   const [form, setForm] = useState({ ...emptyForm });
   const [clientSearch, setClientSearch] = useState("");
   const [saving, setSaving] = useState(false);
+  const [selectedGuest, setSelectedGuest] = useState<Guest | null>(null);
 
   // Novo cliente inline
   const [newClientMode, setNewClientMode] = useState(false);
@@ -151,6 +161,18 @@ const AdminReservas = () => {
     },
   });
 
+  const { data: guests = [] } = useQuery({
+    queryKey: ["admin-guests"],
+    queryFn: async () => {
+      const { data, error } = await supabase
+        .from("guests")
+        .select("id, full_name, email, phone, cpf")
+        .order("full_name");
+      if (error) throw error;
+      return data as Guest[];
+    },
+  });
+
   const { data: rooms = [] } = useQuery({
     queryKey: ["admin-rooms-active"],
     queryFn: async () => {
@@ -198,22 +220,22 @@ const AdminReservas = () => {
     }
     setSavingClient(true);
     try {
-      // Insere direto na tabela profiles (sem criar usuário no Auth)
+      // Insere na tabela guests (sem FK com auth.users)
       const { data, error } = await supabase
-        .from("profiles")
+        .from("guests")
         .insert({
-          id: crypto.randomUUID(),
           full_name: newClientForm.full_name.trim(),
           email: newClientForm.email.trim() || null,
           phone: newClientForm.phone.trim() || null,
           cpf: newClientForm.cpf.trim() || null,
-          role: "guest",
         })
         .select()
         .single();
       if (error) throw error;
-      await qc.invalidateQueries({ queryKey: ["admin-clients"] });
-      setForm((f) => ({ ...f, profile_id: data.id }));
+      await qc.invalidateQueries({ queryKey: ["admin-guests"] });
+      // Marca como guest selecionado
+      setForm((f) => ({ ...f, profile_id: "", guest_id: data.id }));
+      setSelectedGuest(data);
       setNewClientMode(false);
       setNewClientForm({ full_name: "", email: "", phone: "", cpf: "" });
       toast.success("Cliente cadastrado!");
@@ -226,7 +248,7 @@ const AdminReservas = () => {
 
   /* ── Salvar (criar ou editar) ─────────────────────────────────────────────── */
   const handleSave = async () => {
-    if (!form.profile_id) {
+    if (!form.profile_id && !form.guest_id) {
       toast.error("Selecione um cliente.");
       return;
     }
@@ -255,8 +277,9 @@ const AdminReservas = () => {
         const { error } = await supabase
           .from("reservations")
           .update({
-            profile_id: form.profile_id,
-            client_id: form.profile_id,
+            profile_id: form.profile_id || null,
+            client_id: form.profile_id || null,
+            guest_id: form.guest_id || null,
             room_id: form.room_id,
             check_in: format(form.check_in, "yyyy-MM-dd"),
             check_out: format(form.check_out, "yyyy-MM-dd"),
@@ -281,8 +304,9 @@ const AdminReservas = () => {
           return;
         }
         const { error } = await supabase.from("reservations").insert({
-          profile_id: form.profile_id,
-          client_id: form.profile_id,
+          profile_id: form.profile_id || null,
+          client_id: form.profile_id || null,
+          guest_id: form.guest_id || null,
           room_id: form.room_id,
           check_in: format(form.check_in, "yyyy-MM-dd"),
           check_out: format(form.check_out, "yyyy-MM-dd"),
@@ -332,6 +356,7 @@ const AdminReservas = () => {
     setClientSearch("");
     setNewClientMode(false);
     setNewClientForm({ full_name: "", email: "", phone: "", cpf: "" });
+    setSelectedGuest(null);
   };
 
   /* ── Filtros ──────────────────────────────────────────────────────────────── */
@@ -610,16 +635,26 @@ const AdminReservas = () => {
                     <label className="flex items-center gap-1.5 text-xs text-white/40 font-body uppercase tracking-wider mb-2">
                       <User className="w-3 h-3" /> Cliente
                     </label>
-                    {selectedClient ? (
+                    {selectedClient || selectedGuest ? (
                       <div className="flex items-center justify-between bg-primary/10 border border-primary/25 rounded-lg px-4 py-3">
                         <div>
-                          <p className="text-cream text-sm font-body font-medium">{selectedClient.full_name}</p>
+                          <p className="text-cream text-sm font-body font-medium">
+                            {selectedClient?.full_name || selectedGuest?.full_name}
+                          </p>
                           <p className="text-white/40 text-xs font-body mt-0.5">
-                            {selectedClient.email || selectedClient.phone || selectedClient.cpf}
+                            {selectedClient
+                              ? selectedClient.email || selectedClient.phone || selectedClient.cpf
+                              : selectedGuest?.email ||
+                                selectedGuest?.phone ||
+                                selectedGuest?.cpf ||
+                                "Cadastrado pelo admin"}
                           </p>
                         </div>
                         <button
-                          onClick={() => setForm((f) => ({ ...f, profile_id: "" }))}
+                          onClick={() => {
+                            setForm((f) => ({ ...f, profile_id: "", guest_id: "" }));
+                            setSelectedGuest(null);
+                          }}
                           className="text-white/30 hover:text-red-400 transition-colors"
                         >
                           <X className="w-4 h-4" />
@@ -701,25 +736,70 @@ const AdminReservas = () => {
                           </button>
                         </div>
                         <div className="bg-[#1a1a1f] border border-white/5 rounded-lg max-h-40 overflow-y-auto divide-y divide-white/5">
-                          {filteredClients.length === 0 ? (
-                            <p className="text-white/20 text-xs font-body text-center py-4">
-                              {clientSearch ? "Nenhum cliente encontrado" : "Nenhum cliente cadastrado"}
-                            </p>
-                          ) : (
-                            filteredClients.map((p) => (
-                              <button
-                                key={p.id}
-                                onClick={() => {
-                                  setForm((f) => ({ ...f, profile_id: p.id }));
-                                  setClientSearch("");
-                                }}
-                                className="w-full text-left px-4 py-2.5 hover:bg-white/5 transition-colors"
-                              >
-                                <p className="text-cream text-sm font-body">{p.full_name ?? "Sem nome"}</p>
-                                <p className="text-white/30 text-xs font-body">{p.email || p.phone || p.cpf || "—"}</p>
-                              </button>
-                            ))
-                          )}
+                          {(() => {
+                            const q = clientSearch.toLowerCase();
+                            const matchedProfiles = profiles.filter(
+                              (p) =>
+                                !q ||
+                                p.full_name?.toLowerCase().includes(q) ||
+                                p.email?.toLowerCase().includes(q) ||
+                                p.phone?.includes(q) ||
+                                p.cpf?.includes(q),
+                            );
+                            const matchedGuests = guests.filter(
+                              (g) =>
+                                !q ||
+                                g.full_name?.toLowerCase().includes(q) ||
+                                g.email?.toLowerCase().includes(q) ||
+                                g.phone?.includes(q) ||
+                                g.cpf?.includes(q),
+                            );
+                            const total = matchedProfiles.length + matchedGuests.length;
+                            if (total === 0)
+                              return (
+                                <p className="text-white/20 text-xs font-body text-center py-4">
+                                  {clientSearch ? "Nenhum cliente encontrado" : "Nenhum cliente cadastrado"}
+                                </p>
+                              );
+                            return (
+                              <>
+                                {matchedProfiles.map((p) => (
+                                  <button
+                                    key={p.id}
+                                    onClick={() => {
+                                      setForm((f) => ({ ...f, profile_id: p.id, guest_id: "" }));
+                                      setSelectedGuest(null);
+                                      setClientSearch("");
+                                    }}
+                                    className="w-full text-left px-4 py-2.5 hover:bg-white/5 transition-colors"
+                                  >
+                                    <p className="text-cream text-sm font-body">{p.full_name ?? "Sem nome"}</p>
+                                    <p className="text-white/30 text-xs font-body">
+                                      {p.email || p.phone || p.cpf || "—"}
+                                    </p>
+                                  </button>
+                                ))}
+                                {matchedGuests.map((g) => (
+                                  <button
+                                    key={g.id}
+                                    onClick={() => {
+                                      setForm((f) => ({ ...f, guest_id: g.id, profile_id: "" }));
+                                      setSelectedGuest(g);
+                                      setClientSearch("");
+                                    }}
+                                    className="w-full text-left px-4 py-2.5 hover:bg-white/5 transition-colors"
+                                  >
+                                    <p className="text-cream text-sm font-body">{g.full_name}</p>
+                                    <p className="text-white/30 text-xs font-body">
+                                      {g.email || g.phone || g.cpf || (
+                                        <span className="italic">Cadastrado pelo admin</span>
+                                      )}
+                                    </p>
+                                  </button>
+                                ))}
+                              </>
+                            );
+                          })()}
                         </div>
                       </div>
                     )}
