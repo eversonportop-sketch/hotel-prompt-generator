@@ -224,6 +224,33 @@ export type Database = {
           },
         ]
       }
+      guests: {
+        Row: {
+          cpf: string | null
+          created_at: string
+          email: string | null
+          full_name: string
+          id: string
+          phone: string | null
+        }
+        Insert: {
+          cpf?: string | null
+          created_at?: string
+          email?: string | null
+          full_name: string
+          id?: string
+          phone?: string | null
+        }
+        Update: {
+          cpf?: string | null
+          created_at?: string
+          email?: string | null
+          full_name?: string
+          id?: string
+          phone?: string | null
+        }
+        Relationships: []
+      }
       hall_bookings: {
         Row: {
           client_email: string | null
@@ -539,6 +566,7 @@ export type Database = {
           check_out: string
           client_id: string
           created_at: string
+          guest_id: string | null
           guests_count: number
           id: string
           notes: string | null
@@ -553,6 +581,7 @@ export type Database = {
           check_out: string
           client_id: string
           created_at?: string
+          guest_id?: string | null
           guests_count?: number
           id?: string
           notes?: string | null
@@ -567,6 +596,7 @@ export type Database = {
           check_out?: string
           client_id?: string
           created_at?: string
+          guest_id?: string | null
           guests_count?: number
           id?: string
           notes?: string | null
@@ -577,6 +607,13 @@ export type Database = {
           updated_at?: string
         }
         Relationships: [
+          {
+            foreignKeyName: "reservations_guest_id_fkey"
+            columns: ["guest_id"]
+            isOneToOne: false
+            referencedRelation: "guests"
+            referencedColumns: ["id"]
+          },
           {
             foreignKeyName: "reservations_profile_id_fkey"
             columns: ["profile_id"]
