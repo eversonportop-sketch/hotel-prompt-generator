@@ -51,6 +51,7 @@ interface Reservation {
   notes: string | null;
   profile_id: string | null;
   client_id: string | null;
+  guest_id: string | null;
   rooms: { id: string; name: string; category: string } | null;
   profiles: { full_name: string | null } | null;
 }
@@ -339,6 +340,7 @@ const AdminReservas = () => {
     setEditingId(r.id);
     setForm({
       profile_id: r.profile_id || r.client_id || "",
+      guest_id: r.guest_id || "",
       room_id: (r.rooms as any)?.id || "",
       check_in: new Date(r.check_in + "T12:00:00"),
       check_out: new Date(r.check_out + "T12:00:00"),
