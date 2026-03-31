@@ -114,6 +114,9 @@ const AdminReservas = () => {
   const [newClientMode, setNewClientMode] = useState(false);
   const [newClientName, setNewClientName] = useState("");
   const [newClientPhone, setNewClientPhone] = useState("");
+  const [newClientCpf, setNewClientCpf] = useState("");
+  const [newClientEmail, setNewClientEmail] = useState("");
+  const [newClientCity, setNewClientCity] = useState("");
   const [savingClient, setSavingClient] = useState(false);
 
   // Abre modal com cliente pré-selecionado vindo da página de Clientes
