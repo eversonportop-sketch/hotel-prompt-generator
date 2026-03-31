@@ -289,6 +289,9 @@ const AdminReservas = () => {
     setNewClientMode(false);
     setNewClientName("");
     setNewClientPhone("");
+    setNewClientCpf("");
+    setNewClientEmail("");
+    setNewClientCity("");
   };
 
   const handleSaveNewClient = async () => {
