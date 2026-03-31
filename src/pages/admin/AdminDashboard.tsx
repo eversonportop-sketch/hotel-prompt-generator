@@ -209,22 +209,28 @@ const AdminDashboard = () => {
               Ver todos →
             </Link>
           </div>
-          {Object.keys(roomsByStatus).length === 0 ? (
+          {quartos.length === 0 ? (
             <p className="text-white/20 text-sm font-body">Nenhum quarto cadastrado</p>
           ) : (
-            <div className="space-y-2">
-              {Object.entries(roomsByStatus).map(([status, count]) => {
-                const cfg = statusConfig[status] || { bg: "bg-white/5", dot: "bg-white/30", text: "text-white/50" };
-                return (
-                  <div key={status} className={`flex items-center justify-between px-3 py-2.5 rounded-lg ${cfg.bg}`}>
-                    <div className="flex items-center gap-2.5">
-                      <span className={`w-1.5 h-1.5 rounded-full flex-shrink-0 ${cfg.dot}`} />
-                      <span className={`text-sm font-body ${cfg.text}`}>{statusLabels[status] || status}</span>
-                    </div>
-                    <span className={`text-sm font-bold font-body ${cfg.text}`}>{count}</span>
-                  </div>
-                );
-              })}
+            <div className="grid grid-cols-2 gap-2">
+              {(quartos as any[]).map((q) => (
+                <div
+                  key={q.id}
+                  className={`rounded-lg px-3 py-2.5 ${q.ocupado ? "bg-red-500/10 border border-red-500/20" : "bg-emerald-500/10 border border-emerald-500/20"}`}
+                >
+                  <p className={`text-sm font-semibold font-body ${q.ocupado ? "text-red-300" : "text-emerald-300"}`}>{q.name}</p>
+                  {q.ocupado ? (
+                    <>
+                      <p className="text-xs text-red-400/70 font-body truncate">{q.hospede || "—"}</p>
+                      <p className="text-[10px] text-red-400/50 font-body">
+                        Saída: {q.check_out ? q.check_out.split("-").reverse().slice(0, 2).join("/") : "—"}
+                      </p>
+                    </>
+                  ) : (
+                    <p className="text-xs text-emerald-400/70 font-body">Disponível</p>
+                  )}
+                </div>
+              ))}
             </div>
           )}
         </motion.div>
