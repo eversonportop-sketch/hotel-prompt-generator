@@ -215,6 +215,7 @@ const QuartoDetalhe = () => {
   const [checkOut, setCheckOut] = useState<Date>();
   const [guestsCount, setGuestsCount] = useState(1);
   const [available, setAvailable] = useState<boolean | null>(null);
+  const [categoryAvail, setCategoryAvail] = useState<{ free: number; total: number; freeRoomId: string | null } | null>(null);
   const [checking, setChecking] = useState(false);
 
   // Restaura intenção de reserva após login
