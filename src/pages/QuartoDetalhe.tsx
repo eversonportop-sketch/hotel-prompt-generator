@@ -476,6 +476,7 @@ const QuartoDetalhe = () => {
                             onSelect={(d) => {
                               setCheckOut(d);
                               setAvailable(null);
+                              setCategoryAvail(null);
                             }}
                             disabled={(date) => date < (checkIn ? addDays(checkIn, 1) : addDays(today, 1))}
                             initialFocus
