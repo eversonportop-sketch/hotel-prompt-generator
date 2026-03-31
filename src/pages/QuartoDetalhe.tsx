@@ -543,7 +543,7 @@ const QuartoDetalhe = () => {
                     <Button
                       variant="gold"
                       className="flex-1"
-                      disabled={!checkIn || !checkOut || !available || reservationMutation.isPending}
+                      disabled={!checkIn || !checkOut || !available || !categoryAvail?.freeRoomId || reservationMutation.isPending}
                       onClick={() => {
                         if (!user) {
                           // Salva intenção e redireciona para cadastro/login
