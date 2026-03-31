@@ -447,6 +447,7 @@ const QuartoDetalhe = () => {
                             onSelect={(d) => {
                               setCheckIn(d);
                               setAvailable(null);
+                              setCategoryAvail(null);
                               if (d && checkOut && d >= checkOut) setCheckOut(undefined);
                             }}
                             disabled={(date) => date < today}
