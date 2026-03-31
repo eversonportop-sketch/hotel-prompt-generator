@@ -50,12 +50,31 @@ function formatDateShort(date: Date) {
 }
 
 const AdminDashboard = () => {
-  const { data: rooms = [] } = useQuery({
-    queryKey: ["dash-rooms"],
+  const { data: quartos = [] } = useQuery({
+    queryKey: ["dash-rooms-occupancy"],
     queryFn: async () => {
-      const { data, error } = await supabase.from("rooms").select("id, status");
-      if (error) throw error;
-      return data;
+      const td = new Date().toISOString().split("T")[0];
+      const { data: roomsData } = await supabase
+        .from("rooms")
+        .select("id, name, category")
+        .eq("status", "active")
+        .order("display_order");
+      const { data: resData } = await supabase
+        .from("reservations")
+        .select("id, room_id, check_in, check_out, status, profile_id, client_id, profiles!reservations_profile_id_fkey(full_name)")
+        .in("status", ["confirmed", "pending"])
+        .lte("check_in", td)
+        .gte("check_out", td);
+      return (roomsData || []).map((room: any) => {
+        const res = (resData || []).find((r: any) => r.room_id === room.id);
+        return {
+          ...room,
+          ocupado: !!res,
+          hospede: (res?.profiles as any)?.full_name || null,
+          check_out: res?.check_out || null,
+          reservation_id: res?.id || null,
+        };
+      });
     },
   });
 
