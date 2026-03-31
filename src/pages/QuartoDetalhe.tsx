@@ -286,17 +286,17 @@ const QuartoDetalhe = () => {
   // Cria reserva usando profile_id (correto)
   const reservationMutation = useMutation({
     mutationFn: async () => {
-      if (!user || !room || !checkIn || !checkOut) throw new Error("Dados incompletos");
+      if (!user || !room || !checkIn || !checkOut || !categoryAvail?.freeRoomId)
+        throw new Error("Dados incompletos");
       const nights = differenceInDays(checkOut, checkIn);
       const price = Number(room.promotional_price || room.price);
 
-      // Busca o profile_id do usuário logado
       const { data: profile } = await supabase.from("profiles").select("id").eq("id", user.id).single();
 
       const { error } = await supabase.from("reservations").insert({
-        client_id: user.id, // mantém por compatibilidade
-        profile_id: profile?.id ?? user.id, // campo correto
-        room_id: room.id,
+        client_id: user.id,
+        profile_id: profile?.id ?? user.id,
+        room_id: categoryAvail.freeRoomId, // quarto livre da categoria
         check_in: format(checkIn, "yyyy-MM-dd"),
         check_out: format(checkOut, "yyyy-MM-dd"),
         guests_count: guestsCount,
@@ -311,12 +311,13 @@ const QuartoDetalhe = () => {
       setCheckIn(undefined);
       setCheckOut(undefined);
       setAvailable(null);
+      setCategoryAvail(null);
       setGuestsCount(1);
     },
     onError: (err: any) => {
       toast.error(
         err?.message?.includes("not available")
-          ? "Quarto indisponível para as datas selecionadas."
+          ? "Categoria indisponível para as datas selecionadas."
           : err?.message || "Erro ao criar reserva.",
       );
     },
