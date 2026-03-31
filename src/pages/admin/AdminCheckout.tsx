@@ -98,7 +98,7 @@ const AdminCheckout = () => {
     queryFn: async () => {
       const { data, error } = await supabase
         .from("reservations")
-        .select("*, rooms(name, price), profiles(full_name, phone)")
+        .select("*, rooms(name, price), profiles!reservations_profile_id_fkey(full_name, phone)")
         .eq("status", "completed")
         .order("check_out", { ascending: false })
         .limit(50);
