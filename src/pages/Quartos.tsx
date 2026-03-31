@@ -1,9 +1,20 @@
 import Layout from "@/components/layout/Layout";
 import { motion } from "framer-motion";
-import { Users, BedDouble, ArrowRight, Star } from "lucide-react";
+import { Users, ArrowRight, Star, DoorOpen } from "lucide-react";
 import { Link } from "react-router-dom";
 import { useQuery } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
+import { useMemo } from "react";
+
+interface CategoryGroup {
+  category: string;
+  image: string;
+  minPrice: number;
+  minPromoPrice: number | null;
+  totalRooms: number;
+  capacity: number;
+  firstRoomId: string;
+}
 
 const Quartos = () => {
   const { data: rooms = [], isLoading } = useQuery({
@@ -14,6 +25,29 @@ const Quartos = () => {
       return data;
     },
   });
+
+  const categories = useMemo<CategoryGroup[]>(() => {
+    const map = new Map<string, any[]>();
+    rooms.forEach((r: any) => {
+      const cat = r.category || "Sem categoria";
+      if (!map.has(cat)) map.set(cat, []);
+      map.get(cat)!.push(r);
+    });
+    return Array.from(map.entries()).map(([category, list]) => {
+      const prices = list.map((r: any) => Number(r.promotional_price || r.price));
+      const regularPrices = list.map((r: any) => Number(r.price));
+      const hasPromo = list.some((r: any) => r.promotional_price);
+      return {
+        category,
+        image: list[0].image_url || "/placeholder.svg",
+        minPrice: Math.min(...regularPrices),
+        minPromoPrice: hasPromo ? Math.min(...prices) : null,
+        totalRooms: list.length,
+        capacity: Math.max(...list.map((r: any) => r.capacity || 2)),
+        firstRoomId: list[0].id,
+      };
+    });
+  }, [rooms]);
 
   return (
     <Layout>
@@ -46,18 +80,18 @@ const Quartos = () => {
         </div>
       </section>
 
-      {/* Grid */}
+      {/* Grid por categoria */}
       <section className="py-20 bg-charcoal">
         <div className="container-hotel">
           {isLoading ? (
             <div className="text-center text-cream/30 font-body py-20">Carregando quartos...</div>
-          ) : rooms.length === 0 ? (
+          ) : categories.length === 0 ? (
             <div className="text-center text-cream/30 font-body py-20">Nenhum quarto disponível no momento.</div>
           ) : (
             <div className="grid grid-cols-1 md:grid-cols-2 gap-6 lg:gap-8">
-              {rooms.map((room: any, index: number) => (
+              {categories.map((cat, index) => (
                 <motion.div
-                  key={room.id}
+                  key={cat.category}
                   initial={{ opacity: 0, y: 30 }}
                   animate={{ opacity: 1, y: 0 }}
                   transition={{ duration: 0.5, delay: index * 0.1 }}
@@ -65,13 +99,13 @@ const Quartos = () => {
                 >
                   <div className="aspect-[16/10] overflow-hidden relative">
                     <img
-                      src={room.image_url || "/placeholder.svg"}
-                      alt={room.name}
+                      src={cat.image}
+                      alt={cat.category}
                       loading="lazy"
                       className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-700"
                     />
                     <div className="absolute inset-0 bg-gradient-to-t from-charcoal/60 to-transparent opacity-0 group-hover:opacity-100 transition-opacity duration-500" />
-                    {room.promotional_price && (
+                    {cat.minPromoPrice !== null && (
                       <div
                         className="absolute top-4 right-4 px-3 py-1 rounded-full text-xs font-semibold font-body"
                         style={{ background: "linear-gradient(135deg,#C9A84C,#E5C97A)", color: "#000" }}
@@ -82,35 +116,35 @@ const Quartos = () => {
                   </div>
                   <div className="p-6">
                     <div className="flex items-center justify-between mb-2">
-                      <span className="text-xs text-primary font-body tracking-wider uppercase">{room.category}</span>
+                      <span className="text-xs text-primary font-body tracking-wider uppercase">{cat.category}</span>
                       <div className="flex items-center gap-0.5">
                         {[...Array(5)].map((_, i) => (
                           <Star key={i} className="w-3 h-3 fill-primary text-primary" />
                         ))}
                       </div>
                     </div>
-                    <h3 className="font-display text-xl font-semibold text-cream mt-1 mb-3">{room.name}</h3>
+                    <h3 className="font-display text-xl font-semibold text-cream mt-1 mb-3">{cat.category}</h3>
                     <div className="flex items-center gap-4 text-sm text-cream/40 font-body mb-5">
                       <span className="flex items-center gap-1.5">
-                        <Users className="w-4 h-4 text-primary/60" /> {room.capacity} pessoas
+                        <Users className="w-4 h-4 text-primary/60" /> Até {cat.capacity} pessoas
                       </span>
                       <span className="flex items-center gap-1.5">
-                        <BedDouble className="w-4 h-4 text-primary/60" /> {room.beds}
+                        <DoorOpen className="w-4 h-4 text-primary/60" /> {cat.totalRooms} quarto{cat.totalRooms > 1 ? "s" : ""}
                       </span>
                     </div>
                     <div className="flex items-center justify-between pt-4 border-t border-white/5">
                       <div>
-                        {room.promotional_price && (
+                        {cat.minPromoPrice !== null && (
                           <span className="text-sm text-cream/30 line-through font-body mr-2">
-                            R$ {Number(room.price).toFixed(0)}
+                            R$ {cat.minPrice.toFixed(0)}
                           </span>
                         )}
                         <span className="text-2xl font-display font-bold text-primary">
-                          R$ {Number(room.promotional_price || room.price).toFixed(0)}
+                          R$ {(cat.minPromoPrice ?? cat.minPrice).toFixed(0)}
                         </span>
                         <span className="text-sm text-cream/30 font-body"> /noite</span>
                       </div>
-                      <Link to={`/quartos/${room.id}`}>
+                      <Link to={`/quartos/${cat.firstRoomId}`}>
                         <button
                           className="group/btn flex items-center gap-2 px-5 py-2.5 rounded-xl text-sm font-body font-semibold transition-all duration-300 hover:scale-[1.02]"
                           style={{ background: "linear-gradient(135deg,#C9A84C,#E5C97A)", color: "#000" }}

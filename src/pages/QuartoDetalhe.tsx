@@ -215,6 +215,7 @@ const QuartoDetalhe = () => {
   const [checkOut, setCheckOut] = useState<Date>();
   const [guestsCount, setGuestsCount] = useState(1);
   const [available, setAvailable] = useState<boolean | null>(null);
+  const [categoryAvail, setCategoryAvail] = useState<{ free: number; total: number; freeRoomId: string | null } | null>(null);
   const [checking, setChecking] = useState(false);
 
   // Restaura intenção de reserva após login
@@ -246,16 +247,35 @@ const QuartoDetalhe = () => {
   });
 
   const checkAvailability = async () => {
-    if (!checkIn || !checkOut || !id) return;
+    if (!checkIn || !checkOut || !room) return;
     setChecking(true);
     try {
-      const { data, error } = await supabase.rpc("check_room_availability", {
-        p_room_id: id,
-        p_check_in: format(checkIn, "yyyy-MM-dd"),
-        p_check_out: format(checkOut, "yyyy-MM-dd"),
-      });
-      if (error) throw error;
-      setAvailable(data as boolean);
+      const ci = format(checkIn, "yyyy-MM-dd");
+      const co = format(checkOut, "yyyy-MM-dd");
+
+      // Busca todos os quartos ativos da mesma categoria
+      const { data: catRooms } = await supabase
+        .from("rooms")
+        .select("id")
+        .eq("category", room.category)
+        .eq("status", "active");
+      const allIds = (catRooms || []).map((r: any) => r.id);
+
+      // Busca reservas conflitantes
+      const { data: conflicts } = await supabase
+        .from("reservations")
+        .select("room_id")
+        .in("room_id", allIds)
+        .in("status", ["confirmed", "pending"])
+        .lt("check_in", co)
+        .gt("check_out", ci);
+
+      const occupiedIds = new Set((conflicts || []).map((c: any) => c.room_id));
+      const freeIds = allIds.filter((rid: string) => !occupiedIds.has(rid));
+
+      const free = freeIds.length;
+      setCategoryAvail({ free, total: allIds.length, freeRoomId: free > 0 ? freeIds[0] : null });
+      setAvailable(free > 0);
     } catch {
       toast.error("Erro ao verificar disponibilidade");
     } finally {
@@ -266,17 +286,17 @@ const QuartoDetalhe = () => {
   // Cria reserva usando profile_id (correto)
   const reservationMutation = useMutation({
     mutationFn: async () => {
-      if (!user || !room || !checkIn || !checkOut) throw new Error("Dados incompletos");
+      if (!user || !room || !checkIn || !checkOut || !categoryAvail?.freeRoomId)
+        throw new Error("Dados incompletos");
       const nights = differenceInDays(checkOut, checkIn);
       const price = Number(room.promotional_price || room.price);
 
-      // Busca o profile_id do usuário logado
       const { data: profile } = await supabase.from("profiles").select("id").eq("id", user.id).single();
 
       const { error } = await supabase.from("reservations").insert({
-        client_id: user.id, // mantém por compatibilidade
-        profile_id: profile?.id ?? user.id, // campo correto
-        room_id: room.id,
+        client_id: user.id,
+        profile_id: profile?.id ?? user.id,
+        room_id: categoryAvail.freeRoomId, // quarto livre da categoria
         check_in: format(checkIn, "yyyy-MM-dd"),
         check_out: format(checkOut, "yyyy-MM-dd"),
         guests_count: guestsCount,
@@ -291,12 +311,13 @@ const QuartoDetalhe = () => {
       setCheckIn(undefined);
       setCheckOut(undefined);
       setAvailable(null);
+      setCategoryAvail(null);
       setGuestsCount(1);
     },
     onError: (err: any) => {
       toast.error(
         err?.message?.includes("not available")
-          ? "Quarto indisponível para as datas selecionadas."
+          ? "Categoria indisponível para as datas selecionadas."
           : err?.message || "Erro ao criar reserva.",
       );
     },
@@ -426,6 +447,7 @@ const QuartoDetalhe = () => {
                             onSelect={(d) => {
                               setCheckIn(d);
                               setAvailable(null);
+                              setCategoryAvail(null);
                               if (d && checkOut && d >= checkOut) setCheckOut(undefined);
                             }}
                             disabled={(date) => date < today}
@@ -454,6 +476,7 @@ const QuartoDetalhe = () => {
                             onSelect={(d) => {
                               setCheckOut(d);
                               setAvailable(null);
+                              setCategoryAvail(null);
                             }}
                             disabled={(date) => date < (checkIn ? addDays(checkIn, 1) : addDays(today, 1))}
                             initialFocus
@@ -489,19 +512,21 @@ const QuartoDetalhe = () => {
                     </div>
                   )}
 
-                  {available !== null && (
+                  {categoryAvail !== null && (
                     <div
                       className={cn(
                         "flex items-center gap-2 text-sm font-body p-3 rounded-lg",
-                        available
+                        categoryAvail.free > 0
                           ? "text-green-600 bg-green-50 dark:bg-green-900/20 dark:text-green-400"
                           : "text-destructive bg-destructive/10",
                       )}
                     >
-                      {available ? <CheckCircle className="w-4 h-4" /> : <AlertCircle className="w-4 h-4" />}
-                      {available
-                        ? "Quarto disponível! Clique em Reservar para confirmar."
-                        : "Quarto indisponível para estas datas."}
+                      {categoryAvail.free > 0 ? <CheckCircle className="w-4 h-4" /> : <AlertCircle className="w-4 h-4" />}
+                      {categoryAvail.free === 0
+                        ? "Indisponível nas datas selecionadas"
+                        : categoryAvail.free === 1
+                          ? "1 quarto disponível nesta categoria"
+                          : `${categoryAvail.free} quartos disponíveis nesta categoria`}
                     </div>
                   )}
 
@@ -520,7 +545,7 @@ const QuartoDetalhe = () => {
                     <Button
                       variant="gold"
                       className="flex-1"
-                      disabled={!checkIn || !checkOut || !available || reservationMutation.isPending}
+                      disabled={!checkIn || !checkOut || !available || !categoryAvail?.freeRoomId || reservationMutation.isPending}
                       onClick={() => {
                         if (!user) {
                           // Salva intenção e redireciona para cadastro/login
