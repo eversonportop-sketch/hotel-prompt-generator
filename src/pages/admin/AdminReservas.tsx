@@ -19,7 +19,6 @@ import {
   Ban,
   Clock,
   ChevronDown,
-  UserPlus,
 } from "lucide-react";
 import { format, differenceInDays, addDays } from "date-fns";
 import { ptBR } from "date-fns/locale";
@@ -28,12 +27,10 @@ import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover
 import { cn } from "@/lib/utils";
 import { toast } from "sonner";
 
-interface Guest {
+interface ProfileOption {
   id: string;
-  full_name: string;
-  email: string | null;
+  full_name: string | null;
   phone: string | null;
-  cpf: string | null;
 }
 interface Room {
   id: string;
@@ -53,10 +50,8 @@ interface Reservation {
   notes: string | null;
   client_id: string | null;
   profile_id: string | null;
-  guest_id: string | null;
   rooms: { id?: string; name: string; category: string } | null;
-  guests: { full_name: string } | null;
-  profiles: { full_name: string | null } | null;
+  profiles: { full_name: string | null; phone: string | null } | null;
 }
 
 const STATUS: Record<string, { label: string; color: string; icon: React.ReactNode }> = {
@@ -104,13 +99,6 @@ const emptyForm = {
   notes: "",
 };
 
-const emptyNewClient = {
-  full_name: "",
-  email: "",
-  phone: "",
-  cpf: "",
-};
-
 const AdminReservas = () => {
   const qc = useQueryClient();
   const location = useLocation();
@@ -123,8 +111,6 @@ const AdminReservas = () => {
   const [selectedName, setSelectedName] = useState("");
   const [saving, setSaving] = useState(false);
   const [deleteId, setDeleteId] = useState<string | null>(null);
-  const [clientMode, setClientMode] = useState<"search" | "new">("search");
-  const [newClient, setNewClient] = useState({ ...emptyNewClient });
 
   // Abre modal com cliente pré-selecionado vindo da página de Clientes
   useEffect(() => {
@@ -133,11 +119,8 @@ const AdminReservas = () => {
       setEditingId(null);
       setForm({ ...emptyForm, client_id: state.preselectedGuest.id });
       setSelectedName(state.preselectedGuest.full_name);
-      setClientMode("search");
-      setNewClient({ ...emptyNewClient });
       setClientSearch("");
       setModalOpen(true);
-      // Limpa o state para não reabrir ao voltar
       window.history.replaceState({}, "");
     }
   }, [location.state]);
@@ -148,36 +131,24 @@ const AdminReservas = () => {
       const { data, error } = await supabase
         .from("reservations")
         .select(
-          "id,check_in,check_out,guests_count,total_price,status,notes,client_id,profile_id,guest_id,rooms(id,name,category)",
+          "id,check_in,check_out,guests_count,total_price,status,notes,client_id,profile_id,rooms(id,name,category),profiles!reservations_profile_id_fkey(full_name,phone)",
         )
         .order("created_at", { ascending: false });
       if (error) throw error;
-      // Enrich with guest names
-      const allData = (data || []) as any[];
-      const guestIds = [...new Set(allData.filter((r) => r.guest_id).map((r) => r.guest_id as string))];
-      if (guestIds.length) {
-        const { data: gd } = await (supabase as any).from("guests").select("id,full_name").in("id", guestIds);
-        const gMap: Record<string, string> = {};
-        (gd || []).forEach((g: any) => {
-          gMap[g.id] = g.full_name;
-        });
-        allData.forEach((r) => {
-          if (r.guest_id && gMap[r.guest_id]) r.guests = { full_name: gMap[r.guest_id] };
-        });
-      }
-      return allData as Reservation[];
+      return (data || []) as Reservation[];
     },
   });
 
-  const { data: guestsList = [] } = useQuery({
-    queryKey: ["admin-guests-select"],
+  const { data: profilesList = [] } = useQuery({
+    queryKey: ["admin-profiles-select"],
     queryFn: async () => {
-      const { data, error } = await (supabase as any)
-        .from("guests")
-        .select("id,full_name,email,phone,cpf")
+      const { data, error } = await supabase
+        .from("profiles")
+        .select("id,full_name,phone,role")
         .order("full_name");
       if (error) throw error;
-      return data as Guest[];
+      // Filter out admins – show only clients/guests
+      return (data || []).filter((p: any) => p.role !== "admin") as ProfileOption[];
     },
   });
 
@@ -220,13 +191,7 @@ const AdminReservas = () => {
   });
 
   const handleSave = async () => {
-    // Validate client
-    if (clientMode === "new") {
-      if (!newClient.full_name.trim()) {
-        toast.error("Informe o nome do cliente.");
-        return;
-      }
-    } else if (!form.client_id) {
+    if (!form.client_id) {
       toast.error("Selecione um cliente.");
       return;
     }
@@ -247,27 +212,10 @@ const AdminReservas = () => {
     const total = nights * Number(room.promotional_price || room.price);
     setSaving(true);
     try {
-      let guestId = form.client_id;
-
-      // If creating a new client, insert first
-      if (clientMode === "new" && !editingId) {
-        const { data: gd, error: ge } = await (supabase as any)
-          .from("guests")
-          .insert({
-            full_name: newClient.full_name.trim(),
-            email: newClient.email.trim() || null,
-            phone: newClient.phone.trim() || null,
-            cpf: newClient.cpf.trim() || null,
-          })
-          .select("id")
-          .single();
-        if (ge) throw ge;
-        guestId = gd.id;
-        qc.invalidateQueries({ queryKey: ["admin-guests-select"] });
-      }
-
       const payload = {
-        guest_id: guestId,
+        profile_id: form.client_id,
+        client_id: form.client_id,
+        guest_id: null,
         room_id: form.room_id,
         check_in: format(form.check_in, "yyyy-MM-dd"),
         check_out: format(form.check_out, "yyyy-MM-dd"),
@@ -308,12 +256,10 @@ const AdminReservas = () => {
     setForm({ ...emptyForm });
     setClientSearch("");
     setSelectedName("");
-    setClientMode("search");
-    setNewClient({ ...emptyNewClient });
     setModalOpen(true);
   };
   const openEdit = (r: Reservation) => {
-    const cid = r.guest_id || r.client_id || "";
+    const cid = r.profile_id || r.client_id || "";
     setEditingId(r.id);
     setForm({
       client_id: cid,
@@ -323,10 +269,8 @@ const AdminReservas = () => {
       guests_count: r.guests_count,
       notes: r.notes || "",
     });
-    setSelectedName((r.guests as any)?.full_name || (r.profiles as any)?.full_name || "");
+    setSelectedName((r.profiles as any)?.full_name || "");
     setClientSearch("");
-    setClientMode("search");
-    setNewClient({ ...emptyNewClient });
     setModalOpen(true);
   };
   const closeModal = () => {
@@ -335,26 +279,22 @@ const AdminReservas = () => {
     setForm({ ...emptyForm });
     setClientSearch("");
     setSelectedName("");
-    setClientMode("search");
-    setNewClient({ ...emptyNewClient });
   };
 
   const filtered = reservations.filter((r) => {
     const matchStatus = statusFilter === "all" || r.status === statusFilter;
     const q = search.toLowerCase();
-    const cn = (r.guests as any)?.full_name ?? (r.profiles as any)?.full_name ?? "";
+    const cn = (r.profiles as any)?.full_name ?? "";
     const rn = (r.rooms as any)?.name ?? "";
     return matchStatus && (!q || cn.toLowerCase().includes(q) || rn.toLowerCase().includes(q));
   });
 
-  const filteredGuests = guestsList.filter((g) => {
+  const filteredProfiles = profilesList.filter((p) => {
     const q = clientSearch.toLowerCase();
     return (
       !q ||
-      g.full_name?.toLowerCase().includes(q) ||
-      g.email?.toLowerCase().includes(q) ||
-      g.phone?.includes(q) ||
-      g.cpf?.includes(q)
+      p.full_name?.toLowerCase().includes(q) ||
+      p.phone?.includes(q)
     );
   });
 
@@ -497,7 +437,7 @@ const AdminReservas = () => {
             </thead>
             <tbody>
               {filtered.map((r, i) => {
-                const clientName = (r.guests as any)?.full_name || (r.profiles as any)?.full_name;
+                const clientName = (r.profiles as any)?.full_name;
                 const roomName = (r.rooms as any)?.name;
                 const roomCat = (r.rooms as any)?.category;
                 const n = differenceInDays(new Date(r.check_out + "T12:00:00"), new Date(r.check_in + "T12:00:00"));
@@ -623,173 +563,82 @@ const AdminReservas = () => {
                 <div className="px-6 py-5 space-y-5 overflow-y-auto flex-1">
                   {/* 1. CLIENTE */}
                   <section className="space-y-2">
-                    <div className="flex items-center justify-between">
-                      <label className="flex items-center gap-1.5 text-[10px] text-white/40 font-body uppercase tracking-widest">
-                        <User className="w-3 h-3" />
-                        Cliente
-                      </label>
-                      {!editingId && (
-                        <div className="flex items-center gap-1 bg-white/4 border border-white/8 rounded-lg p-0.5">
-                          <button
-                            onClick={() => {
-                              setClientMode("search");
-                              setNewClient({ ...emptyNewClient });
-                            }}
-                            className={`px-2.5 py-1 rounded-md text-[10px] font-body font-semibold transition-all ${clientMode === "search" ? "bg-white/10 text-cream" : "text-white/30 hover:text-white/60"}`}
-                          >
-                            Buscar
-                          </button>
-                          <button
-                            onClick={() => {
-                              setClientMode("new");
-                              setForm((f) => ({ ...f, client_id: "" }));
-                              setSelectedName("");
-                            }}
-                            className={`flex items-center gap-1 px-2.5 py-1 rounded-md text-[10px] font-body font-semibold transition-all ${clientMode === "new" ? "bg-primary/20 text-primary" : "text-white/30 hover:text-white/60"}`}
-                          >
-                            <UserPlus className="w-3 h-3" /> Novo
-                          </button>
-                        </div>
-                      )}
-                    </div>
+                    <label className="flex items-center gap-1.5 text-[10px] text-white/40 font-body uppercase tracking-widest">
+                      <User className="w-3 h-3" />
+                      Cliente
+                    </label>
 
-                    {/* Modo: cadastrar novo cliente */}
-                    {clientMode === "new" ? (
-                      <div className="border border-primary/20 bg-primary/4 rounded-xl p-4 space-y-3">
-                        <p className="text-[10px] text-primary/60 font-body uppercase tracking-widest font-semibold">
-                          Dados do novo cliente
-                        </p>
-                        <div className="space-y-2">
-                          <div>
-                            <label className="text-[10px] text-white/30 font-body uppercase tracking-widest block mb-1">
-                              Nome completo <span className="text-red-400">*</span>
-                            </label>
-                            <input
-                              placeholder="Ex: João da Silva"
-                              value={newClient.full_name}
-                              onChange={(e) => setNewClient((c) => ({ ...c, full_name: e.target.value }))}
-                              className="w-full bg-[#1a1a1f] border border-white/8 rounded-lg px-3 py-2 text-cream text-sm font-body focus:outline-none focus:border-primary/40 transition placeholder:text-white/15"
-                            />
-                          </div>
-                          <div className="grid grid-cols-2 gap-2">
-                            <div>
-                              <label className="text-[10px] text-white/30 font-body uppercase tracking-widest block mb-1">
-                                Telefone
-                              </label>
-                              <input
-                                placeholder="(51) 99999-0000"
-                                value={newClient.phone}
-                                onChange={(e) => setNewClient((c) => ({ ...c, phone: e.target.value }))}
-                                className="w-full bg-[#1a1a1f] border border-white/8 rounded-lg px-3 py-2 text-cream text-sm font-body focus:outline-none focus:border-primary/40 transition placeholder:text-white/15"
-                              />
-                            </div>
-                            <div>
-                              <label className="text-[10px] text-white/30 font-body uppercase tracking-widest block mb-1">
-                                CPF
-                              </label>
-                              <input
-                                placeholder="000.000.000-00"
-                                value={newClient.cpf}
-                                onChange={(e) => setNewClient((c) => ({ ...c, cpf: e.target.value }))}
-                                className="w-full bg-[#1a1a1f] border border-white/8 rounded-lg px-3 py-2 text-cream text-sm font-body focus:outline-none focus:border-primary/40 transition placeholder:text-white/15"
-                              />
-                            </div>
-                          </div>
-                          <div>
-                            <label className="text-[10px] text-white/30 font-body uppercase tracking-widest block mb-1">
-                              E-mail
-                            </label>
-                            <input
-                              placeholder="email@exemplo.com"
-                              type="email"
-                              value={newClient.email}
-                              onChange={(e) => setNewClient((c) => ({ ...c, email: e.target.value }))}
-                              className="w-full bg-[#1a1a1f] border border-white/8 rounded-lg px-3 py-2 text-cream text-sm font-body focus:outline-none focus:border-primary/40 transition placeholder:text-white/15"
-                            />
-                          </div>
+                    {/* Cliente já selecionado */}
+                    {form.client_id ? (
+                      <div className="flex items-center gap-3 bg-emerald-500/8 border border-emerald-500/20 rounded-xl px-4 py-3">
+                        <div className="w-8 h-8 rounded-full bg-emerald-500/15 border border-emerald-500/25 flex items-center justify-center shrink-0">
+                          <span className="text-emerald-400 text-sm font-display font-bold">
+                            {selectedName[0]?.toUpperCase() ?? "?"}
+                          </span>
                         </div>
+                        <div className="flex-1 min-w-0">
+                          <p className="text-cream text-sm font-body font-medium truncate">{selectedName}</p>
+                          <p className="text-white/30 text-xs font-body mt-0.5">Cliente selecionado</p>
+                        </div>
+                        <button
+                          onClick={() => {
+                            setForm((f) => ({ ...f, client_id: "" }));
+                            setSelectedName("");
+                          }}
+                          className="p-1 rounded-lg text-white/20 hover:text-red-400 hover:bg-red-500/10 transition-all"
+                        >
+                          <X className="w-3.5 h-3.5" />
+                        </button>
                       </div>
                     ) : (
-                      <>
-                        {/* Cliente já selecionado */}
-                        {form.client_id ? (
-                          <div className="flex items-center gap-3 bg-emerald-500/8 border border-emerald-500/20 rounded-xl px-4 py-3">
-                            <div className="w-8 h-8 rounded-full bg-emerald-500/15 border border-emerald-500/25 flex items-center justify-center shrink-0">
-                              <span className="text-emerald-400 text-sm font-display font-bold">
-                                {selectedName[0]?.toUpperCase() ?? "?"}
-                              </span>
+                      /* Busca de clientes */
+                      <div className="border border-white/8 rounded-xl overflow-hidden">
+                        <div className="relative">
+                          <Search className="absolute left-3.5 top-1/2 -translate-y-1/2 w-3.5 h-3.5 text-white/20 pointer-events-none" />
+                          <input
+                            placeholder="Buscar por nome ou telefone..."
+                            value={clientSearch}
+                            onChange={(e) => setClientSearch(e.target.value)}
+                            className="w-full pl-10 pr-4 py-3 bg-[#0d0d10] text-cream text-sm font-body focus:outline-none border-b border-white/5 transition placeholder:text-white/15"
+                          />
+                        </div>
+                        <div className="max-h-44 overflow-y-auto divide-y divide-white/4">
+                          {filteredProfiles.length === 0 ? (
+                            <div className="flex flex-col items-center py-7 gap-3">
+                              <User className="w-7 h-7 text-white/10" />
+                              <p className="text-white/25 text-xs font-body text-center">
+                                Cliente não encontrado. Cadastre em Clientes → Novo Cliente
+                              </p>
                             </div>
-                            <div className="flex-1 min-w-0">
-                              <p className="text-cream text-sm font-body font-medium truncate">{selectedName}</p>
-                              <p className="text-white/30 text-xs font-body mt-0.5">Cliente selecionado</p>
-                            </div>
-                            <button
-                              onClick={() => {
-                                setForm((f) => ({ ...f, client_id: "" }));
-                                setSelectedName("");
-                              }}
-                              className="p-1 rounded-lg text-white/20 hover:text-red-400 hover:bg-red-500/10 transition-all"
-                            >
-                              <X className="w-3.5 h-3.5" />
-                            </button>
-                          </div>
-                        ) : (
-                          /* Busca de clientes */
-                          <div className="border border-white/8 rounded-xl overflow-hidden">
-                            <div className="relative">
-                              <Search className="absolute left-3.5 top-1/2 -translate-y-1/2 w-3.5 h-3.5 text-white/20 pointer-events-none" />
-                              <input
-                                placeholder="Buscar por nome, CPF ou telefone..."
-                                value={clientSearch}
-                                onChange={(e) => setClientSearch(e.target.value)}
-                                className="w-full pl-10 pr-4 py-3 bg-[#0d0d10] text-cream text-sm font-body focus:outline-none border-b border-white/5 transition placeholder:text-white/15"
-                              />
-                            </div>
-                            <div className="max-h-44 overflow-y-auto divide-y divide-white/4">
-                              {filteredGuests.length === 0 ? (
-                                <div className="flex flex-col items-center py-7 gap-3">
-                                  <UserPlus className="w-7 h-7 text-white/10" />
-                                  <p className="text-white/25 text-xs font-body text-center">
-                                    {clientSearch ? "Nenhum cliente encontrado" : "Nenhum cliente cadastrado"}
-                                  </p>
-                                  <button
-                                    onClick={() => setClientMode("new")}
-                                    className="text-primary/60 hover:text-primary text-xs font-body font-semibold flex items-center gap-1 transition-colors"
-                                  >
-                                    <UserPlus className="w-3 h-3" /> Cadastrar novo cliente
-                                  </button>
+                          ) : (
+                            filteredProfiles.map((p) => (
+                              <button
+                                key={p.id}
+                                onClick={() => {
+                                  setForm((f) => ({ ...f, client_id: p.id }));
+                                  setSelectedName(p.full_name ?? "");
+                                  setClientSearch("");
+                                }}
+                                className="w-full flex items-center gap-3 px-4 py-3 hover:bg-white/4 transition-colors text-left group"
+                              >
+                                <div className="w-7 h-7 rounded-full bg-white/5 border border-white/8 flex items-center justify-center shrink-0 group-hover:border-primary/30 transition-colors">
+                                  <span className="text-white/30 text-xs font-display font-bold group-hover:text-primary/60 transition-colors">
+                                    {(p.full_name ?? "?")[0].toUpperCase()}
+                                  </span>
                                 </div>
-                              ) : (
-                                filteredGuests.map((p) => (
-                                  <button
-                                    key={p.id}
-                                    onClick={() => {
-                                      setForm((f) => ({ ...f, client_id: p.id }));
-                                      setSelectedName(p.full_name ?? "");
-                                      setClientSearch("");
-                                    }}
-                                    className="w-full flex items-center gap-3 px-4 py-3 hover:bg-white/4 transition-colors text-left group"
-                                  >
-                                    <div className="w-7 h-7 rounded-full bg-white/5 border border-white/8 flex items-center justify-center shrink-0 group-hover:border-primary/30 transition-colors">
-                                      <span className="text-white/30 text-xs font-display font-bold group-hover:text-primary/60 transition-colors">
-                                        {(p.full_name ?? "?")[0].toUpperCase()}
-                                      </span>
-                                    </div>
-                                    <div className="min-w-0">
-                                      <p className="text-cream/80 text-sm font-body font-medium truncate">
-                                        {p.full_name}
-                                      </p>
-                                      <p className="text-white/25 text-xs font-body truncate">
-                                        {p.email || p.phone || p.cpf || "—"}
-                                      </p>
-                                    </div>
-                                  </button>
-                                ))
-                              )}
-                            </div>
-                          </div>
-                        )}
-                      </>
+                                <div className="min-w-0">
+                                  <p className="text-cream/80 text-sm font-body font-medium truncate">
+                                    {p.full_name}
+                                  </p>
+                                  <p className="text-white/25 text-xs font-body truncate">
+                                    {p.phone || "—"}
+                                  </p>
+                                </div>
+                              </button>
+                            ))
+                          )}
+                        </div>
+                      </div>
                     )}
                   </section>
 
