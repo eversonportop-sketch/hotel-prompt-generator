@@ -98,18 +98,13 @@ const AdminDashboard = () => {
     },
   });
 
-  const totalRooms = rooms.length;
-  const activeRooms = (rooms as any[]).filter((r) => r.status === "active").length;
+  const totalRooms = quartos.length;
+  const activeRooms = totalRooms;
   const totalReservations = reservations.length;
   const confirmedReservations = (reservations as any[]).filter((r) => r.status === "confirmed").length;
   const todayCheckins = (reservations as any[]).filter((r) => r.check_in === today).length;
   const todayCheckouts = (reservations as any[]).filter((r) => r.check_out === today).length;
   const totalProfiles = profiles.length;
-
-  const roomsByStatus: Record<string, number> = {};
-  (rooms as any[]).forEach((r) => {
-    roomsByStatus[r.status] = (roomsByStatus[r.status] || 0) + 1;
-  });
 
   const reservationsByStatus: Record<string, number> = {};
   (reservations as any[]).forEach((r) => {
