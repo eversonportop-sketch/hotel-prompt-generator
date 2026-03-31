@@ -508,9 +508,13 @@ const AdminConsumo = () => {
                             {format(new Date(o.created_at), "dd/MM HH:mm", { locale: ptBR })}
                           </span>
                         </div>
-                        <div className="flex items-center gap-2">
+                        <div className="flex items-center gap-2 flex-wrap">
                           <BedDouble className="w-4 h-4 text-primary/60" />
                           <span className="text-cream font-body font-medium">Quarto {o.room_number}</span>
+                          {(() => {
+                            const q = quartosOcupados.find((q) => q.room_name === o.room_number);
+                            return q ? <span className="text-cream/40 text-xs font-body">({q.guest_name})</span> : null;
+                          })()}
                           <span className="text-cream/40 text-sm font-body">
                             — {o.item_name} × {o.quantity}
                           </span>
