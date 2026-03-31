@@ -114,6 +114,9 @@ const AdminReservas = () => {
   const [newClientMode, setNewClientMode] = useState(false);
   const [newClientName, setNewClientName] = useState("");
   const [newClientPhone, setNewClientPhone] = useState("");
+  const [newClientCpf, setNewClientCpf] = useState("");
+  const [newClientEmail, setNewClientEmail] = useState("");
+  const [newClientCity, setNewClientCity] = useState("");
   const [savingClient, setSavingClient] = useState(false);
 
   // Abre modal com cliente pré-selecionado vindo da página de Clientes
@@ -286,18 +289,29 @@ const AdminReservas = () => {
     setNewClientMode(false);
     setNewClientName("");
     setNewClientPhone("");
+    setNewClientCpf("");
+    setNewClientEmail("");
+    setNewClientCity("");
   };
 
   const handleSaveNewClient = async () => {
-    if (!newClientName.trim()) {
-      toast.error("Informe o nome do cliente.");
-      return;
-    }
+    if (!newClientName.trim()) { toast.error("Informe o nome do cliente."); return; }
+    if (!newClientPhone.trim()) { toast.error("Informe o telefone do cliente."); return; }
+    if (!newClientCpf.trim()) { toast.error("Informe o CPF/documento do cliente."); return; }
     setSavingClient(true);
     try {
+      const payload: any = {
+        id: crypto.randomUUID(),
+        full_name: newClientName.trim(),
+        phone: newClientPhone.trim(),
+        cpf: newClientCpf.trim(),
+        role: "guest",
+      };
+      if (newClientEmail.trim()) payload.email = newClientEmail.trim();
+      if (newClientCity.trim()) payload.city = newClientCity.trim();
       const { data, error } = await supabase
         .from("profiles")
-        .insert({ id: crypto.randomUUID(), full_name: newClientName.trim(), phone: newClientPhone.trim() || null, role: "guest" } as any)
+        .insert(payload)
         .select("id,full_name")
         .single();
       if (error) throw error;
@@ -306,6 +320,9 @@ const AdminReservas = () => {
       setNewClientMode(false);
       setNewClientName("");
       setNewClientPhone("");
+      setNewClientCpf("");
+      setNewClientEmail("");
+      setNewClientCity("");
       qc.invalidateQueries({ queryKey: ["admin-profiles-select"] });
       toast.success("Cliente cadastrado e selecionado!");
     } catch (err: any) {
@@ -642,12 +659,34 @@ const AdminReservas = () => {
                           onChange={(e) => setNewClientName(e.target.value)}
                           className="w-full px-3 py-2.5 bg-[#0d0d10] border border-white/8 rounded-lg text-cream text-sm font-body focus:outline-none focus:border-primary/40 transition placeholder:text-white/20"
                         />
-                        <input
-                          placeholder="Telefone (opcional)"
-                          value={newClientPhone}
-                          onChange={(e) => setNewClientPhone(e.target.value)}
-                          className="w-full px-3 py-2.5 bg-[#0d0d10] border border-white/8 rounded-lg text-cream text-sm font-body focus:outline-none focus:border-primary/40 transition placeholder:text-white/20"
-                        />
+                        <div className="grid grid-cols-2 gap-2">
+                          <input
+                            placeholder="Telefone *"
+                            value={newClientPhone}
+                            onChange={(e) => setNewClientPhone(e.target.value)}
+                            className="w-full px-3 py-2.5 bg-[#0d0d10] border border-white/8 rounded-lg text-cream text-sm font-body focus:outline-none focus:border-primary/40 transition placeholder:text-white/20"
+                          />
+                          <input
+                            placeholder="CPF / Documento *"
+                            value={newClientCpf}
+                            onChange={(e) => setNewClientCpf(e.target.value)}
+                            className="w-full px-3 py-2.5 bg-[#0d0d10] border border-white/8 rounded-lg text-cream text-sm font-body focus:outline-none focus:border-primary/40 transition placeholder:text-white/20"
+                          />
+                        </div>
+                        <div className="grid grid-cols-2 gap-2">
+                          <input
+                            placeholder="Email (opcional)"
+                            value={newClientEmail}
+                            onChange={(e) => setNewClientEmail(e.target.value)}
+                            className="w-full px-3 py-2.5 bg-[#0d0d10] border border-white/8 rounded-lg text-cream text-sm font-body focus:outline-none focus:border-primary/40 transition placeholder:text-white/20"
+                          />
+                          <input
+                            placeholder="Cidade (opcional)"
+                            value={newClientCity}
+                            onChange={(e) => setNewClientCity(e.target.value)}
+                            className="w-full px-3 py-2.5 bg-[#0d0d10] border border-white/8 rounded-lg text-cream text-sm font-body focus:outline-none focus:border-primary/40 transition placeholder:text-white/20"
+                          />
+                        </div>
                         <button
                           onClick={handleSaveNewClient}
                           disabled={savingClient}
