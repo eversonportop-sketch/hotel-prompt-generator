@@ -659,12 +659,34 @@ const AdminReservas = () => {
                           onChange={(e) => setNewClientName(e.target.value)}
                           className="w-full px-3 py-2.5 bg-[#0d0d10] border border-white/8 rounded-lg text-cream text-sm font-body focus:outline-none focus:border-primary/40 transition placeholder:text-white/20"
                         />
-                        <input
-                          placeholder="Telefone (opcional)"
-                          value={newClientPhone}
-                          onChange={(e) => setNewClientPhone(e.target.value)}
-                          className="w-full px-3 py-2.5 bg-[#0d0d10] border border-white/8 rounded-lg text-cream text-sm font-body focus:outline-none focus:border-primary/40 transition placeholder:text-white/20"
-                        />
+                        <div className="grid grid-cols-2 gap-2">
+                          <input
+                            placeholder="Telefone *"
+                            value={newClientPhone}
+                            onChange={(e) => setNewClientPhone(e.target.value)}
+                            className="w-full px-3 py-2.5 bg-[#0d0d10] border border-white/8 rounded-lg text-cream text-sm font-body focus:outline-none focus:border-primary/40 transition placeholder:text-white/20"
+                          />
+                          <input
+                            placeholder="CPF / Documento *"
+                            value={newClientCpf}
+                            onChange={(e) => setNewClientCpf(e.target.value)}
+                            className="w-full px-3 py-2.5 bg-[#0d0d10] border border-white/8 rounded-lg text-cream text-sm font-body focus:outline-none focus:border-primary/40 transition placeholder:text-white/20"
+                          />
+                        </div>
+                        <div className="grid grid-cols-2 gap-2">
+                          <input
+                            placeholder="Email (opcional)"
+                            value={newClientEmail}
+                            onChange={(e) => setNewClientEmail(e.target.value)}
+                            className="w-full px-3 py-2.5 bg-[#0d0d10] border border-white/8 rounded-lg text-cream text-sm font-body focus:outline-none focus:border-primary/40 transition placeholder:text-white/20"
+                          />
+                          <input
+                            placeholder="Cidade (opcional)"
+                            value={newClientCity}
+                            onChange={(e) => setNewClientCity(e.target.value)}
+                            className="w-full px-3 py-2.5 bg-[#0d0d10] border border-white/8 rounded-lg text-cream text-sm font-body focus:outline-none focus:border-primary/40 transition placeholder:text-white/20"
+                          />
+                        </div>
                         <button
                           onClick={handleSaveNewClient}
                           disabled={savingClient}
