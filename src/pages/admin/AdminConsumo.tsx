@@ -65,7 +65,7 @@ const ORDER_STATUS: Record<string, { label: string; color: string }> = {
 };
 
 const EMPTY_ITEM = { name: "", category: "Bebidas", price: 0, available: true, description: "", display_order: 0 };
-const EMPTY_ORDER = { room_number: "", item_id: "", quantity: 1, notes: "" };
+const EMPTY_ORDER = { room_number: "", item_id: "", quantity: 1, notes: "", reservation_id: "" };
 
 const AdminConsumo = () => {
   const qc = useQueryClient();
