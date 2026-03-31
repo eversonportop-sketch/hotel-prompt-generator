@@ -50,12 +50,31 @@ function formatDateShort(date: Date) {
 }
 
 const AdminDashboard = () => {
-  const { data: rooms = [] } = useQuery({
-    queryKey: ["dash-rooms"],
+  const { data: quartos = [] } = useQuery({
+    queryKey: ["dash-rooms-occupancy"],
     queryFn: async () => {
-      const { data, error } = await supabase.from("rooms").select("id, status");
-      if (error) throw error;
-      return data;
+      const td = new Date().toISOString().split("T")[0];
+      const { data: roomsData } = await supabase
+        .from("rooms")
+        .select("id, name, category")
+        .eq("status", "active")
+        .order("display_order");
+      const { data: resData } = await supabase
+        .from("reservations")
+        .select("id, room_id, check_in, check_out, status, profile_id, client_id, profiles!reservations_profile_id_fkey(full_name)")
+        .in("status", ["confirmed", "pending"])
+        .lte("check_in", td)
+        .gte("check_out", td);
+      return (roomsData || []).map((room: any) => {
+        const res = (resData || []).find((r: any) => r.room_id === room.id);
+        return {
+          ...room,
+          ocupado: !!res,
+          hospede: (res?.profiles as any)?.full_name || null,
+          check_out: res?.check_out || null,
+          reservation_id: res?.id || null,
+        };
+      });
     },
   });
 
@@ -79,18 +98,13 @@ const AdminDashboard = () => {
     },
   });
 
-  const totalRooms = rooms.length;
-  const activeRooms = (rooms as any[]).filter((r) => r.status === "active").length;
+  const totalRooms = quartos.length;
+  const activeRooms = totalRooms;
   const totalReservations = reservations.length;
   const confirmedReservations = (reservations as any[]).filter((r) => r.status === "confirmed").length;
   const todayCheckins = (reservations as any[]).filter((r) => r.check_in === today).length;
   const todayCheckouts = (reservations as any[]).filter((r) => r.check_out === today).length;
   const totalProfiles = profiles.length;
-
-  const roomsByStatus: Record<string, number> = {};
-  (rooms as any[]).forEach((r) => {
-    roomsByStatus[r.status] = (roomsByStatus[r.status] || 0) + 1;
-  });
 
   const reservationsByStatus: Record<string, number> = {};
   (reservations as any[]).forEach((r) => {
@@ -195,22 +209,28 @@ const AdminDashboard = () => {
               Ver todos →
             </Link>
           </div>
-          {Object.keys(roomsByStatus).length === 0 ? (
+          {quartos.length === 0 ? (
             <p className="text-white/20 text-sm font-body">Nenhum quarto cadastrado</p>
           ) : (
-            <div className="space-y-2">
-              {Object.entries(roomsByStatus).map(([status, count]) => {
-                const cfg = statusConfig[status] || { bg: "bg-white/5", dot: "bg-white/30", text: "text-white/50" };
-                return (
-                  <div key={status} className={`flex items-center justify-between px-3 py-2.5 rounded-lg ${cfg.bg}`}>
-                    <div className="flex items-center gap-2.5">
-                      <span className={`w-1.5 h-1.5 rounded-full flex-shrink-0 ${cfg.dot}`} />
-                      <span className={`text-sm font-body ${cfg.text}`}>{statusLabels[status] || status}</span>
-                    </div>
-                    <span className={`text-sm font-bold font-body ${cfg.text}`}>{count}</span>
-                  </div>
-                );
-              })}
+            <div className="grid grid-cols-2 gap-2">
+              {(quartos as any[]).map((q) => (
+                <div
+                  key={q.id}
+                  className={`rounded-lg px-3 py-2.5 ${q.ocupado ? "bg-red-500/10 border border-red-500/20" : "bg-emerald-500/10 border border-emerald-500/20"}`}
+                >
+                  <p className={`text-sm font-semibold font-body ${q.ocupado ? "text-red-300" : "text-emerald-300"}`}>{q.name}</p>
+                  {q.ocupado ? (
+                    <>
+                      <p className="text-xs text-red-400/70 font-body truncate">{q.hospede || "—"}</p>
+                      <p className="text-[10px] text-red-400/50 font-body">
+                        Saída: {q.check_out ? q.check_out.split("-").reverse().slice(0, 2).join("/") : "—"}
+                      </p>
+                    </>
+                  ) : (
+                    <p className="text-xs text-emerald-400/70 font-body">Disponível</p>
+                  )}
+                </div>
+              ))}
             </div>
           )}
         </motion.div>
