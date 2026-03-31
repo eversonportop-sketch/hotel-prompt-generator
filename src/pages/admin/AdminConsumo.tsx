@@ -259,6 +259,7 @@ const AdminConsumo = () => {
           total,
           status: "pending",
           notes: orderForm.notes || null,
+          reservation_id: orderForm.reservation_id || null,
         });
         if (error) throw error;
       }
