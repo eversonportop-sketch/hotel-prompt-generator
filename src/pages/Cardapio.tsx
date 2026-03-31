@@ -57,7 +57,7 @@ const Cardapio = () => {
       const { data, error } = await supabase
         .from("reservations")
         .select("id, room_id, rooms:room_id(name)")
-        .eq("client_id", user!.id)
+        .or(`profile_id.eq.${user!.id},client_id.eq.${user!.id}`)
         .in("status", ["confirmed", "pending"])
         .lte("check_in", today)
         .gte("check_out", today)
@@ -70,7 +70,7 @@ const Cardapio = () => {
       const { data: fallback, error: fallbackError } = await supabase
         .from("reservations")
         .select("id, room_id, rooms:room_id(name)")
-        .eq("client_id", user!.id)
+        .or(`profile_id.eq.${user!.id},client_id.eq.${user!.id}`)
         .in("status", ["confirmed", "pending"])
         .order("check_in", { ascending: false })
         .limit(1)
