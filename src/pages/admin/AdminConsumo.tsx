@@ -65,7 +65,7 @@ const ORDER_STATUS: Record<string, { label: string; color: string }> = {
 };
 
 const EMPTY_ITEM = { name: "", category: "Bebidas", price: 0, available: true, description: "", display_order: 0 };
-const EMPTY_ORDER = { room_number: "", item_id: "", quantity: 1, notes: "" };
+const EMPTY_ORDER = { room_number: "", item_id: "", quantity: 1, notes: "", reservation_id: "" };
 
 const AdminConsumo = () => {
   const qc = useQueryClient();
@@ -96,17 +96,23 @@ const AdminConsumo = () => {
     },
   });
 
-  // ── Query: quartos ativos ─────────────────────────────────────────────────────
-  const { data: activeRooms = [] } = useQuery({
-    queryKey: ["active-rooms-consumo"],
+  // ── Query: quartos ocupados agora ──────────────────────────────────────────
+  const { data: quartosOcupados = [] } = useQuery({
+    queryKey: ["consumo-quartos-ocupados"],
     queryFn: async () => {
-      const { data, error } = await supabase
-        .from("rooms")
-        .select("id, name, category")
-        .eq("status", "active")
-        .order("display_order");
-      if (error) throw error;
-      return data as { id: string; name: string; category: string }[];
+      const today = new Date().toISOString().split("T")[0];
+      const { data } = await supabase
+        .from("reservations")
+        .select("id, room_id, rooms(name), profiles!reservations_profile_id_fkey(full_name)")
+        .in("status", ["confirmed", "pending"])
+        .lte("check_in", today)
+        .gte("check_out", today);
+      return (data || []).map((r: any) => ({
+        reservation_id: r.id,
+        room_id: r.room_id,
+        room_name: r.rooms?.name || "—",
+        guest_name: (r.profiles as any)?.full_name || "Hóspede",
+      }));
     },
   });
 
@@ -253,6 +259,7 @@ const AdminConsumo = () => {
           total,
           status: "pending",
           notes: orderForm.notes || null,
+          reservation_id: orderForm.reservation_id || null,
         });
         if (error) throw error;
       }
@@ -313,6 +320,7 @@ const AdminConsumo = () => {
       item_id: order.item_id,
       quantity: order.quantity,
       notes: order.notes ?? "",
+      reservation_id: "",
     });
     setOrderModal(true);
   };
@@ -500,9 +508,13 @@ const AdminConsumo = () => {
                             {format(new Date(o.created_at), "dd/MM HH:mm", { locale: ptBR })}
                           </span>
                         </div>
-                        <div className="flex items-center gap-2">
+                        <div className="flex items-center gap-2 flex-wrap">
                           <BedDouble className="w-4 h-4 text-primary/60" />
                           <span className="text-cream font-body font-medium">Quarto {o.room_number}</span>
+                          {(() => {
+                            const q = quartosOcupados.find((q) => q.room_name === o.room_number);
+                            return q ? <span className="text-cream/40 text-xs font-body">({q.guest_name})</span> : null;
+                          })()}
                           <span className="text-cream/40 text-sm font-body">
                             — {o.item_name} × {o.quantity}
                           </span>
@@ -684,20 +696,30 @@ const AdminConsumo = () => {
                 className="p-6 space-y-4"
               >
                 <div>
-                  <label className="block text-xs uppercase tracking-widest text-primary/70 mb-1.5">Quarto *</label>
+                  <label className="block text-xs uppercase tracking-widest text-primary/70 mb-1.5">Quarto Ocupado *</label>
                   <select
                     className="w-full bg-black/50 border border-gold/20 rounded-lg px-4 py-3 text-cream text-sm focus:border-primary focus:outline-none transition"
-                    value={orderForm.room_number}
-                    onChange={(e) => setOrderForm({ ...orderForm, room_number: e.target.value })}
+                    value={orderForm.reservation_id}
+                    onChange={(e) => {
+                      const q = quartosOcupados.find((q) => q.reservation_id === e.target.value);
+                      setOrderForm({
+                        ...orderForm,
+                        reservation_id: e.target.value,
+                        room_number: q?.room_name || "",
+                      });
+                    }}
                     required
                   >
                     <option value="">Selecione o quarto...</option>
-                    {activeRooms.map((r) => (
-                      <option key={r.id} value={r.name}>
-                        {r.name} — {r.category}
+                    {quartosOcupados.map((q) => (
+                      <option key={q.reservation_id} value={q.reservation_id}>
+                        {q.room_name} — {q.guest_name}
                       </option>
                     ))}
                   </select>
+                  {quartosOcupados.length === 0 && (
+                    <p className="text-cream/30 text-xs mt-1 font-body">Nenhum quarto ocupado no momento.</p>
+                  )}
                 </div>
                 <div>
                   <label className="block text-xs uppercase tracking-widest text-primary/70 mb-1.5">Item *</label>
