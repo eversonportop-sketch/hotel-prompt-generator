@@ -69,11 +69,26 @@ const AdminCheckout = () => {
     queryFn: async () => {
       const { data, error } = await supabase
         .from("reservations")
-        .select("*, rooms(name, price), profiles(full_name, phone)")
+        .select("*, rooms(name, price), profiles!reservations_profile_id_fkey(full_name, phone)")
         .in("status", ["confirmed", "pending"])
         .order("check_in", { ascending: false });
       if (error) throw error;
-      return data as Reservation[];
+
+      // Buscar consumo aberto agrupado por reservation_id
+      const ids = (data || []).map((r: any) => r.id);
+      let consumoMap: Record<string, number> = {};
+      if (ids.length > 0) {
+        const { data: consumos } = await supabase
+          .from("consumption_orders")
+          .select("reservation_id, total")
+          .in("reservation_id", ids)
+          .in("status", ["pending", "delivered"]);
+        (consumos || []).forEach((c: any) => {
+          consumoMap[c.reservation_id] = (consumoMap[c.reservation_id] || 0) + Number(c.total);
+        });
+      }
+
+      return (data || []).map((r: any) => ({ ...r, _consumoTotal: consumoMap[r.id] || 0 })) as (Reservation & { _consumoTotal: number })[];
     },
   });
 
