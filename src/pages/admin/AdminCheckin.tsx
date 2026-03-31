@@ -56,6 +56,7 @@ interface DailyOp {
   total_price: number;
   notes: string | null;
   guest_name: string | null;
+  profile_id: string | null;
   guest_phone: string | null;
   room_name: string;
   room_category: string;
