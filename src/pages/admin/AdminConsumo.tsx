@@ -319,6 +319,7 @@ const AdminConsumo = () => {
       item_id: order.item_id,
       quantity: order.quantity,
       notes: order.notes ?? "",
+      reservation_id: "",
     });
     setOrderModal(true);
   };
