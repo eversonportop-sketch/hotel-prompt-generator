@@ -297,7 +297,7 @@ const AdminReservas = () => {
     try {
       const { data, error } = await supabase
         .from("profiles")
-        .insert({ full_name: newClientName.trim(), phone: newClientPhone.trim() || null, role: "guest" })
+        .insert({ id: crypto.randomUUID(), full_name: newClientName.trim(), phone: newClientPhone.trim() || null, role: "guest" } as any)
         .select("id,full_name")
         .single();
       if (error) throw error;
