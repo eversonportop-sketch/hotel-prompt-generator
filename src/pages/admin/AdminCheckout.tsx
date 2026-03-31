@@ -230,8 +230,12 @@ const AdminCheckout = () => {
     );
   });
 
-  const ResCard = ({ res, selected, onClick }: { res: Reservation; selected: boolean; onClick: () => void }) => {
+  const ResCard = ({ res, selected, onClick }: { res: Reservation & { _consumoTotal?: number }; selected: boolean; onClick: () => void }) => {
     const n = Math.max(1, differenceInDays(new Date(res.check_out), new Date(res.check_in)));
+    const rp = (res.rooms as any)?.price ?? 0;
+    const diarias = rp * n || res.total_price || 0;
+    const consumo = (res as any)._consumoTotal || 0;
+    const estimado = diarias + consumo;
     return (
       <button
         onClick={onClick}
@@ -241,28 +245,16 @@ const AdminCheckout = () => {
       >
         <div className="flex items-center justify-between mb-1.5">
           <p className="text-cream font-body font-semibold text-sm">{(res.profiles as any)?.full_name ?? "Hóspede"}</p>
-          <span
-            className={`text-xs px-2 py-0.5 rounded-full border font-body ${
-              res.status === "confirmed"
-                ? "bg-green-500/20 text-green-400 border-green-500/30"
-                : res.status === "completed"
-                  ? "bg-blue-500/20 text-blue-400 border-blue-500/30"
-                  : "bg-yellow-500/20 text-yellow-400 border-yellow-500/30"
-            }`}
-          >
-            {res.status === "confirmed" ? "Confirmada" : res.status === "completed" ? "Concluída" : "Pendente"}
-          </span>
+          <span className="font-display font-bold text-primary text-sm">R$ {estimado.toFixed(2)}</span>
         </div>
+        <p className="text-cream/50 font-body text-xs mb-1">{(res.rooms as any)?.name ?? "—"}</p>
         <div className="flex items-center gap-3 text-xs text-cream/40 font-body">
-          <span className="flex items-center gap-1">
-            <BedDouble className="w-3 h-3" />
-            {(res.rooms as any)?.name ?? "—"}
-          </span>
           <span>
             <Calendar className="w-3 h-3 inline mr-1" />
             {format(new Date(res.check_in + "T12:00:00"), "dd/MM", { locale: ptBR })} →{" "}
             {format(new Date(res.check_out + "T12:00:00"), "dd/MM", { locale: ptBR })} · {n}n
           </span>
+          {consumo > 0 && <span>+ consumo R$ {consumo.toFixed(2)}</span>}
         </div>
       </button>
     );
