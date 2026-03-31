@@ -283,6 +283,36 @@ const AdminReservas = () => {
     setForm({ ...emptyForm });
     setClientSearch("");
     setSelectedName("");
+    setNewClientMode(false);
+    setNewClientName("");
+    setNewClientPhone("");
+  };
+
+  const handleSaveNewClient = async () => {
+    if (!newClientName.trim()) {
+      toast.error("Informe o nome do cliente.");
+      return;
+    }
+    setSavingClient(true);
+    try {
+      const { data, error } = await supabase
+        .from("profiles")
+        .insert({ full_name: newClientName.trim(), phone: newClientPhone.trim() || null, role: "guest" })
+        .select("id,full_name")
+        .single();
+      if (error) throw error;
+      setForm((f) => ({ ...f, client_id: data.id }));
+      setSelectedName(data.full_name || "");
+      setNewClientMode(false);
+      setNewClientName("");
+      setNewClientPhone("");
+      qc.invalidateQueries({ queryKey: ["admin-profiles-select"] });
+      toast.success("Cliente cadastrado e selecionado!");
+    } catch (err: any) {
+      toast.error(err.message || "Erro ao cadastrar cliente.");
+    } finally {
+      setSavingClient(false);
+    }
   };
 
   const filtered = reservations.filter((r) => {
