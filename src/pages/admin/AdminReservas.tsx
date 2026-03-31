@@ -295,15 +295,23 @@ const AdminReservas = () => {
   };
 
   const handleSaveNewClient = async () => {
-    if (!newClientName.trim()) {
-      toast.error("Informe o nome do cliente.");
-      return;
-    }
+    if (!newClientName.trim()) { toast.error("Informe o nome do cliente."); return; }
+    if (!newClientPhone.trim()) { toast.error("Informe o telefone do cliente."); return; }
+    if (!newClientCpf.trim()) { toast.error("Informe o CPF/documento do cliente."); return; }
     setSavingClient(true);
     try {
+      const payload: any = {
+        id: crypto.randomUUID(),
+        full_name: newClientName.trim(),
+        phone: newClientPhone.trim(),
+        cpf: newClientCpf.trim(),
+        role: "guest",
+      };
+      if (newClientEmail.trim()) payload.email = newClientEmail.trim();
+      if (newClientCity.trim()) payload.city = newClientCity.trim();
       const { data, error } = await supabase
         .from("profiles")
-        .insert({ id: crypto.randomUUID(), full_name: newClientName.trim(), phone: newClientPhone.trim() || null, role: "guest" } as any)
+        .insert(payload)
         .select("id,full_name")
         .single();
       if (error) throw error;
@@ -312,6 +320,9 @@ const AdminReservas = () => {
       setNewClientMode(false);
       setNewClientName("");
       setNewClientPhone("");
+      setNewClientCpf("");
+      setNewClientEmail("");
+      setNewClientCity("");
       qc.invalidateQueries({ queryKey: ["admin-profiles-select"] });
       toast.success("Cliente cadastrado e selecionado!");
     } catch (err: any) {
