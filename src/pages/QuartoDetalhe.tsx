@@ -247,16 +247,35 @@ const QuartoDetalhe = () => {
   });
 
   const checkAvailability = async () => {
-    if (!checkIn || !checkOut || !id) return;
+    if (!checkIn || !checkOut || !room) return;
     setChecking(true);
     try {
-      const { data, error } = await supabase.rpc("check_room_availability", {
-        p_room_id: id,
-        p_check_in: format(checkIn, "yyyy-MM-dd"),
-        p_check_out: format(checkOut, "yyyy-MM-dd"),
-      });
-      if (error) throw error;
-      setAvailable(data as boolean);
+      const ci = format(checkIn, "yyyy-MM-dd");
+      const co = format(checkOut, "yyyy-MM-dd");
+
+      // Busca todos os quartos ativos da mesma categoria
+      const { data: catRooms } = await supabase
+        .from("rooms")
+        .select("id")
+        .eq("category", room.category)
+        .eq("status", "active");
+      const allIds = (catRooms || []).map((r: any) => r.id);
+
+      // Busca reservas conflitantes
+      const { data: conflicts } = await supabase
+        .from("reservations")
+        .select("room_id")
+        .in("room_id", allIds)
+        .in("status", ["confirmed", "pending"])
+        .lt("check_in", co)
+        .gt("check_out", ci);
+
+      const occupiedIds = new Set((conflicts || []).map((c: any) => c.room_id));
+      const freeIds = allIds.filter((rid: string) => !occupiedIds.has(rid));
+
+      const free = freeIds.length;
+      setCategoryAvail({ free, total: allIds.length, freeRoomId: free > 0 ? freeIds[0] : null });
+      setAvailable(free > 0);
     } catch {
       toast.error("Erro ao verificar disponibilidade");
     } finally {
