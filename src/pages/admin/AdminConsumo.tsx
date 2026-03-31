@@ -692,20 +692,30 @@ const AdminConsumo = () => {
                 className="p-6 space-y-4"
               >
                 <div>
-                  <label className="block text-xs uppercase tracking-widest text-primary/70 mb-1.5">Quarto *</label>
+                  <label className="block text-xs uppercase tracking-widest text-primary/70 mb-1.5">Quarto Ocupado *</label>
                   <select
                     className="w-full bg-black/50 border border-gold/20 rounded-lg px-4 py-3 text-cream text-sm focus:border-primary focus:outline-none transition"
-                    value={orderForm.room_number}
-                    onChange={(e) => setOrderForm({ ...orderForm, room_number: e.target.value })}
+                    value={orderForm.reservation_id}
+                    onChange={(e) => {
+                      const q = quartosOcupados.find((q) => q.reservation_id === e.target.value);
+                      setOrderForm({
+                        ...orderForm,
+                        reservation_id: e.target.value,
+                        room_number: q?.room_name || "",
+                      });
+                    }}
                     required
                   >
                     <option value="">Selecione o quarto...</option>
-                    {activeRooms.map((r) => (
-                      <option key={r.id} value={r.name}>
-                        {r.name} — {r.category}
+                    {quartosOcupados.map((q) => (
+                      <option key={q.reservation_id} value={q.reservation_id}>
+                        {q.room_name} — {q.guest_name}
                       </option>
                     ))}
                   </select>
+                  {quartosOcupados.length === 0 && (
+                    <p className="text-cream/30 text-xs mt-1 font-body">Nenhum quarto ocupado no momento.</p>
+                  )}
                 </div>
                 <div>
                   <label className="block text-xs uppercase tracking-widest text-primary/70 mb-1.5">Item *</label>
