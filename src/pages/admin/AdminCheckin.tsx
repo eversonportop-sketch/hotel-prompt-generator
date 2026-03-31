@@ -350,6 +350,15 @@ const AdminCheckin = () => {
                             <span className="text-cream font-body font-medium">
                               {op.guest_name || "Hóspede sem nome"}
                             </span>
+                            {op.profile_id ? (
+                              <span className="inline-flex items-center px-1.5 py-0.5 rounded text-[10px] font-semibold bg-blue-500/20 text-blue-400 border border-blue-500/30">
+                                Online
+                              </span>
+                            ) : (
+                              <span className="inline-flex items-center px-1.5 py-0.5 rounded text-[10px] font-semibold bg-amber-500/20 text-amber-400 border border-amber-500/30">
+                                Presencial
+                              </span>
+                            )}
                             {op.guest_phone && (
                               <span className="text-cream/30 text-sm flex items-center gap-1">
                                 <Phone className="w-3 h-3" /> {op.guest_phone}
