@@ -369,10 +369,10 @@ const AdminCheckout = () => {
                           Conta do hóspede
                         </p>
                         <h2 className="font-display text-xl font-bold text-cream">
-                          {(selectedRes.profiles as any)?.full_name ?? "Hóspede"}
+                          {(selectedRes.profiles as any)?.full_name ?? "Hóspede"} — {(selectedRes.rooms as any)?.name ?? "Quarto"}
                         </h2>
                         <p className="text-cream/40 font-body text-sm mt-0.5">
-                          {(selectedRes.rooms as any)?.name} · {nights} {nights === 1 ? "noite" : "noites"}
+                          {nights} {nights === 1 ? "noite" : "noites"}
                         </p>
                       </div>
                       <button
