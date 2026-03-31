@@ -19,18 +19,22 @@ import {
   ShoppingCart,
   CalendarPlus,
   Trash2,
+  KeyRound,
+  MapPin,
 } from "lucide-react";
 import { format } from "date-fns";
 import { ptBR } from "date-fns/locale";
 import { toast } from "sonner";
 
-interface Guest {
+interface Client {
   id: string;
   full_name: string;
   email: string | null;
   phone: string | null;
   cpf: string | null;
+  city: string | null;
   created_at: string;
+  role: string | null;
 }
 
 const emptyForm = {
@@ -38,33 +42,40 @@ const emptyForm = {
   email: "",
   cpf: "",
   phone: "",
+  city: "",
 };
 
 const AdminClientes = () => {
   const [search, setSearch] = useState("");
   const [modalOpen, setModalOpen] = useState(false);
-  const [editGuest, setEditGuest] = useState<Guest | null>(null);
+  const [editClient, setEditClient] = useState<Client | null>(null);
   const [form, setForm] = useState(emptyForm);
   const [saving, setSaving] = useState(false);
-  const [historyClient, setHistoryClient] = useState<Guest | null>(null);
+  const [historyClient, setHistoryClient] = useState<Client | null>(null);
   const [deleteId, setDeleteId] = useState<string | null>(null);
+  const [portalClient, setPortalClient] = useState<Client | null>(null);
+  const [portalEmail, setPortalEmail] = useState("");
+  const [portalPassword, setPortalPassword] = useState("");
+  const [creatingPortal, setCreatingPortal] = useState(false);
   const navigate = useNavigate();
 
   const qc = useQueryClient();
 
-  const { data: guests = [], isLoading } = useQuery({
-    queryKey: ["admin-guests"],
+  /* ── Query: busca clientes operacionais (não admin) ── */
+  const { data: clients = [], isLoading } = useQuery({
+    queryKey: ["admin-clients"],
     queryFn: async () => {
-      const { data, error } = await (supabase as any)
-        .from("guests")
-        .select("*")
+      const { data, error } = await supabase
+        .from("profiles")
+        .select("id,full_name,email,phone,cpf,city,created_at,role")
+        .neq("role", "admin")
         .order("created_at", { ascending: false });
       if (error) throw error;
-      return data as Guest[];
+      return (data || []) as Client[];
     },
   });
 
-  const filtered = guests.filter((g) => {
+  const filtered = clients.filter((g) => {
     const q = search.toLowerCase();
     return (
       g.full_name?.toLowerCase().includes(q) ||
@@ -75,52 +86,65 @@ const AdminClientes = () => {
   });
 
   const openNew = () => {
-    setEditGuest(null);
+    setEditClient(null);
     setForm(emptyForm);
     setModalOpen(true);
   };
 
-  const openEdit = (g: Guest) => {
-    setEditGuest(g);
+  const openEdit = (g: Client) => {
+    setEditClient(g);
     setForm({
       full_name: g.full_name || "",
       email: g.email || "",
       cpf: g.cpf || "",
       phone: g.phone || "",
+      city: g.city || "",
     });
     setModalOpen(true);
   };
 
+  /* ── Salvar cliente operacional (sem auth) ── */
   const handleSave = async () => {
     if (!form.full_name.trim()) {
       toast.error("Nome é obrigatório");
       return;
     }
+    if (!form.phone.trim()) {
+      toast.error("Telefone é obrigatório");
+      return;
+    }
+    if (!form.cpf.trim()) {
+      toast.error("CPF/Documento é obrigatório");
+      return;
+    }
     setSaving(true);
     try {
-      if (editGuest) {
-        const { error } = await (supabase as any)
-          .from("guests")
-          .update({
-            full_name: form.full_name,
-            phone: form.phone || null,
-            cpf: form.cpf || null,
-            email: form.email || null,
-          })
-          .eq("id", editGuest.id);
+      const payload: any = {
+        full_name: form.full_name.trim(),
+        phone: form.phone.trim() || null,
+        cpf: form.cpf.trim() || null,
+        email: form.email.trim() || null,
+        city: form.city.trim() || null,
+      };
+
+      if (editClient) {
+        const { error } = await supabase
+          .from("profiles")
+          .update(payload)
+          .eq("id", editClient.id);
         if (error) throw error;
         toast.success("Cliente atualizado!");
       } else {
-        const { error } = await (supabase as any).from("guests").insert({
-          full_name: form.full_name,
-          phone: form.phone || null,
-          cpf: form.cpf || null,
-          email: form.email || null,
+        const { error } = await supabase.from("profiles").insert({
+          ...payload,
+          id: crypto.randomUUID(),
+          role: "guest",
         });
         if (error) throw error;
         toast.success("Cliente cadastrado!");
       }
-      qc.invalidateQueries({ queryKey: ["admin-guests"] });
+      qc.invalidateQueries({ queryKey: ["admin-clients"] });
+      qc.invalidateQueries({ queryKey: ["admin-profiles-select"] });
       setModalOpen(false);
     } catch (err: any) {
       toast.error(err.message || "Erro ao salvar");
@@ -129,22 +153,68 @@ const AdminClientes = () => {
     }
   };
 
-  const deleteGuest = useMutation({
+  const deleteClient = useMutation({
     mutationFn: async (id: string) => {
-      const { error } = await (supabase as any).from("guests").delete().eq("id", id);
+      const { error } = await supabase.from("profiles").delete().eq("id", id);
       if (error) throw error;
     },
     onSuccess: () => {
-      qc.invalidateQueries({ queryKey: ["admin-guests"] });
+      qc.invalidateQueries({ queryKey: ["admin-clients"] });
+      qc.invalidateQueries({ queryKey: ["admin-profiles-select"] });
       toast.success("Cliente excluído.");
       setDeleteId(null);
     },
     onError: () => toast.error("Erro ao excluir cliente."),
   });
 
-  const handleNewReservation = (g: Guest) => {
-    // Navega para reservas passando o cliente via state
-    navigate("/admin/reservas", { state: { preselectedGuest: g } });
+  const handleNewReservation = (g: Client) => {
+    navigate("/admin/reservas", { state: { preselectedGuest: { id: g.id, full_name: g.full_name } } });
+  };
+
+  /* ── Criar acesso ao portal (auth) ── */
+  const handleCreatePortalAccess = async () => {
+    if (!portalClient) return;
+    if (!portalEmail.trim()) {
+      toast.error("Informe o e-mail para acesso ao portal.");
+      return;
+    }
+    if (!portalPassword.trim() || portalPassword.length < 6) {
+      toast.error("A senha deve ter pelo menos 6 caracteres.");
+      return;
+    }
+    setCreatingPortal(true);
+    try {
+      // Create auth user via Supabase admin invite or signUp
+      const { data: authData, error: authError } = await supabase.auth.signUp({
+        email: portalEmail.trim(),
+        password: portalPassword.trim(),
+        options: {
+          data: {
+            full_name: portalClient.full_name,
+          },
+        },
+      });
+      if (authError) throw authError;
+
+      // Update the profile to link auth user id and set email
+      if (authData.user) {
+        // Update the existing operational profile to link the auth id
+        await supabase
+          .from("profiles")
+          .update({ email: portalEmail.trim() })
+          .eq("id", portalClient.id);
+      }
+
+      toast.success("Acesso ao portal criado! O cliente pode fazer login com o e-mail e senha informados.");
+      qc.invalidateQueries({ queryKey: ["admin-clients"] });
+      setPortalClient(null);
+      setPortalEmail("");
+      setPortalPassword("");
+    } catch (err: any) {
+      toast.error(err.message || "Erro ao criar acesso ao portal.");
+    } finally {
+      setCreatingPortal(false);
+    }
   };
 
   const field = (
@@ -153,11 +223,12 @@ const AdminClientes = () => {
     placeholder: string,
     icon: React.ReactNode,
     type = "text",
+    required = false,
   ) => (
     <div>
       <label className="flex items-center gap-1.5 text-xs text-white/40 font-body uppercase tracking-wider mb-1.5">
         {icon}
-        {label}
+        {label} {required && <span className="text-primary">*</span>}
       </label>
       <input
         type={type}
@@ -196,12 +267,12 @@ const AdminClientes = () => {
       <div className="grid grid-cols-2 gap-4">
         <div className="bg-white/5 border border-white/10 rounded-xl p-4">
           <p className="text-white/30 text-xs font-body uppercase tracking-wider mb-1">Total</p>
-          <p className="font-display text-3xl font-bold text-cream">{guests.length}</p>
+          <p className="font-display text-3xl font-bold text-cream">{clients.length}</p>
         </div>
         <div className="bg-purple-500/10 border border-purple-500/20 rounded-xl p-4">
           <p className="text-white/30 text-xs font-body uppercase tracking-wider mb-1">Cadastrados Hoje</p>
           <p className="font-display text-3xl font-bold text-purple-400">
-            {guests.filter((g) => g.created_at?.startsWith(new Date().toISOString().split("T")[0])).length}
+            {clients.filter((g) => g.created_at?.startsWith(new Date().toISOString().split("T")[0])).length}
           </p>
         </div>
       </div>
@@ -290,7 +361,7 @@ const AdminClientes = () => {
                     </span>
                   </td>
                   <td className="px-5 py-4">
-                    <div className="flex items-center gap-2">
+                    <div className="flex items-center gap-1.5">
                       <button
                         onClick={() => handleNewReservation(g)}
                         className="flex items-center gap-1 text-xs text-white/25 hover:text-primary font-body transition-colors px-2 py-1 rounded-lg hover:bg-primary/10"
@@ -298,6 +369,18 @@ const AdminClientes = () => {
                       >
                         <CalendarPlus className="w-3.5 h-3.5" />
                         <span className="hidden lg:inline">Reserva</span>
+                      </button>
+                      <button
+                        onClick={() => {
+                          setPortalClient(g);
+                          setPortalEmail(g.email || "");
+                          setPortalPassword("");
+                        }}
+                        className="flex items-center gap-1 text-xs text-white/25 hover:text-cyan-400 font-body transition-colors px-2 py-1 rounded-lg hover:bg-cyan-500/10"
+                        title="Criar acesso ao portal"
+                      >
+                        <KeyRound className="w-3.5 h-3.5" />
+                        <span className="hidden lg:inline">Portal</span>
                       </button>
                       <button
                         onClick={() => setHistoryClient(g)}
@@ -358,7 +441,7 @@ const AdminClientes = () => {
                   <div className="flex items-center gap-2">
                     <Users className="w-4 h-4 text-primary" />
                     <h2 className="font-display text-lg font-semibold text-cream">
-                      {editGuest ? "Editar Cliente" : "Novo Cliente"}
+                      {editClient ? "Editar Cliente" : "Novo Cliente"}
                     </h2>
                   </div>
                   <button
@@ -370,12 +453,18 @@ const AdminClientes = () => {
                 </div>
 
                 <div className="px-6 py-5 space-y-4 max-h-[65vh] overflow-y-auto">
-                  {field("Nome completo", "full_name", "João da Silva", <User className="w-3 h-3" />)}
-                  {field("E-mail", "email", "joao@email.com", <Mail className="w-3 h-3" />, "email")}
+                  {field("Nome completo", "full_name", "João da Silva", <User className="w-3 h-3" />, "text", true)}
                   <div className="grid grid-cols-2 gap-3">
-                    {field("CPF", "cpf", "000.000.000-00", <FileText className="w-3 h-3" />)}
-                    {field("Telefone", "phone", "(51) 99999-9999", <Phone className="w-3 h-3" />, "tel")}
+                    {field("Telefone", "phone", "(51) 99999-9999", <Phone className="w-3 h-3" />, "tel", true)}
+                    {field("CPF / Documento", "cpf", "000.000.000-00", <FileText className="w-3 h-3" />, "text", true)}
                   </div>
+                  <div className="grid grid-cols-2 gap-3">
+                    {field("E-mail", "email", "joao@email.com", <Mail className="w-3 h-3" />, "email")}
+                    {field("Cidade", "city", "Porto Alegre", <MapPin className="w-3 h-3" />)}
+                  </div>
+                  <p className="text-white/20 text-[10px] font-body">
+                    Este cadastro é apenas operacional. Para dar acesso ao portal, use o botão "Portal" na lista de clientes.
+                  </p>
                 </div>
 
                 <div className="flex items-center justify-end gap-3 px-6 py-4 border-t border-white/5">
@@ -392,7 +481,7 @@ const AdminClientes = () => {
                     style={{ background: "linear-gradient(135deg,#C9A84C,#E5C97A)" }}
                   >
                     {saving ? <Loader2 className="w-4 h-4 animate-spin" /> : <Save className="w-4 h-4" />}
-                    {editGuest ? "Salvar Alterações" : "Cadastrar Cliente"}
+                    {editClient ? "Salvar Alterações" : "Cadastrar Cliente"}
                   </button>
                 </div>
               </div>
@@ -442,11 +531,116 @@ const AdminClientes = () => {
                     Cancelar
                   </button>
                   <button
-                    onClick={() => deleteGuest.mutate(deleteId!)}
-                    disabled={deleteGuest.isPending}
+                    onClick={() => deleteClient.mutate(deleteId!)}
+                    disabled={deleteClient.isPending}
                     className="flex-1 py-2.5 text-sm font-body font-semibold rounded-xl bg-red-500/15 hover:bg-red-500/25 text-red-400 border border-red-500/25 transition-colors disabled:opacity-50"
                   >
-                    {deleteGuest.isPending ? "Excluindo..." : "Confirmar"}
+                    {deleteClient.isPending ? "Excluindo..." : "Confirmar"}
+                  </button>
+                </div>
+              </div>
+            </motion.div>
+          </>
+        )}
+      </AnimatePresence>
+
+      {/* Modal Criar Acesso ao Portal */}
+      <AnimatePresence>
+        {portalClient && (
+          <>
+            <motion.div
+              key="portal-bg"
+              initial={{ opacity: 0 }}
+              animate={{ opacity: 1 }}
+              exit={{ opacity: 0 }}
+              className="fixed inset-0 z-50 bg-black/70 backdrop-blur-sm"
+              onClick={() => setPortalClient(null)}
+            />
+            <motion.div
+              key="portal-modal"
+              initial={{ opacity: 0, scale: 0.95, y: 20 }}
+              animate={{ opacity: 1, scale: 1, y: 0 }}
+              exit={{ opacity: 0, scale: 0.95, y: 20 }}
+              transition={{ duration: 0.2 }}
+              className="fixed inset-0 z-50 flex items-center justify-center p-4 pointer-events-none"
+            >
+              <div
+                className="bg-[#111114] border border-white/10 rounded-2xl w-full max-w-md shadow-2xl pointer-events-auto overflow-hidden"
+                onClick={(e) => e.stopPropagation()}
+              >
+                <div className="flex items-center justify-between px-6 py-5 border-b border-white/5">
+                  <div className="flex items-center gap-2">
+                    <KeyRound className="w-4 h-4 text-cyan-400" />
+                    <h2 className="font-display text-lg font-semibold text-cream">Criar Acesso ao Portal</h2>
+                  </div>
+                  <button
+                    onClick={() => setPortalClient(null)}
+                    className="text-white/25 hover:text-cream transition-colors"
+                  >
+                    <X className="w-5 h-5" />
+                  </button>
+                </div>
+
+                <div className="px-6 py-5 space-y-4">
+                  <div className="flex items-center gap-3 bg-white/5 border border-white/10 rounded-xl px-4 py-3">
+                    <div className="w-9 h-9 rounded-full bg-primary/10 border border-primary/20 flex items-center justify-center shrink-0">
+                      <span className="text-primary text-sm font-display font-bold">
+                        {(portalClient.full_name ?? "?")[0].toUpperCase()}
+                      </span>
+                    </div>
+                    <div>
+                      <p className="text-cream text-sm font-body font-medium">{portalClient.full_name}</p>
+                      <p className="text-white/30 text-xs font-body">Cliente operacional</p>
+                    </div>
+                  </div>
+
+                  <p className="text-white/30 text-xs font-body">
+                    O cliente poderá fazer login no portal com o e-mail e senha informados abaixo.
+                  </p>
+
+                  <div>
+                    <label className="flex items-center gap-1.5 text-xs text-white/40 font-body uppercase tracking-wider mb-1.5">
+                      <Mail className="w-3 h-3" />
+                      E-mail para login <span className="text-primary">*</span>
+                    </label>
+                    <input
+                      type="email"
+                      placeholder="cliente@email.com"
+                      value={portalEmail}
+                      onChange={(e) => setPortalEmail(e.target.value)}
+                      className="w-full bg-[#1a1a1f] border border-white/10 rounded-lg px-3 py-2.5 text-cream text-sm font-body focus:outline-none focus:border-primary/50 transition placeholder:text-white/20"
+                    />
+                  </div>
+
+                  <div>
+                    <label className="flex items-center gap-1.5 text-xs text-white/40 font-body uppercase tracking-wider mb-1.5">
+                      <KeyRound className="w-3 h-3" />
+                      Senha <span className="text-primary">*</span>
+                    </label>
+                    <input
+                      type="password"
+                      placeholder="Mínimo 6 caracteres"
+                      value={portalPassword}
+                      onChange={(e) => setPortalPassword(e.target.value)}
+                      className="w-full bg-[#1a1a1f] border border-white/10 rounded-lg px-3 py-2.5 text-cream text-sm font-body focus:outline-none focus:border-primary/50 transition placeholder:text-white/20"
+                    />
+                  </div>
+                </div>
+
+                <div className="flex items-center justify-end gap-3 px-6 py-4 border-t border-white/5">
+                  <button
+                    onClick={() => setPortalClient(null)}
+                    className="px-4 py-2 text-sm text-white/40 hover:text-cream font-body transition-colors"
+                  >
+                    Cancelar
+                  </button>
+                  <button
+                    onClick={handleCreatePortalAccess}
+                    disabled={creatingPortal}
+                    className="flex items-center gap-2 px-5 py-2.5 rounded-lg text-sm font-body font-semibold transition-all disabled:opacity-50 bg-cyan-500/15 border border-cyan-500/30 text-cyan-400 hover:bg-cyan-500/25"
+                  >
+                    {creatingPortal ? <Loader2 className="w-4 h-4 animate-spin" /> : <KeyRound className="w-4 h-4" />}
+                    {creatingPortal ? "Criando..." : "Criar Acesso"}
                   </button>
                 </div>
               </div>
@@ -477,17 +671,17 @@ const statusColors: Record<string, string> = {
   canceled: "bg-red-500/15 text-red-400 border-red-500/20",
 };
 
-const ClientHistoryModal = ({ client, onClose }: { client: Guest; onClose: () => void }) => {
+const ClientHistoryModal = ({ client, onClose }: { client: Client; onClose: () => void }) => {
   const [tab, setTab] = useState<"reservas" | "consumo">("reservas");
 
-  // Busca reservas vinculadas por guest_id
+  // Busca reservas vinculadas por client_id ou profile_id
   const { data: reservations = [], isLoading } = useQuery({
-    queryKey: ["guest-history", client.id],
+    queryKey: ["client-history", client.id],
     queryFn: async () => {
       const { data, error } = await supabase
         .from("reservations")
         .select("*, rooms(name, category, price)")
-        .eq("guest_id", client.id)
+        .or(`profile_id.eq.${client.id},client_id.eq.${client.id}`)
         .order("check_in", { ascending: false });
       if (error) throw error;
       return data;
@@ -496,7 +690,7 @@ const ClientHistoryModal = ({ client, onClose }: { client: Guest; onClose: () =>
 
   // Busca consumo vinculado às reservas do cliente
   const { data: orders = [] } = useQuery({
-    queryKey: ["guest-orders", client.id],
+    queryKey: ["client-orders", client.id],
     queryFn: async () => {
       if (!reservations.length) return [];
       const ids = reservations.map((r: any) => r.id);
