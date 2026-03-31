@@ -510,19 +510,21 @@ const QuartoDetalhe = () => {
                     </div>
                   )}
 
-                  {available !== null && (
+                  {categoryAvail !== null && (
                     <div
                       className={cn(
                         "flex items-center gap-2 text-sm font-body p-3 rounded-lg",
-                        available
+                        categoryAvail.free > 0
                           ? "text-green-600 bg-green-50 dark:bg-green-900/20 dark:text-green-400"
                           : "text-destructive bg-destructive/10",
                       )}
                     >
-                      {available ? <CheckCircle className="w-4 h-4" /> : <AlertCircle className="w-4 h-4" />}
-                      {available
-                        ? "Quarto disponível! Clique em Reservar para confirmar."
-                        : "Quarto indisponível para estas datas."}
+                      {categoryAvail.free > 0 ? <CheckCircle className="w-4 h-4" /> : <AlertCircle className="w-4 h-4" />}
+                      {categoryAvail.free === 0
+                        ? "Indisponível nas datas selecionadas"
+                        : categoryAvail.free === 1
+                          ? "1 quarto disponível nesta categoria"
+                          : `${categoryAvail.free} quartos disponíveis nesta categoria`}
                     </div>
                   )}
 
