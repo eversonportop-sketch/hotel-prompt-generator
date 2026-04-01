@@ -252,13 +252,15 @@ const AdminReservas = () => {
 
       // If creating a new client, insert first
       if (clientMode === "new" && !editingId) {
-        const { data: gd, error: ge } = await (supabase as any)
-          .from("guests")
+        const { data: gd, error: ge } = await supabase
+          .from("profiles")
           .insert({
+            id: crypto.randomUUID(),
             full_name: newClient.full_name.trim(),
             email: newClient.email.trim() || null,
             phone: newClient.phone.trim() || null,
             cpf: newClient.cpf.trim() || null,
+            role: "guest",
           })
           .select("id")
           .single();
@@ -268,7 +270,7 @@ const AdminReservas = () => {
       }
 
       const payload = {
-        guest_id: guestId,
+        client_id: guestId,
         room_id: form.room_id,
         check_in: format(form.check_in, "yyyy-MM-dd"),
         check_out: format(form.check_out, "yyyy-MM-dd"),
