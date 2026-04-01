@@ -243,8 +243,10 @@ const RoomModal = ({
               min={0}
               step="0.01"
               className="w-full bg-black/50 border border-gold/20 rounded-lg px-4 py-3 text-cream text-sm focus:border-primary focus:outline-none transition"
-              value={form.price}
-              onChange={(e) => setForm((f) => ({ ...f, price: Number(e.target.value) }))}
+              value={form.price === 0 ? "" : form.price}
+              placeholder="0,00"
+              onFocus={(e) => e.target.select()}
+              onChange={(e) => setForm((f) => ({ ...f, price: e.target.value === "" ? 0 : Number(e.target.value) }))}
               required
             />
           </div>
@@ -258,6 +260,7 @@ const RoomModal = ({
               step="0.01"
               className="w-full bg-black/50 border border-gold/20 rounded-lg px-4 py-3 text-cream text-sm focus:border-primary focus:outline-none transition"
               value={form.promotional_price}
+              onFocus={(e) => e.target.select()}
               onChange={(e) => setForm((f) => ({ ...f, promotional_price: e.target.value }))}
               placeholder="Vazio = sem promoção"
             />
