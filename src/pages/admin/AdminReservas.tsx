@@ -172,9 +172,10 @@ const AdminReservas = () => {
   const { data: guestsList = [] } = useQuery({
     queryKey: ["admin-guests-select"],
     queryFn: async () => {
-      const { data, error } = await (supabase as any)
-        .from("guests")
+      const { data, error } = await supabase
+        .from("profiles")
         .select("id,full_name,email,phone,cpf")
+        .neq("role", "admin")
         .order("full_name");
       if (error) throw error;
       return data as Guest[];
