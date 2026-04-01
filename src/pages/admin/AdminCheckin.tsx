@@ -430,12 +430,12 @@ const AdminCheckin = () => {
                           {op.room_id && (
                             <Button
                               size="sm"
-                              variant="outline"
+                              variant="gold-outline"
                               onClick={() => {
                                 setHkStatus(op.housekeeping_status || "clean");
                                 setHkDialog(op);
                               }}
-                              className="border-gold/20 text-cream/50 hover:border-gold/40 font-body"
+                              className="font-body"
                             >
                               <BedDouble className="w-4 h-4 mr-1" />
                               Quarto
