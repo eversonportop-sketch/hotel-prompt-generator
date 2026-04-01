@@ -450,7 +450,7 @@ const QuartoDetalhe = () => {
                               setCategoryAvail(null);
                               if (d && checkOut && d >= checkOut) setCheckOut(undefined);
                             }}
-                            disabled={(date) => date < today}
+                            disabled={(date) => date < new Date(new Date().setHours(0, 0, 0, 0))}
                             initialFocus
                             className="p-3 pointer-events-auto"
                           />
