@@ -8,7 +8,6 @@ import {
   Search,
   Plus,
   X,
-  Loader2,
   BedDouble,
   User,
   Users,
@@ -111,14 +110,6 @@ const AdminReservas = () => {
   const [selectedName, setSelectedName] = useState("");
   const [saving, setSaving] = useState(false);
   const [deleteId, setDeleteId] = useState<string | null>(null);
-  const [newClientMode, setNewClientMode] = useState(false);
-  const [newClientName, setNewClientName] = useState("");
-  const [newClientPhone, setNewClientPhone] = useState("");
-  const [newClientCpf, setNewClientCpf] = useState("");
-  const [newClientEmail, setNewClientEmail] = useState("");
-  const [newClientCity, setNewClientCity] = useState("");
-  const [savingClient, setSavingClient] = useState(false);
-
   // Abre modal com cliente pré-selecionado vindo da página de Clientes
   useEffect(() => {
     const state = location.state as { preselectedGuest?: { id: string; full_name: string } } | null;
@@ -286,50 +277,6 @@ const AdminReservas = () => {
     setForm({ ...emptyForm });
     setClientSearch("");
     setSelectedName("");
-    setNewClientMode(false);
-    setNewClientName("");
-    setNewClientPhone("");
-    setNewClientCpf("");
-    setNewClientEmail("");
-    setNewClientCity("");
-  };
-
-  const handleSaveNewClient = async () => {
-    if (!newClientName.trim()) { toast.error("Informe o nome do cliente."); return; }
-    if (!newClientPhone.trim()) { toast.error("Informe o telefone do cliente."); return; }
-    if (!newClientCpf.trim()) { toast.error("Informe o CPF/documento do cliente."); return; }
-    setSavingClient(true);
-    try {
-      const payload: any = {
-        id: crypto.randomUUID(),
-        full_name: newClientName.trim(),
-        phone: newClientPhone.trim(),
-        cpf: newClientCpf.trim(),
-        role: "guest",
-      };
-      if (newClientEmail.trim()) payload.email = newClientEmail.trim();
-      if (newClientCity.trim()) payload.city = newClientCity.trim();
-      const { data, error } = await supabase
-        .from("profiles")
-        .insert(payload)
-        .select("id,full_name")
-        .single();
-      if (error) throw error;
-      setForm((f) => ({ ...f, client_id: data.id }));
-      setSelectedName(data.full_name || "");
-      setNewClientMode(false);
-      setNewClientName("");
-      setNewClientPhone("");
-      setNewClientCpf("");
-      setNewClientEmail("");
-      setNewClientCity("");
-      qc.invalidateQueries({ queryKey: ["admin-profiles-select"] });
-      toast.success("Cliente cadastrado e selecionado!");
-    } catch (err: any) {
-      toast.error(err.message || "Erro ao cadastrar cliente.");
-    } finally {
-      setSavingClient(false);
-    }
   };
 
   const filtered = reservations.filter((r) => {
@@ -641,61 +588,6 @@ const AdminReservas = () => {
                           <X className="w-3.5 h-3.5" />
                         </button>
                       </div>
-                    ) : newClientMode ? (
-                      /* Cadastro de novo cliente */
-                      <div className="border border-primary/20 rounded-xl overflow-hidden bg-primary/5 p-4 space-y-3">
-                        <div className="flex items-center justify-between">
-                          <p className="text-cream text-xs font-body font-semibold uppercase tracking-wider">Novo Cliente</p>
-                          <button
-                            onClick={() => setNewClientMode(false)}
-                            className="text-white/30 hover:text-cream transition-colors"
-                          >
-                            <X className="w-3.5 h-3.5" />
-                          </button>
-                        </div>
-                        <input
-                          placeholder="Nome completo *"
-                          value={newClientName}
-                          onChange={(e) => setNewClientName(e.target.value)}
-                          className="w-full px-3 py-2.5 bg-[#0d0d10] border border-white/8 rounded-lg text-cream text-sm font-body focus:outline-none focus:border-primary/40 transition placeholder:text-white/20"
-                        />
-                        <div className="grid grid-cols-2 gap-2">
-                          <input
-                            placeholder="Telefone *"
-                            value={newClientPhone}
-                            onChange={(e) => setNewClientPhone(e.target.value)}
-                            className="w-full px-3 py-2.5 bg-[#0d0d10] border border-white/8 rounded-lg text-cream text-sm font-body focus:outline-none focus:border-primary/40 transition placeholder:text-white/20"
-                          />
-                          <input
-                            placeholder="CPF / Documento *"
-                            value={newClientCpf}
-                            onChange={(e) => setNewClientCpf(e.target.value)}
-                            className="w-full px-3 py-2.5 bg-[#0d0d10] border border-white/8 rounded-lg text-cream text-sm font-body focus:outline-none focus:border-primary/40 transition placeholder:text-white/20"
-                          />
-                        </div>
-                        <div className="grid grid-cols-2 gap-2">
-                          <input
-                            placeholder="Email (opcional)"
-                            value={newClientEmail}
-                            onChange={(e) => setNewClientEmail(e.target.value)}
-                            className="w-full px-3 py-2.5 bg-[#0d0d10] border border-white/8 rounded-lg text-cream text-sm font-body focus:outline-none focus:border-primary/40 transition placeholder:text-white/20"
-                          />
-                          <input
-                            placeholder="Cidade (opcional)"
-                            value={newClientCity}
-                            onChange={(e) => setNewClientCity(e.target.value)}
-                            className="w-full px-3 py-2.5 bg-[#0d0d10] border border-white/8 rounded-lg text-cream text-sm font-body focus:outline-none focus:border-primary/40 transition placeholder:text-white/20"
-                          />
-                        </div>
-                        <button
-                          onClick={handleSaveNewClient}
-                          disabled={savingClient}
-                          className="w-full flex items-center justify-center gap-2 py-2.5 rounded-lg text-sm font-body font-semibold transition-all disabled:opacity-50 bg-primary/15 border border-primary/30 text-primary hover:bg-primary/25"
-                        >
-                          {savingClient ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : <Plus className="w-3.5 h-3.5" />}
-                          {savingClient ? "Salvando..." : "Cadastrar e Selecionar"}
-                        </button>
-                      </div>
                     ) : (
                       /* Busca de clientes */
                       <div className="space-y-2">
@@ -714,7 +606,7 @@ const AdminReservas = () => {
                               <div className="flex flex-col items-center py-7 gap-3">
                                 <User className="w-7 h-7 text-white/10" />
                                 <p className="text-white/25 text-xs font-body text-center">
-                                  Cliente não encontrado. Cadastre em Clientes → Novo Cliente
+                                  Cliente não encontrado. Vá em Clientes → Novo Cliente
                                 </p>
                               </div>
                             ) : (
@@ -746,13 +638,6 @@ const AdminReservas = () => {
                             )}
                           </div>
                         </div>
-                        <button
-                          onClick={() => setNewClientMode(true)}
-                          className="w-full flex items-center justify-center gap-2 py-2.5 rounded-xl border border-dashed border-white/15 text-white/40 text-xs font-body hover:border-primary/30 hover:text-primary/60 transition-all"
-                        >
-                          <Plus className="w-3.5 h-3.5" />
-                          Novo Cliente
-                        </button>
                       </div>
                     )}
                   </section>
