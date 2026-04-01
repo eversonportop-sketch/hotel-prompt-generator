@@ -8,6 +8,7 @@ import {
   Search,
   Plus,
   X,
+  Loader2,
   BedDouble,
   User,
   Users,
