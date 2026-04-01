@@ -434,7 +434,10 @@ const QuartoDetalhe = () => {
                         <PopoverTrigger asChild>
                           <Button
                             variant="outline"
-                            className={cn("w-full justify-start text-left font-normal", !checkIn && "text-cream/50")}
+                            className={cn(
+                              "w-full justify-start border-gold/20 bg-charcoal text-cream hover:bg-charcoal-light hover:text-cream",
+                              !checkIn && "text-cream/50",
+                            )}
                           >
                             <CalendarIcon className="mr-2 h-4 w-4" />
                             {checkIn ? format(checkIn, "dd/MM/yyyy") : "Selecionar"}
@@ -463,7 +466,10 @@ const QuartoDetalhe = () => {
                         <PopoverTrigger asChild>
                           <Button
                             variant="outline"
-                            className={cn("w-full justify-start text-left font-normal", !checkOut && "text-cream/50")}
+                            className={cn(
+                              "w-full justify-start border-gold/20 bg-charcoal text-cream hover:bg-charcoal-light hover:text-cream",
+                              !checkOut && "text-cream/50",
+                            )}
                           >
                             <CalendarIcon className="mr-2 h-4 w-4" />
                             {checkOut ? format(checkOut, "dd/MM/yyyy") : "Selecionar"}
@@ -478,7 +484,7 @@ const QuartoDetalhe = () => {
                               setAvailable(null);
                               setCategoryAvail(null);
                             }}
-                            disabled={(date) => date < (checkIn ? addDays(checkIn, 1) : addDays(today, 1))}
+                            disabled={(date) => date <= (checkIn || new Date())}
                             initialFocus
                             className="p-3 pointer-events-auto"
                           />
