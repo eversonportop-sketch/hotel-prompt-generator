@@ -2,45 +2,99 @@ import { motion } from "framer-motion";
 import { Button } from "@/components/ui/button";
 import { Link } from "react-router-dom";
 import { useState } from "react";
-import { Calendar, Users, Search, Star } from "lucide-react";
+import { useQuery } from "@tanstack/react-query";
+import { supabase } from "@/integrations/supabase/client";
+import { Calendar, Users, Search, Star, ChevronLeft, ChevronRight } from "lucide-react";
 import hotelLogo from "@/assets/hotel-sb-logo.png";
 
 const HeroSection = () => {
   const [checkIn, setCheckIn] = useState("");
   const [checkOut, setCheckOut] = useState("");
   const [guests, setGuests] = useState(2);
+  const [bannerIdx, setBannerIdx] = useState(0);
+
+  const { data: banners = [] } = useQuery({
+    queryKey: ["hero-banners"],
+    queryFn: async () => {
+      const { data } = await supabase
+        .from("banners")
+        .select("id, image_url, title")
+        .eq("active", true)
+        .order("display_order");
+      return data || [];
+    },
+  });
+
+  const currentBanner = banners[bannerIdx];
+
+  const prevBanner = () => setBannerIdx((i) => (i - 1 + banners.length) % banners.length);
+  const nextBanner = () => setBannerIdx((i) => (i + 1) % banners.length);
 
   return (
     <section className="relative min-h-screen flex flex-col items-center justify-center overflow-hidden">
-      {/* Fundo com gradiente rico */}
-      <div
-        className="absolute inset-0"
-        style={{
-          background: "radial-gradient(ellipse at 20% 50%, #1a1200 0%, #0A0A0A 50%, #0d0800 100%)",
-        }}
-      />
-
-      {/* Grade decorativa */}
-      <div
-        className="absolute inset-0 opacity-[0.04]"
-        style={{
-          backgroundImage:
-            "linear-gradient(#C9A84C 1px, transparent 1px), linear-gradient(90deg, #C9A84C 1px, transparent 1px)",
-          backgroundSize: "80px 80px",
-        }}
-      />
-
-      {/* Brilho central */}
-      <div
-        className="absolute top-1/3 left-1/2 -translate-x-1/2 -translate-y-1/2 w-[600px] h-[600px] rounded-full opacity-10 blur-3xl pointer-events-none"
-        style={{ background: "radial-gradient(circle, #C9A84C 0%, transparent 70%)" }}
-      />
-
-      {/* Brilho lateral esquerdo */}
-      <div
-        className="absolute top-1/2 left-0 w-[300px] h-[400px] rounded-full opacity-5 blur-3xl pointer-events-none"
-        style={{ background: "radial-gradient(circle, #C0272D 0%, transparent 70%)" }}
-      />
+      {/* Fundo: banner do admin ou gradiente padrão */}
+      {currentBanner?.image_url ? (
+        <>
+          <motion.div
+            key={currentBanner.image_url}
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            transition={{ duration: 0.8 }}
+            className="absolute inset-0 bg-cover bg-center"
+            style={{ backgroundImage: `url(${currentBanner.image_url})` }}
+          />
+          <div className="absolute inset-0 bg-black/60" />
+          {/* Navegação do carrossel */}
+          {banners.length > 1 && (
+            <>
+              <button
+                onClick={prevBanner}
+                className="absolute left-4 top-1/2 -translate-y-1/2 z-20 w-10 h-10 rounded-full bg-black/40 hover:bg-black/70 flex items-center justify-center text-white transition-all"
+              >
+                <ChevronLeft className="w-5 h-5" />
+              </button>
+              <button
+                onClick={nextBanner}
+                className="absolute right-4 top-1/2 -translate-y-1/2 z-20 w-10 h-10 rounded-full bg-black/40 hover:bg-black/70 flex items-center justify-center text-white transition-all"
+              >
+                <ChevronRight className="w-5 h-5" />
+              </button>
+              <div className="absolute bottom-24 left-1/2 -translate-x-1/2 z-20 flex gap-2">
+                {banners.map((_, i) => (
+                  <button
+                    key={i}
+                    onClick={() => setBannerIdx(i)}
+                    className={`w-2 h-2 rounded-full transition-all ${i === bannerIdx ? "bg-primary scale-125" : "bg-white/40"}`}
+                  />
+                ))}
+              </div>
+            </>
+          )}
+        </>
+      ) : (
+        <>
+          <div
+            className="absolute inset-0"
+            style={{ background: "radial-gradient(ellipse at 20% 50%, #1a1200 0%, #0A0A0A 50%, #0d0800 100%)" }}
+          />
+          <div
+            className="absolute inset-0 opacity-[0.04]"
+            style={{
+              backgroundImage:
+                "linear-gradient(#C9A84C 1px, transparent 1px), linear-gradient(90deg, #C9A84C 1px, transparent 1px)",
+              backgroundSize: "80px 80px",
+            }}
+          />
+          <div
+            className="absolute top-1/3 left-1/2 -translate-x-1/2 -translate-y-1/2 w-[600px] h-[600px] rounded-full opacity-10 blur-3xl pointer-events-none"
+            style={{ background: "radial-gradient(circle, #C9A84C 0%, transparent 70%)" }}
+          />
+          <div
+            className="absolute top-1/2 left-0 w-[300px] h-[400px] rounded-full opacity-5 blur-3xl pointer-events-none"
+            style={{ background: "radial-gradient(circle, #C0272D 0%, transparent 70%)" }}
+          />
+        </>
+      )}
 
       {/* Partículas douradas animadas */}
       {[...Array(12)].map((_, i) => (
