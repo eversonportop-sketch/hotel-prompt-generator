@@ -145,12 +145,12 @@ const AdminReservas = () => {
   const { data: reservations = [], isLoading } = useQuery({
     queryKey: ["admin-reservations"],
     queryFn: async () => {
-      const { data, error } = await supabase
-        .from("reservations")
-        .select(
-          "id,check_in,check_out,guests_count,total_price,status,notes,client_id,profile_id,guest_id,rooms(id,name,category)",
-        )
-        .order("created_at", { ascending: false });
+       const { data, error } = await supabase
+         .from("reservations")
+         .select(
+           "*, profiles(full_name), rooms(id,name,category)",
+         )
+         .order("created_at", { ascending: false });
       if (error) throw error;
       // Enrich with guest names
       const allData = (data || []) as any[];
@@ -501,7 +501,7 @@ const AdminReservas = () => {
             </thead>
             <tbody>
               {filtered.map((r, i) => {
-                const clientName = (r.guests as any)?.full_name || (r.profiles as any)?.full_name;
+                const clientName = (r.profiles as any)?.full_name || (r.guests as any)?.full_name;
                 const roomName = (r.rooms as any)?.name;
                 const roomCat = (r.rooms as any)?.category;
                 const n = differenceInDays(new Date(r.check_out + "T12:00:00"), new Date(r.check_in + "T12:00:00"));
