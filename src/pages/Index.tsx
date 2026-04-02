@@ -3,7 +3,7 @@ import HeroSection from "@/components/home/HeroSection";
 import HighlightSection from "@/components/home/HighlightSection";
 import AmenitiesSection from "@/components/home/AmenitiesSection";
 import DiferenciaisSection from "@/components/home/DiferenciaisSection";
-import PromotionsSection from "@/components/home/PromotionsSection";
+import HomeSectionsDisplay from "@/components/home/HomeSectionsDisplay";
 import FAQSection from "@/components/home/FAQSection";
 import CTASection from "@/components/home/CTASection";
 import WelcomePopup from "@/components/WelcomePopup";
