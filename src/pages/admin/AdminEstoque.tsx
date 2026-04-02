@@ -61,7 +61,7 @@ const emptyItem: NewItemForm = {
   unit: "un",
   current_quantity: 0,
   min_quantity: 0,
-  unit_cost: 0,
+  cost_price: 0,
   notes: "",
 };
 
