@@ -344,8 +344,8 @@ const AdminEstoque = () => {
                 type="number"
                 min={0}
                 step={0.01}
-                value={form.unit_cost}
-                onChange={(e) => setForm({ ...form, unit_cost: +e.target.value })}
+                value={form.cost_price}
+                onChange={(e) => setForm({ ...form, cost_price: +e.target.value })}
                 className="bg-charcoal border-white/10 text-cream mt-1"
               />
             </div>
