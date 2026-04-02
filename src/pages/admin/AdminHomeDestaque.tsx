@@ -106,7 +106,7 @@ const AdminHomeDestaque = () => {
 
     let error;
     if (isNew) {
-      ({ error } = await supabase.from("home_sections").insert([payload]));
+      ({ error } = await fromHomeSections().insert([payload]));
     } else {
       ({ error } = await supabase.from("home_sections").update(payload).eq("id", editingId));
     }
