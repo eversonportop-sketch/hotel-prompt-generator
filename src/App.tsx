@@ -37,6 +37,7 @@ import AdminMidia from "./pages/admin/AdminMidia";
 import AdminInformacoes from "./pages/admin/AdminInformacoes";
 import AdminPopup from "./pages/admin/AdminPopup";
 import AdminEstoque from "./pages/admin/AdminEstoque";
+import AdminHomeDestaque from "./pages/admin/AdminHomeDestaque";
 import NotFound from "./pages/NotFound";
 
 const queryClient = new QueryClient();
