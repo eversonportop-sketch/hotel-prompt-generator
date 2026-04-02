@@ -25,6 +25,7 @@ import {
   X,
   LogOut,
   Loader2,
+  Home,
 } from "lucide-react";
 import hotelLogo from "@/assets/hotel-sb-logo.png";
 import { useAuth } from "@/hooks/useAuth";
