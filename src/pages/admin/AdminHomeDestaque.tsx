@@ -50,7 +50,7 @@ const AdminHomeDestaque = () => {
     if (error) {
       toast.error("Erro ao carregar seções: " + error.message);
     } else {
-      setSections((data as HomeSection[]) || []);
+      setSections((data as unknown as HomeSection[]) || []);
     }
     setLoading(false);
   };
