@@ -501,7 +501,7 @@ const AdminReservas = () => {
             </thead>
             <tbody>
               {filtered.map((r, i) => {
-                const clientName = (r.guests as any)?.full_name || (r.profiles as any)?.full_name;
+                const clientName = (r.profiles as any)?.full_name || (r.guests as any)?.full_name;
                 const roomName = (r.rooms as any)?.name;
                 const roomCat = (r.rooms as any)?.category;
                 const n = differenceInDays(new Date(r.check_out + "T12:00:00"), new Date(r.check_in + "T12:00:00"));
