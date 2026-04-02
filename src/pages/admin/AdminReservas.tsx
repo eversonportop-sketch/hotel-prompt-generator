@@ -270,7 +270,7 @@ const AdminReservas = () => {
       }
 
       const payload = {
-        client_id: guestId,
+        profile_id: guestId,
         room_id: form.room_id,
         check_in: format(form.check_in, "yyyy-MM-dd"),
         check_out: format(form.check_out, "yyyy-MM-dd"),
@@ -316,7 +316,7 @@ const AdminReservas = () => {
     setModalOpen(true);
   };
   const openEdit = (r: Reservation) => {
-    const cid = r.guest_id || r.client_id || "";
+    const cid = r.profile_id || r.guest_id || r.client_id || "";
     setEditingId(r.id);
     setForm({
       client_id: cid,

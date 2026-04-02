@@ -128,8 +128,6 @@ const AdminCheckin = () => {
   const [coExtras, setCoExtras] = useState(0);
   const [coNotes, setCoNotes] = useState("");
 
-  const [hkDialog, setHkDialog] = useState<DailyOp | null>(null);
-  const [hkStatus, setHkStatus] = useState<HousekeepingStatus>("clean");
 
   const { data: operations = [], isLoading, refetch } = useQuery({
     queryKey: ["daily-operations"],
@@ -189,21 +187,6 @@ const AdminCheckin = () => {
     onError: (err: Error) => toast.error(err.message),
   });
 
-  const hkMutation = useMutation({
-    mutationFn: async (op: DailyOp) => {
-      const { error } = await supabase
-        .from("room_status" as any)
-        .update({ housekeeping_status: hkStatus, updated_by: user!.id, updated_at: new Date().toISOString() })
-        .eq("room_id", op.room_id);
-      if (error) throw error;
-    },
-    onSuccess: () => {
-      toast.success("Status do quarto atualizado!");
-      queryClient.invalidateQueries({ queryKey: ["daily-operations"] });
-      setHkDialog(null);
-    },
-    onError: () => toast.error("Erro ao atualizar housekeeping"),
-  });
 
   const filtered = operations.filter((op) => {
     const matchStatus = filter === "all" || op.operation_status === filter;
@@ -427,20 +410,6 @@ const AdminCheckin = () => {
                               Check-out
                             </Button>
                           )}
-                          {op.room_id && (
-                            <Button
-                              size="sm"
-                              variant="gold-outline"
-                              onClick={() => {
-                                setHkStatus(op.housekeeping_status || "clean");
-                                setHkDialog(op);
-                              }}
-                              className="font-body"
-                            >
-                              <BedDouble className="w-4 h-4 mr-1" />
-                              Quarto
-                            </Button>
-                          )}
                         </div>
                       </div>
                     </motion.div>
@@ -598,53 +567,6 @@ const AdminCheckin = () => {
         </DialogContent>
       </Dialog>
 
-      <Dialog open={!!hkDialog} onOpenChange={() => setHkDialog(null)}>
-        <DialogContent className="bg-charcoal-light border border-gold/20 text-cream max-w-sm">
-          <DialogHeader>
-            <DialogTitle className="font-display text-xl flex items-center gap-2">
-              <BedDouble className="w-5 h-5 text-primary" />
-              Status do Quarto
-            </DialogTitle>
-          </DialogHeader>
-
-          {hkDialog && (
-            <div className="space-y-3 py-2">
-              <p className="text-cream/60 text-sm font-body">{hkDialog.room_name}</p>
-              {(Object.keys(hkLabels) as HousekeepingStatus[]).map((s) => (
-                <button
-                  key={s}
-                  onClick={() => setHkStatus(s)}
-                  className={`w-full flex items-center gap-3 px-4 py-3 rounded-lg border transition-all font-body text-sm ${
-                    hkStatus === s
-                      ? "border-primary/50 bg-primary/10 text-cream"
-                      : "border-gold/10 bg-charcoal text-cream/50 hover:border-gold/30"
-                  }`}
-                >
-                  <span className={`w-2.5 h-2.5 rounded-full shrink-0 ${hkLabels[s].dot}`} />
-                  {hkLabels[s].label}
-                </button>
-              ))}
-            </div>
-          )}
-
-          <DialogFooter>
-            <Button
-              variant="outline"
-              onClick={() => setHkDialog(null)}
-              className="border-gold/20 text-cream/50 font-body"
-            >
-              Cancelar
-            </Button>
-            <Button
-              onClick={() => hkDialog && hkMutation.mutate(hkDialog)}
-              disabled={hkMutation.isPending}
-              className="bg-primary/20 border border-primary/40 text-primary hover:bg-primary/30 font-body"
-            >
-              {hkMutation.isPending ? "Salvando…" : "Salvar"}
-            </Button>
-          </DialogFooter>
-        </DialogContent>
-      </Dialog>
     </div>
   );
 };

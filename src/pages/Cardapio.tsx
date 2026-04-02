@@ -183,24 +183,6 @@ const Cardapio = () => {
     );
   }
 
-  // ── No active reservation ──
-  if (!activeReservation) {
-    return (
-      <Layout>
-        <div className="min-h-[60vh] flex flex-col items-center justify-center gap-6 px-4 text-center">
-          <AlertCircle className="w-16 h-16 text-cream/50" />
-          <h1 className="font-display text-3xl text-cream">Sem Reserva Ativa</h1>
-          <p className="text-cream/50 max-w-md">
-            Você não possui reserva ativa no momento. O cardápio está disponível apenas para hóspedes com reserva em
-            andamento.
-          </p>
-          <Link to="/quartos">
-            <Button variant="gold">Ver Quartos</Button>
-          </Link>
-        </div>
-      </Layout>
-    );
-  }
 
   return (
     <Layout>
@@ -209,9 +191,16 @@ const Cardapio = () => {
           {/* Header */}
           <div className="mb-8">
             <h1 className="font-display text-3xl md:text-4xl text-cream mb-2">Cardápio</h1>
-            <p className="text-cream/50">
-              Quarto: <span className="text-primary font-medium">{roomName || "—"}</span>
-            </p>
+            {activeReservation && roomName ? (
+              <p className="text-cream/50">
+                Quarto: <span className="text-primary font-medium">{roomName}</span>
+              </p>
+            ) : (
+              <p className="text-cream/50 flex items-center gap-1.5">
+                <AlertCircle className="w-4 h-4 text-yellow-400" />
+                <span className="text-yellow-400/80 text-sm">Você não possui reserva ativa no momento</span>
+              </p>
+            )}
           </div>
 
           {/* Category filter */}
@@ -366,11 +355,17 @@ const Cardapio = () => {
                   <span className="text-cream font-medium">Total</span>
                   <span className="text-primary font-display text-2xl">R$ {cartTotal.toFixed(2)}</span>
                 </div>
+                {!activeReservation && (
+                  <p className="text-yellow-400/70 text-xs text-center flex items-center justify-center gap-1">
+                    <AlertCircle className="w-3.5 h-3.5" />
+                    Necessário ter reserva ativa para enviar pedidos
+                  </p>
+                )}
                 <Button
                   variant="gold"
                   className="w-full gap-2"
                   size="lg"
-                  disabled={orderMutation.isPending}
+                  disabled={orderMutation.isPending || !activeReservation}
                   onClick={() => orderMutation.mutate()}
                 >
                   {orderMutation.isPending ? (
