@@ -191,9 +191,16 @@ const Cardapio = () => {
           {/* Header */}
           <div className="mb-8">
             <h1 className="font-display text-3xl md:text-4xl text-cream mb-2">Cardápio</h1>
-            <p className="text-cream/50">
-              Quarto: <span className="text-primary font-medium">{roomName || "—"}</span>
-            </p>
+            {activeReservation && roomName ? (
+              <p className="text-cream/50">
+                Quarto: <span className="text-primary font-medium">{roomName}</span>
+              </p>
+            ) : (
+              <p className="text-cream/50 flex items-center gap-1.5">
+                <AlertCircle className="w-4 h-4 text-yellow-400" />
+                <span className="text-yellow-400/80 text-sm">Você não possui reserva ativa no momento</span>
+              </p>
+            )}
           </div>
 
           {/* Category filter */}
