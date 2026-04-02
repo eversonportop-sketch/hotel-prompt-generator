@@ -91,6 +91,7 @@ const App = () => (
                 <Route path="midia" element={<AdminMidia />} />
                 <Route path="informacoes" element={<AdminInformacoes />} />
                 <Route path="popup" element={<AdminPopup />} />
+                <Route path="estoque" element={<AdminEstoque />} />
               </Route>
 
               <Route path="*" element={<NotFound />} />
