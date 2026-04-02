@@ -258,8 +258,8 @@ const AdminEstoque = () => {
                       {item.unit}
                     </span>
                     <span>Mín: {item.min_quantity} {item.unit}</span>
-                    {item.unit_cost > 0 && (
-                      <span>Custo: R$ {item.unit_cost.toFixed(2)}</span>
+                    {item.cost_price > 0 && (
+                      <span>Custo: R$ {item.cost_price.toFixed(2)}</span>
                     )}
                   </div>
                 </div>
