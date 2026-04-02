@@ -12,6 +12,7 @@ import {
   Users,
   Waves,
   PartyPopper,
+  Package,
   Tag,
   Image,
   Info,
@@ -46,6 +47,7 @@ const sidebarGroups = [
       { icon: Users, label: "Clientes", href: "/admin/clientes" },
       { icon: Waves, label: "Piscina", href: "/admin/piscina" },
       { icon: PartyPopper, label: "Salão", href: "/admin/salao" },
+      { icon: Package, label: "Estoque", href: "/admin/estoque" },
     ],
   },
   {

@@ -36,6 +36,7 @@ import AdminConsumo from "./pages/admin/AdminConsumo";
 import AdminMidia from "./pages/admin/AdminMidia";
 import AdminInformacoes from "./pages/admin/AdminInformacoes";
 import AdminPopup from "./pages/admin/AdminPopup";
+import AdminEstoque from "./pages/admin/AdminEstoque";
 import NotFound from "./pages/NotFound";
 
 const queryClient = new QueryClient();
@@ -90,6 +91,7 @@ const App = () => (
                 <Route path="midia" element={<AdminMidia />} />
                 <Route path="informacoes" element={<AdminInformacoes />} />
                 <Route path="popup" element={<AdminPopup />} />
+                <Route path="estoque" element={<AdminEstoque />} />
               </Route>
 
               <Route path="*" element={<NotFound />} />
