@@ -410,20 +410,6 @@ const AdminCheckin = () => {
                               Check-out
                             </Button>
                           )}
-                          {op.room_id && (
-                            <Button
-                              size="sm"
-                              variant="gold-outline"
-                              onClick={() => {
-                                setHkStatus(op.housekeeping_status || "clean");
-                                setHkDialog(op);
-                              }}
-                              className="font-body"
-                            >
-                              <BedDouble className="w-4 h-4 mr-1" />
-                              Quarto
-                            </Button>
-                          )}
                         </div>
                       </div>
                     </motion.div>
