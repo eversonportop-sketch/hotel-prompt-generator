@@ -25,6 +25,7 @@ import {
   X,
   LogOut,
   Loader2,
+  Home,
 } from "lucide-react";
 import hotelLogo from "@/assets/hotel-sb-logo.png";
 import { useAuth } from "@/hooks/useAuth";
@@ -59,6 +60,7 @@ const sidebarGroups = [
       { icon: Info, label: "Informações", href: "/admin/informacoes" },
       { icon: Settings, label: "Configurações", href: "/admin/configuracoes" },
       { icon: Sparkles, label: "Popup", href: "/admin/popup" },
+      { icon: Home, label: "Home Sections", href: "/admin/home-destaques" },
     ],
   },
 ];
