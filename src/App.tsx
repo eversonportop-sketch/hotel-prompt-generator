@@ -93,6 +93,7 @@ const App = () => (
                 <Route path="informacoes" element={<AdminInformacoes />} />
                 <Route path="popup" element={<AdminPopup />} />
                 <Route path="estoque" element={<AdminEstoque />} />
+                <Route path="home-destaques" element={<AdminHomeDestaque />} />
               </Route>
 
               <Route path="*" element={<NotFound />} />
