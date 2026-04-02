@@ -41,7 +41,7 @@ interface StockItem {
   unit: string;
   current_quantity: number;
   min_quantity: number;
-  unit_cost: number;
+  cost_price: number;
   notes: string | null;
 }
 
