@@ -135,7 +135,7 @@ const AdminHomeDestaque = () => {
 
   const handleDelete = async (id: string) => {
     if (!confirm("Excluir esta seção?")) return;
-    const { error } = await supabase.from("home_sections").delete().eq("id", id);
+    const { error } = await fromHomeSections().delete().eq("id", id);
     if (error) {
       toast.error("Erro ao excluir: " + error.message);
     } else {
