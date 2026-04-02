@@ -187,21 +187,6 @@ const AdminCheckin = () => {
     onError: (err: Error) => toast.error(err.message),
   });
 
-  const hkMutation = useMutation({
-    mutationFn: async (op: DailyOp) => {
-      const { error } = await supabase
-        .from("room_status" as any)
-        .update({ housekeeping_status: hkStatus, updated_by: user!.id, updated_at: new Date().toISOString() })
-        .eq("room_id", op.room_id);
-      if (error) throw error;
-    },
-    onSuccess: () => {
-      toast.success("Status do quarto atualizado!");
-      queryClient.invalidateQueries({ queryKey: ["daily-operations"] });
-      setHkDialog(null);
-    },
-    onError: () => toast.error("Erro ao atualizar housekeeping"),
-  });
 
   const filtered = operations.filter((op) => {
     const matchStatus = filter === "all" || op.operation_status === filter;
