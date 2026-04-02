@@ -15,7 +15,7 @@ const Index = () => {
       <HighlightSection />
       <AmenitiesSection />
       <DiferenciaisSection />
-      <PromotionsSection />
+      <HomeSectionsDisplay />
       <FAQSection />
       <CTASection />
       <WelcomePopup />
