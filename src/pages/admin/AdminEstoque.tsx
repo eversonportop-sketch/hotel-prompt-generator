@@ -130,9 +130,17 @@ const AdminEstoque = () => {
 
       if (newQty < 0) throw new Error("Estoque não pode ficar negativo");
 
+      // FIX 1: map Portuguese UI values to the English values expected by the DB check constraint
+      const movementTypeMap: Record<string, string> = {
+        entrada: "in",
+        saida: "out",
+        ajuste: "adjustment",
+      };
+
+      // FIX 2: use "movement_type" (correct column name) instead of "type"
       const { error: moveErr } = await supabase.from("stock_movements" as any).insert({
         item_id: f.item_id,
-        movement_type: f.type,
+        movement_type: movementTypeMap[f.type] ?? f.type,
         quantity: f.quantity,
         previous_quantity: item.current_quantity,
         new_quantity: newQty,
