@@ -128,8 +128,6 @@ const AdminCheckin = () => {
   const [coExtras, setCoExtras] = useState(0);
   const [coNotes, setCoNotes] = useState("");
 
-  const [hkDialog, setHkDialog] = useState<DailyOp | null>(null);
-  const [hkStatus, setHkStatus] = useState<HousekeepingStatus>("clean");
 
   const { data: operations = [], isLoading, refetch } = useQuery({
     queryKey: ["daily-operations"],
