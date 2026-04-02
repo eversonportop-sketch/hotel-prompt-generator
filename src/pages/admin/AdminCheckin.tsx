@@ -567,53 +567,6 @@ const AdminCheckin = () => {
         </DialogContent>
       </Dialog>
 
-      <Dialog open={!!hkDialog} onOpenChange={() => setHkDialog(null)}>
-        <DialogContent className="bg-charcoal-light border border-gold/20 text-cream max-w-sm">
-          <DialogHeader>
-            <DialogTitle className="font-display text-xl flex items-center gap-2">
-              <BedDouble className="w-5 h-5 text-primary" />
-              Status do Quarto
-            </DialogTitle>
-          </DialogHeader>
-
-          {hkDialog && (
-            <div className="space-y-3 py-2">
-              <p className="text-cream/60 text-sm font-body">{hkDialog.room_name}</p>
-              {(Object.keys(hkLabels) as HousekeepingStatus[]).map((s) => (
-                <button
-                  key={s}
-                  onClick={() => setHkStatus(s)}
-                  className={`w-full flex items-center gap-3 px-4 py-3 rounded-lg border transition-all font-body text-sm ${
-                    hkStatus === s
-                      ? "border-primary/50 bg-primary/10 text-cream"
-                      : "border-gold/10 bg-charcoal text-cream/50 hover:border-gold/30"
-                  }`}
-                >
-                  <span className={`w-2.5 h-2.5 rounded-full shrink-0 ${hkLabels[s].dot}`} />
-                  {hkLabels[s].label}
-                </button>
-              ))}
-            </div>
-          )}
-
-          <DialogFooter>
-            <Button
-              variant="outline"
-              onClick={() => setHkDialog(null)}
-              className="border-gold/20 text-cream/50 font-body"
-            >
-              Cancelar
-            </Button>
-            <Button
-              onClick={() => hkDialog && hkMutation.mutate(hkDialog)}
-              disabled={hkMutation.isPending}
-              className="bg-primary/20 border border-primary/40 text-primary hover:bg-primary/30 font-body"
-            >
-              {hkMutation.isPending ? "Salvando…" : "Salvar"}
-            </Button>
-          </DialogFooter>
-        </DialogContent>
-      </Dialog>
     </div>
   );
 };

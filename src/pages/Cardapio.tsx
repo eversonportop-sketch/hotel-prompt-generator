@@ -355,11 +355,17 @@ const Cardapio = () => {
                   <span className="text-cream font-medium">Total</span>
                   <span className="text-primary font-display text-2xl">R$ {cartTotal.toFixed(2)}</span>
                 </div>
+                {!activeReservation && (
+                  <p className="text-yellow-400/70 text-xs text-center flex items-center justify-center gap-1">
+                    <AlertCircle className="w-3.5 h-3.5" />
+                    Necessário ter reserva ativa para enviar pedidos
+                  </p>
+                )}
                 <Button
                   variant="gold"
                   className="w-full gap-2"
                   size="lg"
-                  disabled={orderMutation.isPending}
+                  disabled={orderMutation.isPending || !activeReservation}
                   onClick={() => orderMutation.mutate()}
                 >
                   {orderMutation.isPending ? (

@@ -316,7 +316,7 @@ const AdminReservas = () => {
     setModalOpen(true);
   };
   const openEdit = (r: Reservation) => {
-    const cid = r.guest_id || r.client_id || "";
+    const cid = r.profile_id || r.guest_id || r.client_id || "";
     setEditingId(r.id);
     setForm({
       client_id: cid,
