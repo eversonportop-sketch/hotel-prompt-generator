@@ -12,6 +12,7 @@ import {
   Users,
   Waves,
   PartyPopper,
+  Package,
   Tag,
   Image,
   Info,
