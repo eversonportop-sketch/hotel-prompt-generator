@@ -122,8 +122,7 @@ const AdminHomeDestaque = () => {
   };
 
   const toggleActive = async (section: HomeSection) => {
-    const { error } = await supabase
-      .from("home_sections")
+    const { error } = await fromHomeSections()
       .update({ active: !section.active, updated_at: new Date().toISOString() })
       .eq("id", section.id);
 
