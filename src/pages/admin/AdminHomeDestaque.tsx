@@ -43,8 +43,7 @@ const AdminHomeDestaque = () => {
 
   const fetchSections = async () => {
     setLoading(true);
-    const { data, error } = await supabase
-      .from("home_sections")
+    const { data, error } = await fromHomeSections()
       .select("*")
       .order("display_order", { ascending: true });
 
