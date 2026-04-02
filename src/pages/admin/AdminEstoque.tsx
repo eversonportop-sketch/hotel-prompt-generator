@@ -5,19 +5,8 @@ import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Label } from "@/components/ui/label";
-import {
-  Dialog,
-  DialogContent,
-  DialogHeader,
-  DialogTitle,
-} from "@/components/ui/dialog";
-import {
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
-} from "@/components/ui/select";
+import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import {
   Package,
   Search,
@@ -100,9 +89,7 @@ const AdminEstoque = () => {
   });
 
   const filtered = items.filter((i) => {
-    const matchSearch =
-      !search ||
-      i.name.toLowerCase().includes(search.toLowerCase());
+    const matchSearch = !search || i.name.toLowerCase().includes(search.toLowerCase());
     const matchCat = catFilter === "all" || i.category === catFilter;
     return matchSearch && matchCat;
   });
@@ -145,7 +132,7 @@ const AdminEstoque = () => {
 
       const { error: moveErr } = await supabase.from("stock_movements" as any).insert({
         item_id: f.item_id,
-        type: f.type,
+        movement_type: f.type,
         quantity: f.quantity,
         previous_quantity: item.current_quantity,
         new_quantity: newQty,
@@ -165,8 +152,7 @@ const AdminEstoque = () => {
       setMoveForm({ item_id: "", type: "entrada", quantity: 0, notes: "" });
       toast({ title: "Movimentação registrada" });
     },
-    onError: (e: any) =>
-      toast({ title: e.message || "Erro na movimentação", variant: "destructive" }),
+    onError: (e: any) => toast({ title: e.message || "Erro na movimentação", variant: "destructive" }),
   });
 
   const openMoveFor = (id: string) => {
@@ -182,12 +168,17 @@ const AdminEstoque = () => {
           <h1 className="text-2xl font-display font-bold text-cream flex items-center gap-2">
             <Package className="w-6 h-6 text-primary" /> Estoque
           </h1>
-          <p className="text-sm text-white/40 font-body mt-1">
-            Controle manual de estoque
-          </p>
+          <p className="text-sm text-white/40 font-body mt-1">Controle manual de estoque</p>
         </div>
         <div className="flex gap-2">
-          <Button variant="gold-outline" size="sm" onClick={() => { setForm(emptyItem); setItemModal(true); }}>
+          <Button
+            variant="gold-outline"
+            size="sm"
+            onClick={() => {
+              setForm(emptyItem);
+              setItemModal(true);
+            }}
+          >
             <Plus className="w-4 h-4 mr-1" /> Novo Item
           </Button>
           <Button variant="gold" size="sm" onClick={() => setMoveModal(true)}>
@@ -212,9 +203,13 @@ const AdminEstoque = () => {
             <SelectValue placeholder="Categoria" />
           </SelectTrigger>
           <SelectContent className="bg-charcoal-light border-white/10">
-            <SelectItem value="all" className="text-cream">Todas</SelectItem>
+            <SelectItem value="all" className="text-cream">
+              Todas
+            </SelectItem>
             {categories.map((c) => (
-              <SelectItem key={c} value={c} className="text-cream">{c}</SelectItem>
+              <SelectItem key={c} value={c} className="text-cream">
+                {c}
+              </SelectItem>
             ))}
           </SelectContent>
         </Select>
@@ -252,15 +247,16 @@ const AdminEstoque = () => {
                   </div>
                   <div className="flex gap-4 mt-1 text-xs text-white/30 font-body">
                     <span>
-                      Qtd: <span className={`font-semibold ${isLow ? "text-red-400" : "text-cream"}`}>
+                      Qtd:{" "}
+                      <span className={`font-semibold ${isLow ? "text-red-400" : "text-cream"}`}>
                         {item.current_quantity}
                       </span>{" "}
                       {item.unit}
                     </span>
-                    <span>Mín: {item.min_quantity} {item.unit}</span>
-                    {item.cost_price > 0 && (
-                      <span>Custo: R$ {item.cost_price.toFixed(2)}</span>
-                    )}
+                    <span>
+                      Mín: {item.min_quantity} {item.unit}
+                    </span>
+                    {item.cost_price > 0 && <span>Custo: R$ {item.cost_price.toFixed(2)}</span>}
                   </div>
                 </div>
                 <Button
@@ -300,7 +296,9 @@ const AdminEstoque = () => {
                 </SelectTrigger>
                 <SelectContent className="bg-charcoal-light border-white/10">
                   {CATEGORIES.map((c) => (
-                    <SelectItem key={c} value={c} className="text-cream">{c}</SelectItem>
+                    <SelectItem key={c} value={c} className="text-cream">
+                      {c}
+                    </SelectItem>
                   ))}
                 </SelectContent>
               </Select>
@@ -313,7 +311,9 @@ const AdminEstoque = () => {
                 </SelectTrigger>
                 <SelectContent className="bg-charcoal-light border-white/10">
                   {UNITS.map((u) => (
-                    <SelectItem key={u} value={u} className="text-cream">{u}</SelectItem>
+                    <SelectItem key={u} value={u} className="text-cream">
+                      {u}
+                    </SelectItem>
                   ))}
                 </SelectContent>
               </Select>
@@ -398,11 +398,18 @@ const AdminEstoque = () => {
             <div>
               <Label className="text-white/50">Tipo *</Label>
               <div className="flex gap-2 mt-1">
-                {([
-                  { value: "entrada", label: "Entrada", icon: ArrowDownToLine, color: "text-green-400 border-green-500/30" },
-                  { value: "saida", label: "Saída", icon: ArrowUpFromLine, color: "text-red-400 border-red-500/30" },
-                  { value: "ajuste", label: "Ajuste", icon: RefreshCw, color: "text-blue-400 border-blue-500/30" },
-                ] as const).map((t) => (
+                {(
+                  [
+                    {
+                      value: "entrada",
+                      label: "Entrada",
+                      icon: ArrowDownToLine,
+                      color: "text-green-400 border-green-500/30",
+                    },
+                    { value: "saida", label: "Saída", icon: ArrowUpFromLine, color: "text-red-400 border-red-500/30" },
+                    { value: "ajuste", label: "Ajuste", icon: RefreshCw, color: "text-blue-400 border-blue-500/30" },
+                  ] as const
+                ).map((t) => (
                   <button
                     key={t.value}
                     onClick={() => setMoveForm({ ...moveForm, type: t.value })}
@@ -419,9 +426,7 @@ const AdminEstoque = () => {
               </div>
             </div>
             <div>
-              <Label className="text-white/50">
-                {moveForm.type === "ajuste" ? "Nova quantidade" : "Quantidade"}
-              </Label>
+              <Label className="text-white/50">{moveForm.type === "ajuste" ? "Nova quantidade" : "Quantidade"}</Label>
               <Input
                 type="number"
                 min={0}
