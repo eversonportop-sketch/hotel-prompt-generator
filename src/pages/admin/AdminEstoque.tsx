@@ -117,7 +117,7 @@ const AdminEstoque = () => {
         unit: f.unit,
         current_quantity: f.current_quantity,
         min_quantity: f.min_quantity,
-        unit_cost: f.unit_cost,
+        unit_cost: f.cost_price,
         notes: f.notes || null,
       } as any);
       if (error) throw error;
