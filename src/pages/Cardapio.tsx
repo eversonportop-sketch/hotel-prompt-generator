@@ -183,24 +183,6 @@ const Cardapio = () => {
     );
   }
 
-  // ── No active reservation ──
-  if (!activeReservation) {
-    return (
-      <Layout>
-        <div className="min-h-[60vh] flex flex-col items-center justify-center gap-6 px-4 text-center">
-          <AlertCircle className="w-16 h-16 text-cream/50" />
-          <h1 className="font-display text-3xl text-cream">Sem Reserva Ativa</h1>
-          <p className="text-cream/50 max-w-md">
-            Você não possui reserva ativa no momento. O cardápio está disponível apenas para hóspedes com reserva em
-            andamento.
-          </p>
-          <Link to="/quartos">
-            <Button variant="gold">Ver Quartos</Button>
-          </Link>
-        </div>
-      </Layout>
-    );
-  }
 
   return (
     <Layout>
