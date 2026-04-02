@@ -41,7 +41,7 @@ interface StockItem {
   unit: string;
   current_quantity: number;
   min_quantity: number;
-  unit_cost: number;
+  cost_price: number;
   notes: string | null;
 }
 
@@ -51,7 +51,7 @@ interface NewItemForm {
   unit: string;
   current_quantity: number;
   min_quantity: number;
-  unit_cost: number;
+  cost_price: number;
   notes: string;
 }
 
@@ -61,7 +61,7 @@ const emptyItem: NewItemForm = {
   unit: "un",
   current_quantity: 0,
   min_quantity: 0,
-  unit_cost: 0,
+  cost_price: 0,
   notes: "",
 };
 
@@ -117,7 +117,7 @@ const AdminEstoque = () => {
         unit: f.unit,
         current_quantity: f.current_quantity,
         min_quantity: f.min_quantity,
-        unit_cost: f.unit_cost,
+        cost_price: f.cost_price,
         notes: f.notes || null,
       } as any);
       if (error) throw error;
@@ -258,8 +258,8 @@ const AdminEstoque = () => {
                       {item.unit}
                     </span>
                     <span>Mín: {item.min_quantity} {item.unit}</span>
-                    {item.unit_cost > 0 && (
-                      <span>Custo: R$ {item.unit_cost.toFixed(2)}</span>
+                    {item.cost_price > 0 && (
+                      <span>Custo: R$ {item.cost_price.toFixed(2)}</span>
                     )}
                   </div>
                 </div>
@@ -344,8 +344,8 @@ const AdminEstoque = () => {
                 type="number"
                 min={0}
                 step={0.01}
-                value={form.unit_cost}
-                onChange={(e) => setForm({ ...form, unit_cost: +e.target.value })}
+                value={form.cost_price}
+                onChange={(e) => setForm({ ...form, cost_price: +e.target.value })}
                 className="bg-charcoal border-white/10 text-cream mt-1"
               />
             </div>
