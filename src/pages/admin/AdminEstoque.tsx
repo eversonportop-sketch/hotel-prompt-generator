@@ -17,6 +17,7 @@ import {
   RefreshCw,
   AlertTriangle,
   Loader2,
+  Printer,
 } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
 
@@ -161,6 +162,77 @@ const AdminEstoque = () => {
     setMoveModal(true);
   };
 
+  const printReport = () => {
+    const now = new Date().toLocaleString("pt-BR");
+    const lowItems = items.filter((i) => i.current_quantity <= i.min_quantity && i.min_quantity > 0);
+    const rows = filtered
+      .map((item) => {
+        const isLow = item.current_quantity <= item.min_quantity && item.min_quantity > 0;
+        return `
+        <tr style="border-bottom:1px solid #eee; ${isLow ? "background:#fff5f5" : ""}">
+          <td style="padding:8px 12px">${item.name}</td>
+          <td style="padding:8px 12px">${item.category}</td>
+          <td style="padding:8px 12px;text-align:center;font-weight:600;color:${isLow ? "#dc2626" : "#111"}">${item.current_quantity} ${item.unit}</td>
+          <td style="padding:8px 12px;text-align:center">${item.min_quantity} ${item.unit}</td>
+          <td style="padding:8px 12px;text-align:right">${item.cost_price > 0 ? "R$ " + item.cost_price.toFixed(2) : "-"}</td>
+          <td style="padding:8px 12px;text-align:center">${isLow ? "⚠️ Baixo" : "✅ OK"}</td>
+        </tr>`;
+      })
+      .join("");
+
+    const html = `
+      <!DOCTYPE html>
+      <html>
+      <head>
+        <meta charset="utf-8"/>
+        <title>Relatório de Estoque — SB Hotel</title>
+        <style>
+          body { font-family: Arial, sans-serif; padding: 32px; color: #111; }
+          h1 { font-size: 22px; margin-bottom: 4px; }
+          p.sub { color: #666; font-size: 13px; margin-bottom: 24px; }
+          table { width: 100%; border-collapse: collapse; font-size: 13px; }
+          thead tr { background: #1a1a1a; color: #fff; }
+          thead th { padding: 10px 12px; text-align: left; }
+          tbody tr:hover { background: #f9f9f9; }
+          .summary { display:flex; gap:32px; margin-bottom:24px; }
+          .summary div { background:#f3f4f6; border-radius:8px; padding:12px 20px; }
+          .summary div span { display:block; font-size:11px; color:#666; }
+          .summary div strong { font-size:20px; }
+          @media print { body { padding: 16px; } }
+        </style>
+      </head>
+      <body>
+        <h1>📦 Relatório de Estoque — SB Hotel</h1>
+        <p class="sub">Gerado em: ${now}</p>
+        <div class="summary">
+          <div><span>Total de itens</span><strong>${items.length}</strong></div>
+          <div><span>Itens exibidos</span><strong>${filtered.length}</strong></div>
+          <div><span style="color:#dc2626">Estoque baixo</span><strong style="color:#dc2626">${lowItems.length}</strong></div>
+        </div>
+        <table>
+          <thead>
+            <tr>
+              <th>Item</th>
+              <th>Categoria</th>
+              <th style="text-align:center">Qtd Atual</th>
+              <th style="text-align:center">Qtd Mín</th>
+              <th style="text-align:right">Custo Unit.</th>
+              <th style="text-align:center">Status</th>
+            </tr>
+          </thead>
+          <tbody>${rows}</tbody>
+        </table>
+      </body>
+      </html>`;
+
+    const win = window.open("", "_blank");
+    if (!win) return;
+    win.document.write(html);
+    win.document.close();
+    win.focus();
+    setTimeout(() => win.print(), 500);
+  };
+
   return (
     <div className="p-4 md:p-8 space-y-6">
       {/* Header */}
@@ -184,6 +256,9 @@ const AdminEstoque = () => {
           </Button>
           <Button variant="gold" size="sm" onClick={() => setMoveModal(true)}>
             <ArrowUpDown className="w-4 h-4 mr-1" /> Movimentar
+          </Button>
+          <Button variant="gold-outline" size="sm" onClick={printReport} disabled={filtered.length === 0}>
+            <Printer className="w-4 h-4 mr-1" /> Relatório
           </Button>
         </div>
       </div>
@@ -324,8 +399,9 @@ const AdminEstoque = () => {
               <Input
                 type="number"
                 min={0}
-                value={form.current_quantity}
-                onChange={(e) => setForm({ ...form, current_quantity: +e.target.value })}
+                value={form.current_quantity === 0 ? "" : form.current_quantity}
+                onChange={(e) => setForm({ ...form, current_quantity: e.target.value === "" ? 0 : +e.target.value })}
+                placeholder="0"
                 className="bg-charcoal border-white/10 text-cream mt-1"
               />
             </div>
@@ -334,8 +410,9 @@ const AdminEstoque = () => {
               <Input
                 type="number"
                 min={0}
-                value={form.min_quantity}
-                onChange={(e) => setForm({ ...form, min_quantity: +e.target.value })}
+                value={form.min_quantity === 0 ? "" : form.min_quantity}
+                onChange={(e) => setForm({ ...form, min_quantity: e.target.value === "" ? 0 : +e.target.value })}
+                placeholder="0"
                 className="bg-charcoal border-white/10 text-cream mt-1"
               />
             </div>
@@ -345,8 +422,9 @@ const AdminEstoque = () => {
                 type="number"
                 min={0}
                 step={0.01}
-                value={form.cost_price}
-                onChange={(e) => setForm({ ...form, cost_price: +e.target.value })}
+                value={form.cost_price === 0 ? "" : form.cost_price}
+                onChange={(e) => setForm({ ...form, cost_price: e.target.value === "" ? 0 : +e.target.value })}
+                placeholder="0.00"
                 className="bg-charcoal border-white/10 text-cream mt-1"
               />
             </div>
@@ -431,8 +509,9 @@ const AdminEstoque = () => {
               <Input
                 type="number"
                 min={0}
-                value={moveForm.quantity}
-                onChange={(e) => setMoveForm({ ...moveForm, quantity: +e.target.value })}
+                value={moveForm.quantity === 0 ? "" : moveForm.quantity}
+                onChange={(e) => setMoveForm({ ...moveForm, quantity: e.target.value === "" ? 0 : +e.target.value })}
+                placeholder="0"
                 className="bg-charcoal border-white/10 text-cream mt-1"
               />
             </div>
