@@ -8,13 +8,7 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
-import {
-  Dialog,
-  DialogContent,
-  DialogHeader,
-  DialogTitle,
-  DialogFooter,
-} from "@/components/ui/dialog";
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from "@/components/ui/dialog";
 import {
   ArrowLeft,
   LogIn,
@@ -34,12 +28,7 @@ import { toast } from "sonner";
 import hotelLogo from "@/assets/hotel-sb-logo.png";
 import { computeOperationStatus, type OperationStatus } from "@/lib/operationStatus";
 
-type HousekeepingStatus =
-  | "clean"
-  | "dirty"
-  | "inspected"
-  | "out_of_order"
-  | "do_not_disturb";
+type HousekeepingStatus = "clean" | "dirty" | "inspected" | "out_of_order" | "do_not_disturb";
 
 interface DailyOp {
   reservation_id: string;
@@ -67,10 +56,7 @@ interface DailyOp {
   operation_status: OperationStatus;
 }
 
-const opStatusConfig: Record<
-  OperationStatus,
-  { label: string; color: string; icon: React.ElementType }
-> = {
+const opStatusConfig: Record<OperationStatus, { label: string; color: string; icon: React.ElementType }> = {
   arriving_today: {
     label: "Chegando hoje",
     color: "bg-amber-500/20 text-amber-400 border-amber-500/30",
@@ -122,8 +108,11 @@ const AdminCheckin = () => {
   const [coExtras, setCoExtras] = useState(0);
   const [coNotes, setCoNotes] = useState("");
 
-
-  const { data: operations = [], isLoading, refetch } = useQuery({
+  const {
+    data: operations = [],
+    isLoading,
+    refetch,
+  } = useQuery({
     queryKey: ["daily-operations"],
     queryFn: async () => {
       const { data, error } = await supabase
@@ -132,7 +121,7 @@ const AdminCheckin = () => {
         .order("check_in", { ascending: true });
       if (error) throw error;
       // Override operation_status with unified client-side logic
-      return ((data as unknown) as DailyOp[]).map((op) => ({
+      return (data as unknown as DailyOp[]).map((op) => ({
         ...op,
         operation_status: computeOperationStatus(op),
       }));
@@ -158,7 +147,9 @@ const AdminCheckin = () => {
       toast.success("Check-in realizado com sucesso!");
       queryClient.invalidateQueries({ queryKey: ["daily-operations"] });
       setCheckinDialog(null);
-      setCiDoc(""); setCiGuests(1); setCiNotes("");
+      setCiDoc("");
+      setCiGuests(1);
+      setCiNotes("");
     },
     onError: (err: Error) => toast.error(err.message),
   });
@@ -180,11 +171,11 @@ const AdminCheckin = () => {
       toast.success("Check-out realizado com sucesso!");
       queryClient.invalidateQueries({ queryKey: ["daily-operations"] });
       setCheckoutDialog(null);
-      setCoExtras(0); setCoNotes("");
+      setCoExtras(0);
+      setCoNotes("");
     },
     onError: (err: Error) => toast.error(err.message),
   });
-
 
   const filtered = operations.filter((op) => {
     const matchStatus = filter === "all" || op.operation_status === filter;
@@ -215,10 +206,7 @@ const AdminCheckin = () => {
           <span className="text-cream/30 text-xs font-body hidden md:block">
             {format(new Date(), "EEEE, dd 'de' MMMM yyyy", { locale: ptBR })}
           </span>
-          <button
-            onClick={() => refetch()}
-            className="text-cream/40 hover:text-primary transition-colors"
-          >
+          <button onClick={() => refetch()} className="text-cream/40 hover:text-primary transition-colors">
             <RefreshCw className="w-4 h-4" />
           </button>
           <Link to="/" className="text-cream/50 text-sm font-body hover:text-primary transition-colors">
@@ -285,7 +273,7 @@ const AdminCheckin = () => {
                     <span className="ml-1 opacity-60">{counts[tab]}</span>
                   </button>
                 );
-              }
+              },
             )}
           </div>
 
@@ -299,9 +287,7 @@ const AdminCheckin = () => {
                 {filtered.map((op, i) => {
                   const opCfg = opStatusConfig[op.operation_status];
                   const Icon = opCfg.icon;
-                  const hk = op.housekeeping_status
-                    ? hkLabels[op.housekeeping_status]
-                    : null;
+                  const hk = op.housekeeping_status ? hkLabels[op.housekeeping_status] : null;
 
                   return (
                     <motion.div
@@ -314,7 +300,9 @@ const AdminCheckin = () => {
                       <div className="bg-charcoal-light border border-gold/10 rounded-lg p-4 flex flex-col md:flex-row md:items-center gap-4 hover:border-gold/20 transition-colors">
                         <div className="flex-1 space-y-2">
                           <div className="flex items-center gap-2 flex-wrap">
-                            <span className={`inline-flex items-center gap-1 text-xs px-2 py-0.5 rounded-full border ${opCfg.color}`}>
+                            <span
+                              className={`inline-flex items-center gap-1 text-xs px-2 py-0.5 rounded-full border ${opCfg.color}`}
+                            >
                               <Icon className="w-3 h-3" />
                               {opCfg.label}
                             </span>
@@ -354,8 +342,8 @@ const AdminCheckin = () => {
                             </span>
                             <span className="flex items-center gap-1">
                               <Clock className="w-3.5 h-3.5" />
-                              {format(new Date(op.check_in), "dd/MM")} →{" "}
-                              {format(new Date(op.check_out), "dd/MM/yyyy")}
+                              {format(new Date(op.check_in + "T12:00:00"), "dd/MM")} →{" "}
+                              {format(new Date(op.check_out + "T12:00:00"), "dd/MM/yyyy")}
                             </span>
                             <span className="flex items-center gap-1">
                               <Users className="w-3.5 h-3.5" />
@@ -433,8 +421,8 @@ const AdminCheckin = () => {
               <div className="bg-charcoal rounded-lg p-3 border border-gold/10">
                 <p className="text-cream font-body font-medium">{checkinDialog.guest_name}</p>
                 <p className="text-cream/40 text-sm font-body">
-                  {checkinDialog.room_name} · {format(new Date(checkinDialog.check_in), "dd/MM")} →{" "}
-                  {format(new Date(checkinDialog.check_out), "dd/MM/yyyy")}
+                  {checkinDialog.room_name} · {format(new Date(checkinDialog.check_in + "T12:00:00"), "dd/MM")} →{" "}
+                  {format(new Date(checkinDialog.check_out + "T12:00:00"), "dd/MM/yyyy")}
                 </p>
               </div>
 
@@ -564,7 +552,6 @@ const AdminCheckin = () => {
           </DialogFooter>
         </DialogContent>
       </Dialog>
-
     </div>
   );
 };
