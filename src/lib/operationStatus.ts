@@ -3,12 +3,7 @@
  * Must be the single source of truth across Dashboard, Checkin, and Checkout.
  */
 
-export type OperationStatus =
-  | "arriving_today"
-  | "departing_today"
-  | "in_house"
-  | "checked_out"
-  | "upcoming";
+export type OperationStatus = "arriving_today" | "departing_today" | "in_house" | "checked_out" | "upcoming";
 
 interface ReservationForStatus {
   check_in: string;
@@ -38,7 +33,7 @@ export function computeOperationStatus(r: ReservationForStatus): OperationStatus
   const checkOut = toDateOnly(r.check_out);
 
   // 1. Already checked out (highest priority)
-  if (r.checked_out_at || r.status === "completed") {
+  if (r.checked_out_at || r.status === "completed" || r.status === "checked_out") {
     return "checked_out";
   }
 
@@ -53,12 +48,7 @@ export function computeOperationStatus(r: ReservationForStatus): OperationStatus
   }
 
   // 4. Arriving today
-  if (
-    checkIn === today &&
-    !r.checked_in_at &&
-    !r.checked_out_at &&
-    ["pending", "confirmed"].includes(r.status)
-  ) {
+  if (checkIn === today && !r.checked_in_at && !r.checked_out_at && ["pending", "confirmed"].includes(r.status)) {
     return "arriving_today";
   }
 
