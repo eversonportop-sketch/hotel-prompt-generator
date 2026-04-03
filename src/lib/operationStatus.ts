@@ -18,26 +18,43 @@ interface ReservationForStatus {
   checked_out_at?: string | null;
 }
 
-export function computeOperationStatus(r: ReservationForStatus): OperationStatus {
-  const today = new Date().toISOString().split("T")[0];
+/** Normalise any date/timestamp string to YYYY-MM-DD */
+function toDateOnly(v: string): string {
+  return v.slice(0, 10);
+}
 
-  // 1. Already checked out
+/** Local today as YYYY-MM-DD (avoids UTC shift issues) */
+function localToday(): string {
+  const d = new Date();
+  const yyyy = d.getFullYear();
+  const mm = String(d.getMonth() + 1).padStart(2, "0");
+  const dd = String(d.getDate()).padStart(2, "0");
+  return `${yyyy}-${mm}-${dd}`;
+}
+
+export function computeOperationStatus(r: ReservationForStatus): OperationStatus {
+  const today = localToday();
+  const checkIn = toDateOnly(r.check_in);
+  const checkOut = toDateOnly(r.check_out);
+
+  // 1. Already checked out (highest priority)
   if (r.checked_out_at || r.status === "completed") {
     return "checked_out";
   }
 
   // 2. Departing today
-  if (
-    r.check_out === today &&
-    r.checked_in_at &&
-    !r.checked_out_at
-  ) {
+  if (checkOut === today && r.checked_in_at && !r.checked_out_at) {
     return "departing_today";
   }
 
-  // 3. Arriving today
+  // 3. In house (before arriving_today so same-day stays with check-in done are in_house)
+  if (r.checked_in_at && !r.checked_out_at && today >= checkIn && today < checkOut) {
+    return "in_house";
+  }
+
+  // 4. Arriving today
   if (
-    r.check_in === today &&
+    checkIn === today &&
     !r.checked_in_at &&
     !r.checked_out_at &&
     ["pending", "confirmed"].includes(r.status)
@@ -45,23 +62,15 @@ export function computeOperationStatus(r: ReservationForStatus): OperationStatus
     return "arriving_today";
   }
 
-  // 4. In house
-  if (
-    r.checked_in_at &&
-    !r.checked_out_at &&
-    today >= r.check_in &&
-    today < r.check_out
-  ) {
-    return "in_house";
-  }
-
   // 5. Upcoming
-  if (
-    r.check_in > today &&
-    ["pending", "confirmed"].includes(r.status)
-  ) {
+  if (checkIn > today && !r.checked_in_at && !r.checked_out_at && ["pending", "confirmed"].includes(r.status)) {
     return "upcoming";
   }
 
-  return "checked_out";
+  // 6. Fallback — do NOT default to checked_out; treat as in_house if checked in, or upcoming otherwise
+  if (r.checked_in_at && !r.checked_out_at) {
+    return "in_house";
+  }
+
+  return "upcoming";
 }
