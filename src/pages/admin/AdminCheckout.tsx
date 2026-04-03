@@ -67,19 +67,19 @@ const AdminCheckout = () => {
   const { data: openReservations = [], isLoading } = useQuery({
     queryKey: ["checkout-open"],
     queryFn: async () => {
-      // Buscar reservas com checkin_logs para filtrar corretamente
+      // Buscar reservas com check-in feito e check-out pendente
+      // checked_in_at e checked_out_at estão diretamente na tabela reservations
       const { data, error } = await supabase
         .from("reservations")
-        .select("*, rooms(name, price), profiles!reservations_profile_id_fkey(full_name, phone), checkin_logs(checked_in_at, checked_out_at)")
-        .in("status", ["confirmed", "pending"])
+        .select("*, rooms(name, price), profiles!reservations_profile_id_fkey(full_name, phone)")
+        .in("status", ["confirmed", "pending", "checked_in"])
+        .not("checked_in_at", "is", null)
+        .is("checked_out_at", null)
         .order("check_in", { ascending: false });
       if (error) throw error;
 
-      // Filtrar: apenas quem fez check-in e NÃO fez check-out
-      const filtered = (data || []).filter((r: any) => {
-        const log = Array.isArray(r.checkin_logs) ? r.checkin_logs[0] : r.checkin_logs;
-        return log?.checked_in_at && !log?.checked_out_at;
-      });
+      // Todos os resultados já possuem check-in feito e checkout pendente
+      const filtered = data || [];
 
       // Buscar consumo aberto agrupado por reservation_id
       const ids = filtered.map((r: any) => r.id);
@@ -95,41 +95,36 @@ const AdminCheckout = () => {
         });
       }
 
-      return filtered.map((r: any) => ({ ...r, _consumoTotal: consumoMap[r.id] || 0 })) as (Reservation & { _consumoTotal: number })[];
+      return filtered.map((r: any) => ({ ...r, _consumoTotal: consumoMap[r.id] || 0 })) as (Reservation & {
+        _consumoTotal: number;
+      })[];
     },
   });
 
-  // Histórico: checked_out_at NOT NULL ou status = 'completed'
+  // Histórico: status completed|checked_out OU checked_out_at preenchido
   const { data: history = [], isLoading: loadingHistory } = useQuery({
     queryKey: ["checkout-history"],
     queryFn: async () => {
-      // Buscar todas as reservas completadas
-      const { data: completed, error: e1 } = await supabase
+      const { data, error } = await supabase
         .from("reservations")
         .select("*, rooms(name, price), profiles!reservations_profile_id_fkey(full_name, phone)")
-        .eq("status", "completed")
+        .in("status", ["completed", "checked_out"])
         .order("check_out", { ascending: false })
         .limit(50);
-      if (e1) throw e1;
+      if (error) throw error;
 
-      // Também buscar reservas com checked_out_at preenchido mas status != completed
-      const { data: withCheckout, error: e2 } = await supabase
+      // também pegar reservas com checked_out_at preenchido mas status diferente
+      const { data: withCO, error: e2 } = await supabase
         .from("reservations")
-        .select("*, rooms(name, price), profiles!reservations_profile_id_fkey(full_name, phone), checkin_logs(checked_out_at)")
-        .neq("status", "completed")
+        .select("*, rooms(name, price), profiles!reservations_profile_id_fkey(full_name, phone)")
+        .not("checked_out_at", "is", null)
+        .not("status", "in", "(completed,checked_out)")
         .order("check_out", { ascending: false })
         .limit(50);
       if (e2) throw e2;
 
-      const extraHistory = (withCheckout || []).filter((r: any) => {
-        const log = Array.isArray(r.checkin_logs) ? r.checkin_logs[0] : r.checkin_logs;
-        return !!log?.checked_out_at;
-      });
-
-      // Merge and deduplicate
-      const all = [...(completed || []), ...extraHistory];
       const seen = new Set<string>();
-      return all.filter((r: any) => {
+      return [...(data || []), ...(withCO || [])].filter((r: any) => {
         if (seen.has(r.id)) return false;
         seen.add(r.id);
         return true;
@@ -260,7 +255,15 @@ const AdminCheckout = () => {
     );
   });
 
-  const ResCard = ({ res, selected, onClick }: { res: Reservation & { _consumoTotal?: number }; selected: boolean; onClick: () => void }) => {
+  const ResCard = ({
+    res,
+    selected,
+    onClick,
+  }: {
+    res: Reservation & { _consumoTotal?: number };
+    selected: boolean;
+    onClick: () => void;
+  }) => {
     const n = Math.max(1, differenceInDays(new Date(res.check_out), new Date(res.check_in)));
     const rp = (res.rooms as any)?.price ?? 0;
     const diarias = rp * n || res.total_price || 0;
@@ -399,7 +402,8 @@ const AdminCheckout = () => {
                           Conta do hóspede
                         </p>
                         <h2 className="font-display text-xl font-bold text-cream">
-                          {(selectedRes.profiles as any)?.full_name ?? "Hóspede"} — {(selectedRes.rooms as any)?.name ?? "Quarto"}
+                          {(selectedRes.profiles as any)?.full_name ?? "Hóspede"} —{" "}
+                          {(selectedRes.rooms as any)?.name ?? "Quarto"}
                         </h2>
                         <p className="text-cream/40 font-body text-sm mt-0.5">
                           {nights} {nights === 1 ? "noite" : "noites"}
