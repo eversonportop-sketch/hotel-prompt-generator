@@ -79,14 +79,18 @@ const AdminDashboard = () => {
     },
   });
 
-  const { data: reservations = [] } = useQuery({
-    queryKey: ["dash-reservations"],
+  const { data: dailyOps = [] } = useQuery({
+    queryKey: ["dash-daily-operations"],
     queryFn: async () => {
       const { data, error } = await supabase
-        .from("reservations")
-        .select("id, status, check_in, check_out, rooms(name), profiles(full_name)");
+        .from("daily_operations")
+        .select("*")
+        .order("check_in", { ascending: true });
       if (error) throw error;
-      return data;
+      return ((data as any[]) || []).map((op) => ({
+        ...op,
+        operation_status: computeOperationStatus(op),
+      }));
     },
   });
 
