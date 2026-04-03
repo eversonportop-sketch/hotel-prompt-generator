@@ -67,9 +67,14 @@ export function computeOperationStatus(r: ReservationForStatus): OperationStatus
     return "upcoming";
   }
 
-  // 6. Fallback — do NOT default to checked_out; treat as in_house if checked in, or upcoming otherwise
+  // 6. Fallback for checked-in guests past their checkout date
   if (r.checked_in_at && !r.checked_out_at) {
     return "in_house";
+  }
+
+  // 7. Past reservations without check-in = no-show, treat as checked_out
+  if (checkIn <= today) {
+    return "checked_out";
   }
 
   return "upcoming";
