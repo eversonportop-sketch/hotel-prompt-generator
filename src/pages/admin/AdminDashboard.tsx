@@ -311,10 +311,10 @@ const AdminDashboard = () => {
           ) : (
             <div className="space-y-2">
               {todayActivity.slice(0, 4).map((r: any) => {
-                const isIn = r.check_in === today;
+                const isIn = r.operation_status === "arriving_today";
                 return (
                   <div
-                    key={r.id}
+                    key={r.reservation_id || r.id}
                     className="flex items-center justify-between py-1.5 border-b border-white/5 last:border-0"
                   >
                     <div className="flex items-center gap-2">
@@ -325,10 +325,10 @@ const AdminDashboard = () => {
                         {isIn ? "IN" : "OUT"}
                       </span>
                       <span className="text-sm text-cream/70 font-body truncate max-w-[100px]">
-                        {r.profiles?.full_name || "—"}
+                        {r.guest_name || "—"}
                       </span>
                     </div>
-                    <span className="text-xs text-white/30 font-body">{r.rooms?.name || "—"}</span>
+                    <span className="text-xs text-white/30 font-body">{r.room_name || "—"}</span>
                   </div>
                 );
               })}
