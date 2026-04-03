@@ -105,18 +105,21 @@ const AdminDashboard = () => {
 
   const totalRooms = quartos.length;
   const activeRooms = totalRooms;
-  const totalReservations = reservations.length;
-  const confirmedReservations = (reservations as any[]).filter((r) => r.status === "confirmed").length;
-  const todayCheckins = (reservations as any[]).filter((r) => r.check_in === today).length;
-  const todayCheckouts = (reservations as any[]).filter((r) => r.check_out === today).length;
+  const totalReservations = dailyOps.length;
+  const confirmedReservations = dailyOps.filter((r: any) => r.status === "confirmed").length;
+  const todayCheckins = dailyOps.filter((r: any) => r.operation_status === "arriving_today").length;
+  const todayCheckouts = dailyOps.filter((r: any) => r.operation_status === "departing_today").length;
+  const inHouse = dailyOps.filter((r: any) => r.operation_status === "in_house").length;
   const totalProfiles = profiles.length;
 
   const reservationsByStatus: Record<string, number> = {};
-  (reservations as any[]).forEach((r) => {
+  dailyOps.forEach((r: any) => {
     reservationsByStatus[r.status] = (reservationsByStatus[r.status] || 0) + 1;
   });
 
-  const todayActivity = (reservations as any[]).filter((r) => r.check_in === today || r.check_out === today);
+  const todayActivity = dailyOps.filter((r: any) =>
+    r.operation_status === "arriving_today" || r.operation_status === "departing_today"
+  );
 
   const kpis = [
     {

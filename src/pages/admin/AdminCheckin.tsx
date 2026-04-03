@@ -131,7 +131,11 @@ const AdminCheckin = () => {
         .select("*")
         .order("check_in", { ascending: true });
       if (error) throw error;
-      return (data as unknown) as DailyOp[];
+      // Override operation_status with unified client-side logic
+      return ((data as unknown) as DailyOp[]).map((op) => ({
+        ...op,
+        operation_status: computeOperationStatus(op),
+      }));
     },
     refetchInterval: 60_000,
   });
