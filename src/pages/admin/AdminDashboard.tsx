@@ -13,6 +13,7 @@ import {
 } from "lucide-react";
 import { useQuery } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
+import { computeOperationStatus } from "@/lib/operationStatus";
 
 const statusLabels: Record<string, string> = {
   pending: "Pendente",
@@ -78,14 +79,18 @@ const AdminDashboard = () => {
     },
   });
 
-  const { data: reservations = [] } = useQuery({
-    queryKey: ["dash-reservations"],
+  const { data: dailyOps = [] } = useQuery({
+    queryKey: ["dash-daily-operations"],
     queryFn: async () => {
       const { data, error } = await supabase
-        .from("reservations")
-        .select("id, status, check_in, check_out, rooms(name), profiles(full_name)");
+        .from("daily_operations")
+        .select("*")
+        .order("check_in", { ascending: true });
       if (error) throw error;
-      return data;
+      return ((data as any[]) || []).map((op) => ({
+        ...op,
+        operation_status: computeOperationStatus(op),
+      }));
     },
   });
 
@@ -100,18 +105,21 @@ const AdminDashboard = () => {
 
   const totalRooms = quartos.length;
   const activeRooms = totalRooms;
-  const totalReservations = reservations.length;
-  const confirmedReservations = (reservations as any[]).filter((r) => r.status === "confirmed").length;
-  const todayCheckins = (reservations as any[]).filter((r) => r.check_in === today).length;
-  const todayCheckouts = (reservations as any[]).filter((r) => r.check_out === today).length;
+  const totalReservations = dailyOps.length;
+  const confirmedReservations = dailyOps.filter((r: any) => r.status === "confirmed").length;
+  const todayCheckins = dailyOps.filter((r: any) => r.operation_status === "arriving_today").length;
+  const todayCheckouts = dailyOps.filter((r: any) => r.operation_status === "departing_today").length;
+  const inHouse = dailyOps.filter((r: any) => r.operation_status === "in_house").length;
   const totalProfiles = profiles.length;
 
   const reservationsByStatus: Record<string, number> = {};
-  (reservations as any[]).forEach((r) => {
+  dailyOps.forEach((r: any) => {
     reservationsByStatus[r.status] = (reservationsByStatus[r.status] || 0) + 1;
   });
 
-  const todayActivity = (reservations as any[]).filter((r) => r.check_in === today || r.check_out === today);
+  const todayActivity = dailyOps.filter((r: any) =>
+    r.operation_status === "arriving_today" || r.operation_status === "departing_today"
+  );
 
   const kpis = [
     {
@@ -303,10 +311,10 @@ const AdminDashboard = () => {
           ) : (
             <div className="space-y-2">
               {todayActivity.slice(0, 4).map((r: any) => {
-                const isIn = r.check_in === today;
+                const isIn = r.operation_status === "arriving_today";
                 return (
                   <div
-                    key={r.id}
+                    key={r.reservation_id || r.id}
                     className="flex items-center justify-between py-1.5 border-b border-white/5 last:border-0"
                   >
                     <div className="flex items-center gap-2">
@@ -317,10 +325,10 @@ const AdminDashboard = () => {
                         {isIn ? "IN" : "OUT"}
                       </span>
                       <span className="text-sm text-cream/70 font-body truncate max-w-[100px]">
-                        {r.profiles?.full_name || "—"}
+                        {r.guest_name || "—"}
                       </span>
                     </div>
-                    <span className="text-xs text-white/30 font-body">{r.rooms?.name || "—"}</span>
+                    <span className="text-xs text-white/30 font-body">{r.room_name || "—"}</span>
                   </div>
                 );
               })}

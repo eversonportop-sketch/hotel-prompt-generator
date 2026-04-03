@@ -63,19 +63,26 @@ const AdminCheckout = () => {
   const [receiptOrders, setReceiptOrders] = useState<ConsumptionOrder[]>([]);
   const printRef = useRef<HTMLDivElement>(null);
 
-  // Reservas ativas
+  // Contas abertas: checked_in_at NOT NULL e checked_out_at IS NULL
   const { data: openReservations = [], isLoading } = useQuery({
     queryKey: ["checkout-open"],
     queryFn: async () => {
+      // Buscar reservas com checkin_logs para filtrar corretamente
       const { data, error } = await supabase
         .from("reservations")
-        .select("*, rooms(name, price), profiles!reservations_profile_id_fkey(full_name, phone)")
+        .select("*, rooms(name, price), profiles!reservations_profile_id_fkey(full_name, phone), checkin_logs(checked_in_at, checked_out_at)")
         .in("status", ["confirmed", "pending"])
         .order("check_in", { ascending: false });
       if (error) throw error;
 
+      // Filtrar: apenas quem fez check-in e NÃO fez check-out
+      const filtered = (data || []).filter((r: any) => {
+        const log = Array.isArray(r.checkin_logs) ? r.checkin_logs[0] : r.checkin_logs;
+        return log?.checked_in_at && !log?.checked_out_at;
+      });
+
       // Buscar consumo aberto agrupado por reservation_id
-      const ids = (data || []).map((r: any) => r.id);
+      const ids = filtered.map((r: any) => r.id);
       let consumoMap: Record<string, number> = {};
       if (ids.length > 0) {
         const { data: consumos } = await supabase
@@ -88,22 +95,45 @@ const AdminCheckout = () => {
         });
       }
 
-      return (data || []).map((r: any) => ({ ...r, _consumoTotal: consumoMap[r.id] || 0 })) as (Reservation & { _consumoTotal: number })[];
+      return filtered.map((r: any) => ({ ...r, _consumoTotal: consumoMap[r.id] || 0 })) as (Reservation & { _consumoTotal: number })[];
     },
   });
 
-  // Histórico de checkouts
+  // Histórico: checked_out_at NOT NULL ou status = 'completed'
   const { data: history = [], isLoading: loadingHistory } = useQuery({
     queryKey: ["checkout-history"],
     queryFn: async () => {
-      const { data, error } = await supabase
+      // Buscar todas as reservas completadas
+      const { data: completed, error: e1 } = await supabase
         .from("reservations")
         .select("*, rooms(name, price), profiles!reservations_profile_id_fkey(full_name, phone)")
         .eq("status", "completed")
         .order("check_out", { ascending: false })
         .limit(50);
-      if (error) throw error;
-      return data as Reservation[];
+      if (e1) throw e1;
+
+      // Também buscar reservas com checked_out_at preenchido mas status != completed
+      const { data: withCheckout, error: e2 } = await supabase
+        .from("reservations")
+        .select("*, rooms(name, price), profiles!reservations_profile_id_fkey(full_name, phone), checkin_logs(checked_out_at)")
+        .neq("status", "completed")
+        .order("check_out", { ascending: false })
+        .limit(50);
+      if (e2) throw e2;
+
+      const extraHistory = (withCheckout || []).filter((r: any) => {
+        const log = Array.isArray(r.checkin_logs) ? r.checkin_logs[0] : r.checkin_logs;
+        return !!log?.checked_out_at;
+      });
+
+      // Merge and deduplicate
+      const all = [...(completed || []), ...extraHistory];
+      const seen = new Set<string>();
+      return all.filter((r: any) => {
+        if (seen.has(r.id)) return false;
+        seen.add(r.id);
+        return true;
+      }) as Reservation[];
     },
   });
 
