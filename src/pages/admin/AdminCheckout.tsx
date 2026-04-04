@@ -72,7 +72,7 @@ const AdminCheckout = () => {
       const { data, error } = await supabase
         .from("reservations")
         .select("*, rooms(name, price), profiles!reservations_profile_id_fkey(full_name, phone)")
-        .in("status", ["confirmed", "pending", "checked_in"])
+        .eq("status", "checked_in")
         .not("checked_in_at", "is", null)
         .is("checked_out_at", null)
         .order("check_in", { ascending: false });
