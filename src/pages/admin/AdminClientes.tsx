@@ -14,10 +14,8 @@ import {
   Save,
   Loader2,
   FileText,
-  History,
   BedDouble,
   ShoppingCart,
-  CalendarPlus,
   Trash2,
   KeyRound,
   MapPin,
@@ -128,10 +126,7 @@ const AdminClientes = () => {
       };
 
       if (editClient) {
-        const { error } = await supabase
-          .from("profiles")
-          .update(payload)
-          .eq("id", editClient.id);
+        const { error } = await supabase.from("profiles").update(payload).eq("id", editClient.id);
         if (error) throw error;
         toast.success("Cliente atualizado!");
       } else {
@@ -199,10 +194,7 @@ const AdminClientes = () => {
       // Update the profile to link auth user id and set email
       if (authData.user) {
         // Update the existing operational profile to link the auth id
-        await supabase
-          .from("profiles")
-          .update({ email: portalEmail.trim() })
-          .eq("id", portalClient.id);
+        await supabase.from("profiles").update({ email: portalEmail.trim() }).eq("id", portalClient.id);
       }
 
       toast.success("Acesso ao portal criado! O cliente pode fazer login com o e-mail e senha informados.");
@@ -363,14 +355,6 @@ const AdminClientes = () => {
                   <td className="px-5 py-4">
                     <div className="flex items-center gap-1.5">
                       <button
-                        onClick={() => handleNewReservation(g)}
-                        className="flex items-center gap-1 text-xs text-white/25 hover:text-primary font-body transition-colors px-2 py-1 rounded-lg hover:bg-primary/10"
-                        title="Nova Reserva"
-                      >
-                        <CalendarPlus className="w-3.5 h-3.5" />
-                        <span className="hidden lg:inline">Reserva</span>
-                      </button>
-                      <button
                         onClick={() => {
                           setPortalClient(g);
                           setPortalEmail(g.email || "");
@@ -381,14 +365,6 @@ const AdminClientes = () => {
                       >
                         <KeyRound className="w-3.5 h-3.5" />
                         <span className="hidden lg:inline">Portal</span>
-                      </button>
-                      <button
-                        onClick={() => setHistoryClient(g)}
-                        className="flex items-center gap-1 text-xs text-white/25 hover:text-blue-400 font-body transition-colors px-2 py-1 rounded-lg hover:bg-blue-500/10"
-                        title="Histórico"
-                      >
-                        <History className="w-3.5 h-3.5" />
-                        <span className="hidden lg:inline">Histórico</span>
                       </button>
                       <button
                         onClick={() => openEdit(g)}
@@ -463,7 +439,8 @@ const AdminClientes = () => {
                     {field("Cidade", "city", "Porto Alegre", <MapPin className="w-3 h-3" />)}
                   </div>
                   <p className="text-white/20 text-[10px] font-body">
-                    Este cadastro é apenas operacional. Para dar acesso ao portal, use o botão "Portal" na lista de clientes.
+                    Este cadastro é apenas operacional. Para dar acesso ao portal, use o botão "Portal" na lista de
+                    clientes.
                   </p>
                 </div>
 
@@ -659,15 +636,15 @@ const AdminClientes = () => {
 
 /* ── Modal de histórico ─────────────────────────────────────────────────────── */
 const statusLabels: Record<string, string> = {
+  pending: "Pendente",
   confirmed: "Confirmada",
-  checked_in: "Hospedado",
-  checked_out: "Finalizada",
+  completed: "Concluída",
   canceled: "Cancelada",
 };
 const statusColors: Record<string, string> = {
+  pending: "bg-yellow-500/15 text-yellow-400 border-yellow-500/20",
   confirmed: "bg-green-500/15 text-green-400 border-green-500/20",
-  checked_in: "bg-blue-500/15 text-blue-400 border-blue-500/20",
-  checked_out: "bg-gray-500/15 text-gray-400 border-gray-500/20",
+  completed: "bg-blue-500/15 text-blue-400 border-blue-500/20",
   canceled: "bg-red-500/15 text-red-400 border-red-500/20",
 };
 
