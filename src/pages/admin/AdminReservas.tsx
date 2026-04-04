@@ -35,6 +35,7 @@ interface Room {
   price: number;
   promotional_price: number | null;
   capacity: number;
+  ocupado?: boolean;
 }
 interface Reservation {
   id: string;
@@ -182,7 +183,10 @@ const AdminReservas = () => {
         .eq("status", "active")
         .order("display_order");
       if (error) throw error;
-      return data as Room[];
+      // Busca reservas ativas (checked_in) para marcar quartos ocupados
+      const { data: activeRes } = await supabase.from("reservations").select("room_id").eq("status", "checked_in");
+      const occupiedIds = new Set((activeRes || []).map((r: any) => r.room_id));
+      return (data as Room[]).map((r) => ({ ...r, ocupado: occupiedIds.has(r.id) }));
     },
   });
 
@@ -781,12 +785,26 @@ const AdminReservas = () => {
                         {rooms.map((room) => (
                           <button
                             key={room.id}
-                            onClick={() => setRoomId(room.id)}
-                            className={`w-full text-left px-4 py-3 rounded-xl border transition-all ${roomId === room.id ? "border-primary/50 bg-primary/8" : "border-white/8 bg-[#1a1a1f] hover:border-white/18"}`}
+                            onClick={() => !room.ocupado && setRoomId(room.id)}
+                            disabled={room.ocupado}
+                            className={`w-full text-left px-4 py-3 rounded-xl border transition-all ${
+                              room.ocupado
+                                ? "border-red-500/20 bg-red-500/5 opacity-60 cursor-not-allowed"
+                                : roomId === room.id
+                                  ? "border-primary/50 bg-primary/8"
+                                  : "border-white/8 bg-[#1a1a1f] hover:border-white/18"
+                            }`}
                           >
                             <div className="flex items-center justify-between">
                               <div>
-                                <p className="text-cream text-sm font-body font-medium">{room.name}</p>
+                                <div className="flex items-center gap-2">
+                                  <p className="text-cream text-sm font-body font-medium">{room.name}</p>
+                                  {room.ocupado && (
+                                    <span className="text-[10px] px-1.5 py-0.5 rounded bg-red-500/20 text-red-400 border border-red-500/30 font-body">
+                                      Ocupado
+                                    </span>
+                                  )}
+                                </div>
                                 <p className="text-white/30 text-xs font-body mt-0.5">
                                   {room.category} · até {room.capacity} hóspedes
                                 </p>
@@ -929,12 +947,26 @@ const AdminReservas = () => {
                       {rooms.map((room) => (
                         <button
                           key={room.id}
-                          onClick={() => setEditRoomId(room.id)}
-                          className={`w-full text-left px-4 py-3 rounded-xl border transition-all ${editRoomId === room.id ? "border-primary/50 bg-primary/8" : "border-white/8 bg-[#1a1a1f] hover:border-white/18"}`}
+                          onClick={() => !room.ocupado && setEditRoomId(room.id)}
+                          disabled={room.ocupado && editRoomId !== room.id}
+                          className={`w-full text-left px-4 py-3 rounded-xl border transition-all ${
+                            editRoomId === room.id
+                              ? "border-primary/50 bg-primary/8"
+                              : room.ocupado
+                                ? "border-red-500/20 bg-red-500/5 opacity-60 cursor-not-allowed"
+                                : "border-white/8 bg-[#1a1a1f] hover:border-white/18"
+                          }`}
                         >
                           <div className="flex items-center justify-between">
                             <div>
-                              <p className="text-cream text-sm font-body font-medium">{room.name}</p>
+                              <div className="flex items-center gap-2">
+                                <p className="text-cream text-sm font-body font-medium">{room.name}</p>
+                                {room.ocupado && editRoomId !== room.id && (
+                                  <span className="text-[10px] px-1.5 py-0.5 rounded bg-red-500/20 text-red-400 border border-red-500/30 font-body">
+                                    Ocupado
+                                  </span>
+                                )}
+                              </div>
                               <p className="text-white/30 text-xs font-body mt-0.5">
                                 {room.category} · até {room.capacity} hósp.
                               </p>
