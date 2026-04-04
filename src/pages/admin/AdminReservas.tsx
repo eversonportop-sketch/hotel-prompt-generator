@@ -60,19 +60,19 @@ interface Reservation {
 }
 
 const STATUS: Record<string, { label: string; color: string; icon: React.ReactNode }> = {
-  pending: {
-    label: "Pendente",
-    color: "bg-yellow-500/15 text-yellow-300 border-yellow-500/25",
-    icon: <Clock className="w-3 h-3" />,
-  },
   confirmed: {
     label: "Confirmada",
     color: "bg-emerald-500/15 text-emerald-300 border-emerald-500/25",
     icon: <CheckCircle2 className="w-3 h-3" />,
   },
-  completed: {
-    label: "Concluída",
+  checked_in: {
+    label: "Hospedado",
     color: "bg-blue-500/15 text-blue-300 border-blue-500/25",
+    icon: <Clock className="w-3 h-3" />,
+  },
+  checked_out: {
+    label: "Finalizada",
+    color: "bg-gray-500/15 text-gray-300 border-gray-500/25",
     icon: <CheckCircle2 className="w-3 h-3" />,
   },
   canceled: {
@@ -83,16 +83,12 @@ const STATUS: Record<string, { label: string; color: string; icon: React.ReactNo
 };
 
 const TRANSITIONS: Record<string, { value: string; label: string; style: string }[]> = {
-  pending: [
-    { value: "confirmed", label: "Confirmar", style: "text-emerald-400 hover:bg-emerald-500/10" },
-    { value: "canceled", label: "Cancelar", style: "text-red-400 hover:bg-red-500/10" },
-  ],
   confirmed: [
-    { value: "completed", label: "Concluir", style: "text-blue-400 hover:bg-blue-500/10" },
     { value: "canceled", label: "Cancelar", style: "text-red-400 hover:bg-red-500/10" },
   ],
-  completed: [],
-  canceled: [{ value: "pending", label: "Reativar", style: "text-yellow-400 hover:bg-yellow-500/10" }],
+  checked_in: [],
+  checked_out: [],
+  canceled: [{ value: "confirmed", label: "Reativar", style: "text-emerald-400 hover:bg-emerald-500/10" }],
 };
 
 const emptyForm = {
@@ -270,6 +266,7 @@ const AdminReservas = () => {
       }
 
       const payload = {
+        client_id: guestId,
         profile_id: guestId,
         room_id: form.room_id,
         check_in: format(form.check_in, "yyyy-MM-dd"),
@@ -386,20 +383,20 @@ const AdminReservas = () => {
       filter: "confirmed",
     },
     {
-      label: "Pendentes",
-      value: reservations.filter((r) => r.status === "pending").length,
-      color: "text-yellow-400",
-      border: "border-yellow-500/20",
-      bg: "bg-yellow-500/10",
-      filter: "pending",
-    },
-    {
-      label: "Concluídas",
-      value: reservations.filter((r) => r.status === "completed").length,
+      label: "Hospedados",
+      value: reservations.filter((r) => r.status === "checked_in").length,
       color: "text-blue-400",
       border: "border-blue-500/20",
       bg: "bg-blue-500/10",
-      filter: "completed",
+      filter: "checked_in",
+    },
+    {
+      label: "Finalizadas",
+      value: reservations.filter((r) => r.status === "checked_out").length,
+      color: "text-gray-400",
+      border: "border-gray-500/20",
+      bg: "bg-gray-500/10",
+      filter: "checked_out",
     },
   ];
 
@@ -457,10 +454,10 @@ const AdminReservas = () => {
             className="appearance-none bg-charcoal-light border border-white/5 rounded-xl pl-4 pr-10 py-2.5 text-cream text-sm font-body focus:outline-none focus:border-primary/40 transition cursor-pointer"
           >
             <option value="all">Todos os status</option>
-            <option value="pending">Pendente</option>
             <option value="confirmed">Confirmada</option>
+            <option value="checked_in">Hospedado</option>
+            <option value="checked_out">Finalizada</option>
             <option value="canceled">Cancelada</option>
-            <option value="completed">Concluída</option>
           </select>
           <ChevronDown className="absolute right-3 top-1/2 -translate-y-1/2 w-4 h-4 text-white/30 pointer-events-none" />
         </div>
@@ -505,7 +502,7 @@ const AdminReservas = () => {
                 const roomName = (r.rooms as any)?.name;
                 const roomCat = (r.rooms as any)?.category;
                 const n = differenceInDays(new Date(r.check_out + "T12:00:00"), new Date(r.check_in + "T12:00:00"));
-                const st = STATUS[r.status] ?? STATUS.pending;
+                const st = STATUS[r.status] ?? STATUS.confirmed;
                 const transitions = TRANSITIONS[r.status] ?? [];
                 return (
                   <motion.tr

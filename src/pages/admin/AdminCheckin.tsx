@@ -73,7 +73,7 @@ const opStatusConfig: Record<OperationStatus, { label: string; color: string; ic
     icon: Home,
   },
   checked_out: {
-    label: "Check-out feito",
+    label: "Finalizada",
     color: "bg-gray-500/20 text-gray-400 border-gray-500/30",
     icon: CheckCircle2,
   },
