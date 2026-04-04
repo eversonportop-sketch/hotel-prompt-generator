@@ -60,19 +60,19 @@ interface Reservation {
 }
 
 const STATUS: Record<string, { label: string; color: string; icon: React.ReactNode }> = {
-  pending: {
-    label: "Pendente",
-    color: "bg-yellow-500/15 text-yellow-300 border-yellow-500/25",
-    icon: <Clock className="w-3 h-3" />,
-  },
   confirmed: {
     label: "Confirmada",
     color: "bg-emerald-500/15 text-emerald-300 border-emerald-500/25",
     icon: <CheckCircle2 className="w-3 h-3" />,
   },
-  completed: {
-    label: "Concluída",
+  checked_in: {
+    label: "Hospedado",
     color: "bg-blue-500/15 text-blue-300 border-blue-500/25",
+    icon: <Clock className="w-3 h-3" />,
+  },
+  checked_out: {
+    label: "Finalizada",
+    color: "bg-gray-500/15 text-gray-300 border-gray-500/25",
     icon: <CheckCircle2 className="w-3 h-3" />,
   },
   canceled: {
@@ -83,16 +83,12 @@ const STATUS: Record<string, { label: string; color: string; icon: React.ReactNo
 };
 
 const TRANSITIONS: Record<string, { value: string; label: string; style: string }[]> = {
-  pending: [
-    { value: "confirmed", label: "Confirmar", style: "text-emerald-400 hover:bg-emerald-500/10" },
-    { value: "canceled", label: "Cancelar", style: "text-red-400 hover:bg-red-500/10" },
-  ],
   confirmed: [
-    { value: "completed", label: "Concluir", style: "text-blue-400 hover:bg-blue-500/10" },
     { value: "canceled", label: "Cancelar", style: "text-red-400 hover:bg-red-500/10" },
   ],
-  completed: [],
-  canceled: [{ value: "pending", label: "Reativar", style: "text-yellow-400 hover:bg-yellow-500/10" }],
+  checked_in: [],
+  checked_out: [],
+  canceled: [{ value: "confirmed", label: "Reativar", style: "text-emerald-400 hover:bg-emerald-500/10" }],
 };
 
 const emptyForm = {
