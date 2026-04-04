@@ -11,7 +11,6 @@ import {
   Loader2,
   BedDouble,
   User,
-  Users,
   CalendarIcon,
   Trash2,
   Pencil,
@@ -19,7 +18,8 @@ import {
   Ban,
   Clock,
   ChevronDown,
-  UserPlus,
+  LogIn,
+  ArrowRight,
 } from "lucide-react";
 import { format, differenceInDays, addDays } from "date-fns";
 import { ptBR } from "date-fns/locale";
@@ -28,13 +28,6 @@ import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover
 import { cn } from "@/lib/utils";
 import { toast } from "sonner";
 
-interface Guest {
-  id: string;
-  full_name: string;
-  email: string | null;
-  phone: string | null;
-  cpf: string | null;
-}
 interface Room {
   id: string;
   name: string;
@@ -54,6 +47,8 @@ interface Reservation {
   client_id: string | null;
   profile_id: string | null;
   guest_id: string | null;
+  checked_in_at: string | null;
+  checked_out_at: string | null;
   rooms: { id?: string; name: string; category: string } | null;
   guests: { full_name: string } | null;
   profiles: { full_name: string | null } | null;
@@ -81,7 +76,6 @@ const STATUS: Record<string, { label: string; color: string; icon: React.ReactNo
     icon: <Ban className="w-3 h-3" />,
   },
 };
-
 const TRANSITIONS: Record<string, { value: string; label: string; style: string }[]> = {
   pending: [
     { value: "confirmed", label: "Confirmar", style: "text-emerald-400 hover:bg-emerald-500/10" },
@@ -91,50 +85,49 @@ const TRANSITIONS: Record<string, { value: string; label: string; style: string 
   completed: [],
   canceled: [{ value: "pending", label: "Reativar", style: "text-yellow-400 hover:bg-yellow-500/10" }],
 };
-
-const emptyForm = {
-  client_id: "",
-  room_id: "",
-  check_in: undefined as Date | undefined,
-  check_out: undefined as Date | undefined,
-  guests_count: 1,
-  notes: "",
-};
-
-const emptyNewClient = {
-  full_name: "",
-  email: "",
-  phone: "",
-  cpf: "",
-};
+const emptyNewClient = { full_name: "", phone: "", cpf: "", email: "" };
 
 const AdminReservas = () => {
   const qc = useQueryClient();
   const location = useLocation();
   const [search, setSearch] = useState("");
   const [statusFilter, setStatusFilter] = useState("all");
-  const [modalOpen, setModalOpen] = useState(false);
-  const [editingId, setEditingId] = useState<string | null>(null);
-  const [form, setForm] = useState({ ...emptyForm });
-  const [clientSearch, setClientSearch] = useState("");
-  const [selectedName, setSelectedName] = useState("");
-  const [saving, setSaving] = useState(false);
   const [deleteId, setDeleteId] = useState<string | null>(null);
-  const [clientMode, setClientMode] = useState<"search" | "new">("search");
-  const [newClient, setNewClient] = useState({ ...emptyNewClient });
 
-  // Abre modal com cliente pré-selecionado vindo da página de Clientes
+  // Nova Reserva modal
+  const [modalOpen, setModalOpen] = useState(false);
+  const [step, setStep] = useState<1 | 2>(1);
+  const [nameInput, setNameInput] = useState("");
+  const [selectedClient, setSelectedClient] = useState<{
+    id: string;
+    name: string;
+    phone?: string;
+    cpf?: string;
+  } | null>(null);
+  const [newClient, setNewClient] = useState({ ...emptyNewClient });
+  const [isNew, setIsNew] = useState(false);
+  const [roomId, setRoomId] = useState("");
+  const [checkIn, setCheckIn] = useState<Date | undefined>();
+  const [checkOut, setCheckOut] = useState<Date | undefined>();
+  const [guestsCount, setGuestsCount] = useState(1);
+  const [notes, setNotes] = useState("");
+  const [saving, setSaving] = useState(false);
+
+  // Edit modal
+  const [editingRes, setEditingRes] = useState<Reservation | null>(null);
+  const [editRoomId, setEditRoomId] = useState("");
+  const [editCheckIn, setEditCheckIn] = useState<Date | undefined>();
+  const [editCheckOut, setEditCheckOut] = useState<Date | undefined>();
+  const [editNotes, setEditNotes] = useState("");
+  const [editSaving, setEditSaving] = useState(false);
+
   useEffect(() => {
     const state = location.state as { preselectedGuest?: { id: string; full_name: string } } | null;
     if (state?.preselectedGuest) {
-      setEditingId(null);
-      setForm({ ...emptyForm, client_id: state.preselectedGuest.id });
-      setSelectedName(state.preselectedGuest.full_name);
-      setClientMode("search");
-      setNewClient({ ...emptyNewClient });
-      setClientSearch("");
-      setModalOpen(true);
-      // Limpa o state para não reabrir ao voltar
+      openModal();
+      setSelectedClient({ id: state.preselectedGuest.id, name: state.preselectedGuest.full_name });
+      setIsNew(false);
+      setStep(2);
       window.history.replaceState({}, "");
     }
   }, [location.state]);
@@ -144,40 +137,35 @@ const AdminReservas = () => {
     queryFn: async () => {
       const { data, error } = await supabase
         .from("reservations")
-        .select("*, profiles(full_name), rooms(id,name,category)")
+        .select("*, profiles(full_name), rooms(id,name,category), checked_in_at, checked_out_at")
         .order("created_at", { ascending: false });
       if (error) throw error;
-      // Enrich with guest names
-      const allData = (data || []) as any[];
-      const guestIds = [...new Set(allData.filter((r) => r.guest_id).map((r) => r.guest_id as string))];
-      if (guestIds.length) {
-        const { data: gd } = await (supabase as any).from("guests").select("id,full_name").in("id", guestIds);
+      const all = (data || []) as any[];
+      const gids = [...new Set(all.filter((r) => r.guest_id).map((r) => r.guest_id as string))];
+      if (gids.length) {
+        const { data: gd } = await (supabase as any).from("guests").select("id,full_name").in("id", gids);
         const gMap: Record<string, string> = {};
         (gd || []).forEach((g: any) => {
           gMap[g.id] = g.full_name;
         });
-        allData.forEach((r) => {
+        all.forEach((r) => {
           if (r.guest_id && gMap[r.guest_id]) r.guests = { full_name: gMap[r.guest_id] };
         });
       }
-      return allData as Reservation[];
+      return all as Reservation[];
     },
   });
 
-  const { data: guestsList = [] } = useQuery({
-    queryKey: ["admin-guests-select"],
+  const { data: clientsList = [] } = useQuery({
+    queryKey: ["admin-clients-search"],
     queryFn: async () => {
-      // Fetch from both profiles (portal users) and guests (walk-in) tables
-      const [profilesRes, guestsRes] = await Promise.all([
-        supabase.from("profiles").select("id,full_name,email,phone,cpf").neq("role", "admin").order("full_name"),
-        supabase.from("guests").select("id,full_name,email,phone,cpf").order("full_name"),
+      const [pr, gr] = await Promise.all([
+        supabase.from("profiles").select("id,full_name,phone,cpf").neq("role", "admin").order("full_name"),
+        supabase.from("guests").select("id,full_name,phone,cpf").order("full_name"),
       ]);
-      if (profilesRes.error) throw profilesRes.error;
-      const profiles = (profilesRes.data || []) as Guest[];
-      const guests = (guestsRes.data || []) as Guest[];
-      // Merge, deduplicate by id
+      const all = [...(pr.data || []), ...(gr.data || [])] as any[];
       const seen = new Set<string>();
-      return [...profiles, ...guests].filter((g) => {
+      return all.filter((g) => {
         if (seen.has(g.id)) return false;
         seen.add(g.id);
         return true;
@@ -223,148 +211,29 @@ const AdminReservas = () => {
     onError: () => toast.error("Erro ao excluir."),
   });
 
-  const handleSave = async () => {
-    // Validate client
-    if (clientMode === "new") {
-      if (!newClient.full_name.trim()) {
-        toast.error("Informe o nome do cliente.");
-        return;
-      }
-    } else if (!form.client_id) {
-      toast.error("Selecione um cliente.");
-      return;
-    }
-    if (!form.room_id) {
-      toast.error("Selecione um quarto.");
-      return;
-    }
-    if (!form.check_in || !form.check_out) {
-      toast.error("Selecione as datas.");
-      return;
-    }
-    const nights = differenceInDays(form.check_out, form.check_in);
-    if (nights < 1) {
-      toast.error("Check-out deve ser após o check-in.");
-      return;
-    }
-    const room = rooms.find((r) => r.id === form.room_id)!;
-    const total = nights * Number(room.promotional_price || room.price);
-    setSaving(true);
-    try {
-      let guestId = form.client_id;
-
-      // If creating a new client, insert into guests table (no auth required)
-      if (clientMode === "new" && !editingId) {
-        const { data: gd, error: ge } = await supabase
-          .from("guests")
-          .insert({
-            full_name: newClient.full_name.trim(),
-            email: newClient.email.trim() || null,
-            phone: newClient.phone.trim() || null,
-            cpf: newClient.cpf.trim() || null,
-          })
-          .select("id")
-          .single();
-        if (ge) throw ge;
-        guestId = gd.id;
-        qc.invalidateQueries({ queryKey: ["admin-guests-select"] });
-      }
-
-      const isNewGuest = clientMode === "new" && !editingId;
-      const payload = {
-        ...(isNewGuest ? { guest_id: guestId } : { profile_id: guestId }),
-        room_id: form.room_id,
-        check_in: format(form.check_in, "yyyy-MM-dd"),
-        check_out: format(form.check_out, "yyyy-MM-dd"),
-        guests_count: form.guests_count,
-        total_price: total,
-        notes: form.notes || null,
-      };
-      if (editingId) {
-        const { error } = await supabase.from("reservations").update(payload).eq("id", editingId);
-        if (error) throw error;
-        toast.success("Reserva atualizada!");
-      } else {
-        const { data: avail } = await supabase.rpc("check_room_availability", {
-          p_room_id: form.room_id,
-          p_check_in: payload.check_in,
-          p_check_out: payload.check_out,
-        });
-        if (!avail) {
-          toast.error("Quarto indisponível para essas datas.");
-          setSaving(false);
-          return;
-        }
-        const { error } = await supabase.from("reservations").insert({ ...payload, status: "confirmed" });
-        if (error) throw error;
-        toast.success("Reserva criada!");
-      }
-      qc.invalidateQueries({ queryKey: ["admin-reservations"] });
-      closeModal();
-    } catch (err: any) {
-      toast.error(err.message || "Erro ao salvar.");
-    } finally {
-      setSaving(false);
-    }
-  };
-
-  const openCreate = () => {
-    setEditingId(null);
-    setForm({ ...emptyForm });
-    setClientSearch("");
-    setSelectedName("");
-    setClientMode("search");
-    setNewClient({ ...emptyNewClient });
-    setModalOpen(true);
-  };
-  const openEdit = (r: Reservation) => {
-    const cid = r.profile_id || r.guest_id || r.client_id || "";
-    setEditingId(r.id);
-    setForm({
-      client_id: cid,
-      room_id: (r.rooms as any)?.id || "",
-      check_in: new Date(r.check_in + "T12:00:00"),
-      check_out: new Date(r.check_out + "T12:00:00"),
-      guests_count: r.guests_count,
-      notes: r.notes || "",
-    });
-    setSelectedName((r.guests as any)?.full_name || (r.profiles as any)?.full_name || "");
-    setClientSearch("");
-    setClientMode("search");
-    setNewClient({ ...emptyNewClient });
-    setModalOpen(true);
-  };
-  const closeModal = () => {
-    setModalOpen(false);
-    setEditingId(null);
-    setForm({ ...emptyForm });
-    setClientSearch("");
-    setSelectedName("");
-    setClientMode("search");
-    setNewClient({ ...emptyNewClient });
-  };
-
   const filtered = reservations.filter((r) => {
     const matchStatus = statusFilter === "all" || r.status === statusFilter;
     const q = search.toLowerCase();
     const cn = (r.guests as any)?.full_name ?? (r.profiles as any)?.full_name ?? "";
-    const rn = (r.rooms as any)?.name ?? "";
-    return matchStatus && (!q || cn.toLowerCase().includes(q) || rn.toLowerCase().includes(q));
-  });
-
-  const filteredGuests = guestsList.filter((g) => {
-    const q = clientSearch.toLowerCase();
     return (
-      !q ||
-      g.full_name?.toLowerCase().includes(q) ||
-      g.email?.toLowerCase().includes(q) ||
-      g.phone?.includes(q) ||
-      g.cpf?.includes(q)
+      matchStatus && (!q || cn.toLowerCase().includes(q) || ((r.rooms as any)?.name ?? "").toLowerCase().includes(q))
     );
   });
 
-  const selectedRoom = rooms.find((r) => r.id === form.room_id);
-  const nights = form.check_in && form.check_out ? differenceInDays(form.check_out, form.check_in) : 0;
+  const matchedClients =
+    nameInput.trim().length >= 1
+      ? clientsList
+          .filter(
+            (c) =>
+              c.full_name?.toLowerCase().includes(nameInput.toLowerCase()) ||
+              c.phone?.includes(nameInput) ||
+              c.cpf?.includes(nameInput),
+          )
+          .slice(0, 6)
+      : [];
+
+  const selectedRoom = rooms.find((r) => r.id === roomId);
+  const nights = checkIn && checkOut ? differenceInDays(checkOut, checkIn) : 0;
   const totalPreview =
     selectedRoom && nights > 0 ? nights * Number(selectedRoom.promotional_price || selectedRoom.price) : 0;
   const today = new Date();
@@ -405,6 +274,146 @@ const AdminReservas = () => {
     },
   ];
 
+  const openModal = () => {
+    setModalOpen(true);
+    setStep(1);
+    setNameInput("");
+    setSelectedClient(null);
+    setIsNew(false);
+    setNewClient({ ...emptyNewClient });
+    setRoomId("");
+    setCheckIn(undefined);
+    setCheckOut(undefined);
+    setGuestsCount(1);
+    setNotes("");
+  };
+
+  const pickExisting = (c: any) => {
+    setSelectedClient({ id: c.id, name: c.full_name, phone: c.phone, cpf: c.cpf });
+    setIsNew(false);
+    setStep(2);
+  };
+  const pickNew = () => {
+    setIsNew(true);
+    setNewClient((n) => ({ ...n, full_name: nameInput.trim() }));
+    setSelectedClient(null);
+    setStep(2);
+  };
+
+  const handleSave = async () => {
+    if (isNew && !newClient.full_name.trim()) {
+      toast.error("Informe o nome.");
+      return;
+    }
+    if (!isNew && !selectedClient) {
+      toast.error("Selecione um hóspede.");
+      return;
+    }
+    if (!roomId) {
+      toast.error("Selecione um quarto.");
+      return;
+    }
+    if (!checkIn || !checkOut || nights < 1) {
+      toast.error("Datas inválidas.");
+      return;
+    }
+    const room = rooms.find((r) => r.id === roomId)!;
+    const total = nights * Number(room.promotional_price || room.price);
+    setSaving(true);
+    try {
+      let guestId = selectedClient?.id ?? null;
+      if (isNew) {
+        const { data: gd, error: ge } = await supabase
+          .from("guests")
+          .insert({
+            full_name: newClient.full_name.trim(),
+            phone: newClient.phone || null,
+            cpf: newClient.cpf || null,
+            email: newClient.email || null,
+          })
+          .select("id")
+          .single();
+        if (ge) throw ge;
+        guestId = gd.id;
+        qc.invalidateQueries({ queryKey: ["admin-clients-search"] });
+      }
+      const payload = {
+        ...(isNew ? { guest_id: guestId } : { profile_id: guestId }),
+        room_id: roomId,
+        check_in: format(checkIn, "yyyy-MM-dd"),
+        check_out: format(checkOut, "yyyy-MM-dd"),
+        guests_count: guestsCount,
+        total_price: total,
+        notes: notes || null,
+        status: "confirmed",
+      };
+      const { data: avail } = await supabase.rpc("check_room_availability", {
+        p_room_id: roomId,
+        p_check_in: payload.check_in,
+        p_check_out: payload.check_out,
+      });
+      if (!avail) {
+        toast.error("Quarto indisponível para essas datas.");
+        setSaving(false);
+        return;
+      }
+      const { error } = await supabase.from("reservations").insert(payload);
+      if (error) throw error;
+      toast.success(isNew ? "Hóspede cadastrado e reserva criada!" : "Reserva criada!");
+      qc.invalidateQueries({ queryKey: ["admin-reservations"] });
+      setModalOpen(false);
+    } catch (err: any) {
+      toast.error(err.message || "Erro ao salvar.");
+    } finally {
+      setSaving(false);
+    }
+  };
+
+  const openEdit = (r: Reservation) => {
+    setEditingRes(r);
+    setEditRoomId((r.rooms as any)?.id || "");
+    setEditCheckIn(new Date(r.check_in + "T12:00:00"));
+    setEditCheckOut(new Date(r.check_out + "T12:00:00"));
+    setEditNotes(r.notes || "");
+  };
+
+  const handleEditSave = async () => {
+    if (!editingRes || !editCheckIn || !editCheckOut) return;
+    const n = differenceInDays(editCheckOut, editCheckIn);
+    if (n < 1) {
+      toast.error("Check-out deve ser após o check-in.");
+      return;
+    }
+    const room = rooms.find((r) => r.id === editRoomId);
+    const total = n * Number(room?.promotional_price || room?.price || 0);
+    setEditSaving(true);
+    try {
+      const { error } = await supabase
+        .from("reservations")
+        .update({
+          room_id: editRoomId,
+          check_in: format(editCheckIn, "yyyy-MM-dd"),
+          check_out: format(editCheckOut, "yyyy-MM-dd"),
+          guests_count: 1,
+          total_price: total,
+          notes: editNotes || null,
+        })
+        .eq("id", editingRes.id);
+      if (error) throw error;
+      toast.success("Reserva atualizada!");
+      qc.invalidateQueries({ queryKey: ["admin-reservations"] });
+      setEditingRes(null);
+    } catch (err: any) {
+      toast.error(err.message || "Erro.");
+    } finally {
+      setEditSaving(false);
+    }
+  };
+
+  const btnGold =
+    "flex items-center gap-2 px-5 py-2.5 rounded-lg text-black text-sm font-body font-semibold hover:brightness-110 transition-all disabled:opacity-50";
+  const goldBg = { background: "linear-gradient(135deg,#C9A84C,#E5C97A)" };
+
   return (
     <div className="p-6 md:p-8 space-y-6 text-cream">
       {/* Header */}
@@ -418,16 +427,12 @@ const AdminReservas = () => {
             <p className="text-white/30 text-xs mt-0.5 font-body">Gestão e controle de reservas</p>
           </div>
         </div>
-        <button
-          onClick={openCreate}
-          className="flex items-center gap-2 px-4 py-2.5 rounded-lg text-black text-sm font-body font-semibold hover:brightness-110 transition-all"
-          style={{ background: "linear-gradient(135deg,#C9A84C,#E5C97A)" }}
-        >
+        <button onClick={openModal} className={btnGold} style={goldBg}>
           <Plus className="w-4 h-4" /> Nova Reserva
         </button>
       </div>
 
-      {/* KPIs clicáveis */}
+      {/* KPIs */}
       <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
         {kpis.map((k) => (
           <button
@@ -441,13 +446,13 @@ const AdminReservas = () => {
         ))}
       </div>
 
-      {/* Filtros */}
+      {/* Search */}
       <div className="flex flex-col sm:flex-row gap-3">
         <div className="relative flex-1">
           <Search className="absolute left-3.5 top-1/2 -translate-y-1/2 w-4 h-4 text-white/25" />
           <input
             className="w-full pl-10 pr-4 py-2.5 bg-charcoal-light border border-white/5 rounded-xl text-cream text-sm focus:border-primary/40 focus:outline-none transition placeholder:text-white/20 font-body"
-            placeholder="Buscar por cliente ou quarto..."
+            placeholder="Buscar por hóspede ou quarto..."
             value={search}
             onChange={(e) => setSearch(e.target.value)}
           />
@@ -468,7 +473,7 @@ const AdminReservas = () => {
         </div>
       </div>
 
-      {/* Tabela */}
+      {/* Table */}
       {isLoading ? (
         <div className="flex items-center justify-center py-20 text-white/20 font-body gap-2">
           <Loader2 className="w-4 h-4 animate-spin" /> Carregando...
@@ -491,7 +496,7 @@ const AdminReservas = () => {
           <table className="w-full">
             <thead>
               <tr className="border-b border-white/5">
-                {["Cliente", "Quarto", "Período", "Noites", "Total", "Status", ""].map((h) => (
+                {["Hóspede", "Quarto", "Período", "Noites", "Total", "Status", ""].map((h) => (
                   <th
                     key={h}
                     className="text-left px-5 py-3.5 text-[10px] uppercase tracking-widest text-white/25 font-body"
@@ -509,6 +514,7 @@ const AdminReservas = () => {
                 const n = differenceInDays(new Date(r.check_out + "T12:00:00"), new Date(r.check_in + "T12:00:00"));
                 const st = STATUS[r.status] ?? STATUS.pending;
                 const transitions = TRANSITIONS[r.status] ?? [];
+                const canCheckin = (r.status === "confirmed" || r.status === "pending") && !r.checked_in_at;
                 return (
                   <motion.tr
                     key={r.id}
@@ -559,6 +565,14 @@ const AdminReservas = () => {
                     </td>
                     <td className="px-5 py-4">
                       <div className="flex items-center gap-1 opacity-0 group-hover:opacity-100 transition-opacity">
+                        {canCheckin && (
+                          <a
+                            href="/admin/checkin"
+                            className="flex items-center gap-1 text-xs px-2.5 py-1.5 rounded-lg font-body text-emerald-400 hover:bg-emerald-500/10 transition-colors"
+                          >
+                            <LogIn className="w-3.5 h-3.5" /> Check-in
+                          </a>
+                        )}
                         {transitions.map((t) => (
                           <button
                             key={t.value}
@@ -590,7 +604,7 @@ const AdminReservas = () => {
         </div>
       )}
 
-      {/* Modal Nova/Editar Reserva */}
+      {/* ═══ MODAL NOVA RESERVA ═══ */}
       <AnimatePresence>
         {modalOpen && (
           <>
@@ -600,10 +614,10 @@ const AdminReservas = () => {
               animate={{ opacity: 1 }}
               exit={{ opacity: 0 }}
               className="fixed inset-0 z-50 bg-black/70 backdrop-blur-sm"
-              onClick={closeModal}
+              onClick={() => setModalOpen(false)}
             />
             <motion.div
-              key="modal"
+              key="m"
               initial={{ opacity: 0, scale: 0.96, y: 16 }}
               animate={{ opacity: 1, scale: 1, y: 0 }}
               exit={{ opacity: 0, scale: 0.96, y: 16 }}
@@ -611,254 +625,363 @@ const AdminReservas = () => {
               className="fixed inset-0 z-50 flex items-center justify-center p-4 pointer-events-none"
             >
               <div
-                className="bg-[#111114] border border-white/10 rounded-2xl w-full max-w-lg shadow-2xl pointer-events-auto flex flex-col max-h-[90vh]"
+                className="bg-[#111114] border border-white/10 rounded-2xl w-full max-w-md shadow-2xl pointer-events-auto flex flex-col max-h-[90vh]"
+                onClick={(e) => e.stopPropagation()}
+              >
+                {/* Modal header */}
+                <div className="flex items-center justify-between px-6 py-5 border-b border-white/5 shrink-0">
+                  <div className="flex items-center gap-3">
+                    {step === 2 && (
+                      <button
+                        onClick={() => {
+                          setStep(1);
+                          setRoomId("");
+                          setCheckIn(undefined);
+                          setCheckOut(undefined);
+                        }}
+                        className="text-white/30 hover:text-cream transition-colors text-lg leading-none"
+                      >
+                        ←
+                      </button>
+                    )}
+                    <div className="flex items-center gap-2">
+                      <CalendarDays className="w-4 h-4 text-primary" />
+                      <h2 className="font-display text-lg font-semibold text-cream">
+                        {step === 1 ? "Nova Reserva" : "Detalhes"}
+                      </h2>
+                    </div>
+                  </div>
+                  <div className="flex items-center gap-3">
+                    <div className="flex gap-1.5">
+                      <div
+                        className={`w-5 h-1 rounded-full transition-colors ${step >= 1 ? "bg-primary" : "bg-white/10"}`}
+                      />
+                      <div
+                        className={`w-5 h-1 rounded-full transition-colors ${step >= 2 ? "bg-primary" : "bg-white/10"}`}
+                      />
+                    </div>
+                    <button
+                      onClick={() => setModalOpen(false)}
+                      className="text-white/25 hover:text-cream transition-colors"
+                    >
+                      <X className="w-5 h-5" />
+                    </button>
+                  </div>
+                </div>
+
+                {/* STEP 1 */}
+                {step === 1 && (
+                  <div className="px-6 py-5 flex-1 overflow-y-auto">
+                    <label className="flex items-center gap-1.5 text-[10px] text-white/40 font-body uppercase tracking-widest mb-3">
+                      <User className="w-3 h-3" /> Nome do hóspede
+                    </label>
+                    <div className="relative mb-3">
+                      <Search className="absolute left-3.5 top-1/2 -translate-y-1/2 w-4 h-4 text-white/20 pointer-events-none" />
+                      <input
+                        autoFocus
+                        placeholder="Digitar nome, CPF ou telefone..."
+                        value={nameInput}
+                        onChange={(e) => setNameInput(e.target.value)}
+                        className="w-full pl-10 pr-4 py-3 bg-[#0d0d10] border border-white/8 rounded-xl text-cream text-sm font-body focus:outline-none focus:border-primary/40 transition placeholder:text-white/20"
+                      />
+                    </div>
+                    <div className="space-y-1.5">
+                      {matchedClients.map((c) => (
+                        <button
+                          key={c.id}
+                          onClick={() => pickExisting(c)}
+                          className="w-full flex items-center gap-3 px-4 py-3 rounded-xl bg-white/[0.03] hover:bg-white/[0.07] border border-white/5 hover:border-white/12 transition-all text-left group"
+                        >
+                          <div className="w-8 h-8 rounded-full bg-white/5 border border-white/8 flex items-center justify-center shrink-0">
+                            <span className="text-white/40 text-sm font-display font-bold group-hover:text-primary/60 transition-colors">
+                              {(c.full_name ?? "?")[0].toUpperCase()}
+                            </span>
+                          </div>
+                          <div className="flex-1 min-w-0">
+                            <p className="text-cream/90 text-sm font-body font-medium truncate">{c.full_name}</p>
+                            <p className="text-white/30 text-xs font-body truncate">{c.phone || c.cpf || "—"}</p>
+                          </div>
+                          <ArrowRight className="w-4 h-4 text-white/20 group-hover:text-primary/50 transition-colors" />
+                        </button>
+                      ))}
+                      {nameInput.trim().length >= 2 && (
+                        <button
+                          onClick={pickNew}
+                          className="w-full flex items-center gap-3 px-4 py-3 rounded-xl border border-dashed border-primary/25 hover:border-primary/50 hover:bg-primary/5 transition-all text-left group"
+                        >
+                          <div className="w-8 h-8 rounded-full bg-primary/10 border border-primary/20 flex items-center justify-center shrink-0">
+                            <Plus className="w-4 h-4 text-primary/50 group-hover:text-primary transition-colors" />
+                          </div>
+                          <div className="flex-1 min-w-0">
+                            <p className="text-primary/70 text-sm font-body font-medium group-hover:text-primary transition-colors">
+                              Novo: "{nameInput.trim()}"
+                            </p>
+                            <p className="text-white/25 text-xs font-body">Cadastrar e criar reserva</p>
+                          </div>
+                          <ArrowRight className="w-4 h-4 text-primary/30 group-hover:text-primary/60 transition-colors" />
+                        </button>
+                      )}
+                      {nameInput.trim().length < 2 && (
+                        <p className="text-white/20 text-xs font-body text-center py-6">
+                          Digite o nome para buscar ou criar um novo hóspede
+                        </p>
+                      )}
+                    </div>
+                  </div>
+                )}
+
+                {/* STEP 2 */}
+                {step === 2 && (
+                  <div className="px-6 py-5 space-y-5 overflow-y-auto flex-1">
+                    {/* Client summary */}
+                    <div className="flex items-center gap-3 bg-emerald-500/8 border border-emerald-500/20 rounded-xl px-4 py-3">
+                      <div className="w-8 h-8 rounded-full bg-emerald-500/15 border border-emerald-500/25 flex items-center justify-center shrink-0">
+                        <span className="text-emerald-400 text-sm font-display font-bold">
+                          {(isNew ? newClient.full_name : (selectedClient?.name ?? "?"))[0]?.toUpperCase()}
+                        </span>
+                      </div>
+                      <div className="flex-1 min-w-0">
+                        <p className="text-cream text-sm font-body font-medium truncate">
+                          {isNew ? newClient.full_name : selectedClient?.name}
+                        </p>
+                        <p className="text-white/30 text-xs font-body">
+                          {isNew ? "Novo hóspede" : selectedClient?.phone || selectedClient?.cpf || "Cadastrado"}
+                        </p>
+                      </div>
+                    </div>
+
+                    {/* New client extra fields */}
+                    {isNew && (
+                      <div className="grid grid-cols-2 gap-3">
+                        {[
+                          ["CPF", "cpf", "000.000.000-00"],
+                          ["Telefone", "phone", "(51) 99999-0000"],
+                        ].map(([label, key, ph]) => (
+                          <div key={key}>
+                            <label className="text-[10px] text-white/30 font-body uppercase tracking-widest block mb-1.5">
+                              {label}
+                            </label>
+                            <input
+                              placeholder={ph}
+                              value={(newClient as any)[key]}
+                              onChange={(e) => setNewClient((c) => ({ ...c, [key]: e.target.value }))}
+                              className="w-full bg-[#1a1a1f] border border-white/8 rounded-lg px-3 py-2.5 text-cream text-sm font-body focus:outline-none focus:border-primary/40 transition placeholder:text-white/15"
+                            />
+                          </div>
+                        ))}
+                      </div>
+                    )}
+
+                    {/* Room */}
+                    <div>
+                      <label className="flex items-center gap-1.5 text-[10px] text-white/40 font-body uppercase tracking-widest mb-2">
+                        <BedDouble className="w-3 h-3" /> Quarto
+                      </label>
+                      <div className="space-y-2 max-h-36 overflow-y-auto pr-1">
+                        {rooms.map((room) => (
+                          <button
+                            key={room.id}
+                            onClick={() => setRoomId(room.id)}
+                            className={`w-full text-left px-4 py-3 rounded-xl border transition-all ${roomId === room.id ? "border-primary/50 bg-primary/8" : "border-white/8 bg-[#1a1a1f] hover:border-white/18"}`}
+                          >
+                            <div className="flex items-center justify-between">
+                              <div>
+                                <p className="text-cream text-sm font-body font-medium">{room.name}</p>
+                                <p className="text-white/30 text-xs font-body mt-0.5">
+                                  {room.category} · até {room.capacity} hóspedes
+                                </p>
+                              </div>
+                              <div className="text-right">
+                                <p className="text-primary font-display font-semibold text-sm">
+                                  R$ {Number(room.promotional_price || room.price).toFixed(0)}
+                                </p>
+                                <p className="text-white/25 text-xs font-body">/noite</p>
+                              </div>
+                            </div>
+                          </button>
+                        ))}
+                      </div>
+                    </div>
+
+                    {/* Dates */}
+                    <div className="grid grid-cols-2 gap-3">
+                      {(
+                        [
+                          ["Check-in", checkIn, setCheckIn, today],
+                          ["Check-out", checkOut, setCheckOut, checkIn ? addDays(checkIn, 1) : addDays(today, 1)],
+                        ] as const
+                      ).map(([label, val, setter, minDate]) => (
+                        <div key={label as string}>
+                          <label className="flex items-center gap-1.5 text-[10px] text-white/40 font-body uppercase tracking-widest mb-2">
+                            <CalendarIcon className="w-3 h-3" /> {label as string}
+                          </label>
+                          <Popover>
+                            <PopoverTrigger asChild>
+                              <button
+                                className={cn(
+                                  "w-full flex items-center gap-2 px-3 py-2.5 bg-[#1a1a1f] border border-white/8 rounded-xl text-sm font-body hover:border-white/20 transition",
+                                  val ? "text-cream" : "text-white/25",
+                                )}
+                              >
+                                <CalendarIcon className="w-3.5 h-3.5 shrink-0" />
+                                {val ? format(val as Date, "dd/MM/yyyy") : "Selecionar"}
+                              </button>
+                            </PopoverTrigger>
+                            <PopoverContent className="w-auto p-0" align="start">
+                              <Calendar
+                                mode="single"
+                                selected={val as Date | undefined}
+                                initialFocus
+                                onSelect={(d) => (setter as (d: Date | undefined) => void)(d)}
+                                disabled={(date) => date < (minDate as Date)}
+                                className="p-3 pointer-events-auto"
+                              />
+                            </PopoverContent>
+                          </Popover>
+                        </div>
+                      ))}
+                    </div>
+
+                    {/* Total */}
+                    {totalPreview > 0 && (
+                      <div className="bg-primary/6 border border-primary/18 rounded-xl p-4">
+                        <div className="flex justify-between text-xs font-body text-white/40 mb-2">
+                          <span>
+                            {nights} {nights === 1 ? "diária" : "diárias"} × R${" "}
+                            {Number(selectedRoom!.promotional_price || selectedRoom!.price).toFixed(0)}
+                          </span>
+                          <span>R$ {totalPreview.toFixed(2).replace(".", ",")}</span>
+                        </div>
+                        <div className="flex justify-between items-center border-t border-primary/12 pt-2">
+                          <span className="font-display text-cream font-semibold text-sm">Total</span>
+                          <span className="font-display text-primary text-xl font-bold">
+                            R$ {totalPreview.toFixed(2).replace(".", ",")}
+                          </span>
+                        </div>
+                      </div>
+                    )}
+                  </div>
+                )}
+
+                {/* Footer */}
+                <div className="flex items-center justify-end gap-3 px-6 py-4 border-t border-white/5 shrink-0">
+                  <button
+                    onClick={() => setModalOpen(false)}
+                    className="px-4 py-2 text-sm text-white/40 hover:text-cream font-body transition-colors"
+                  >
+                    Cancelar
+                  </button>
+                  {step === 2 && (
+                    <button onClick={handleSave} disabled={saving} className={btnGold} style={goldBg}>
+                      {saving ? <Loader2 className="w-4 h-4 animate-spin" /> : <CheckCircle2 className="w-4 h-4" />}
+                      {saving ? "Salvando..." : "Confirmar Reserva"}
+                    </button>
+                  )}
+                </div>
+              </div>
+            </motion.div>
+          </>
+        )}
+      </AnimatePresence>
+
+      {/* ═══ MODAL EDITAR ═══ */}
+      <AnimatePresence>
+        {editingRes && (
+          <>
+            <motion.div
+              key="ebd"
+              initial={{ opacity: 0 }}
+              animate={{ opacity: 1 }}
+              exit={{ opacity: 0 }}
+              className="fixed inset-0 z-50 bg-black/70 backdrop-blur-sm"
+              onClick={() => setEditingRes(null)}
+            />
+            <motion.div
+              key="em"
+              initial={{ opacity: 0, scale: 0.96, y: 16 }}
+              animate={{ opacity: 1, scale: 1, y: 0 }}
+              exit={{ opacity: 0, scale: 0.96, y: 16 }}
+              transition={{ duration: 0.2 }}
+              className="fixed inset-0 z-50 flex items-center justify-center p-4 pointer-events-none"
+            >
+              <div
+                className="bg-[#111114] border border-white/10 rounded-2xl w-full max-w-md shadow-2xl pointer-events-auto flex flex-col max-h-[90vh]"
                 onClick={(e) => e.stopPropagation()}
               >
                 <div className="flex items-center justify-between px-6 py-5 border-b border-white/5 shrink-0">
                   <div className="flex items-center gap-2">
-                    <CalendarDays className="w-4 h-4 text-primary" />
-                    <h2 className="font-display text-lg font-semibold text-cream">
-                      {editingId ? "Editar Reserva" : "Nova Reserva"}
-                    </h2>
+                    <Pencil className="w-4 h-4 text-primary" />
+                    <h2 className="font-display text-lg font-semibold text-cream">Editar Reserva</h2>
                   </div>
-                  <button onClick={closeModal} className="text-white/25 hover:text-cream transition-colors">
+                  <button
+                    onClick={() => setEditingRes(null)}
+                    className="text-white/25 hover:text-cream transition-colors"
+                  >
                     <X className="w-5 h-5" />
                   </button>
                 </div>
-
-                <div className="px-6 py-5 space-y-5 overflow-y-auto flex-1">
-                  {/* 1. CLIENTE — busca única com opção de criar inline */}
-                  <section className="space-y-2">
-                    <label className="flex items-center gap-1.5 text-[10px] text-white/40 font-body uppercase tracking-widest">
-                      <User className="w-3 h-3" />
-                      Cliente
-                    </label>
-
-                    {/* Cliente já selecionado */}
-                    {form.client_id ? (
-                      <div className="flex items-center gap-3 bg-emerald-500/8 border border-emerald-500/20 rounded-xl px-4 py-3">
-                        <div className="w-8 h-8 rounded-full bg-emerald-500/15 border border-emerald-500/25 flex items-center justify-center shrink-0">
-                          <span className="text-emerald-400 text-sm font-display font-bold">
-                            {selectedName[0]?.toUpperCase() ?? "?"}
-                          </span>
-                        </div>
-                        <div className="flex-1 min-w-0">
-                          <p className="text-cream text-sm font-body font-medium truncate">{selectedName}</p>
-                          {clientMode === "new" && (
-                            <p className="text-primary/50 text-xs font-body mt-0.5">Novo cadastro</p>
-                          )}
-                        </div>
-                        <button
-                          onClick={() => {
-                            setForm((f) => ({ ...f, client_id: "" }));
-                            setSelectedName("");
-                            setClientMode("search");
-                            setNewClient({ ...emptyNewClient });
-                          }}
-                          className="p-1 rounded-lg text-white/20 hover:text-red-400 hover:bg-red-500/10 transition-all"
-                        >
-                          <X className="w-3.5 h-3.5" />
-                        </button>
-                      </div>
-                    ) : clientMode === "new" ? (
-                      /* Form inline para novo cliente */
-                      <div className="border border-primary/20 bg-primary/4 rounded-xl p-4 space-y-3">
-                        <div className="flex items-center justify-between">
-                          <p className="text-[10px] text-primary/70 font-body uppercase tracking-widest font-semibold">
-                            Novo cliente
-                          </p>
-                          <button
-                            onClick={() => {
-                              setClientMode("search");
-                              setNewClient({ ...emptyNewClient });
-                              setClientSearch("");
-                            }}
-                            className="text-white/25 hover:text-cream transition-colors"
-                          >
-                            <X className="w-3.5 h-3.5" />
-                          </button>
-                        </div>
-                        <div>
-                          <label className="text-[10px] text-white/30 font-body uppercase tracking-widest block mb-1">
-                            Nome completo <span className="text-red-400">*</span>
-                          </label>
-                          <input
-                            autoFocus
-                            placeholder="Ex: João da Silva"
-                            value={newClient.full_name}
-                            onChange={(e) => setNewClient((c) => ({ ...c, full_name: e.target.value }))}
-                            className="w-full bg-[#1a1a1f] border border-white/8 rounded-lg px-3 py-2 text-cream text-sm font-body focus:outline-none focus:border-primary/40 transition placeholder:text-white/15"
-                          />
-                        </div>
-                        <div className="grid grid-cols-2 gap-2">
-                          <div>
-                            <label className="text-[10px] text-white/30 font-body uppercase tracking-widest block mb-1">
-                              CPF
-                            </label>
-                            <input
-                              placeholder="000.000.000-00"
-                              value={newClient.cpf}
-                              onChange={(e) => setNewClient((c) => ({ ...c, cpf: e.target.value }))}
-                              className="w-full bg-[#1a1a1f] border border-white/8 rounded-lg px-3 py-2 text-cream text-sm font-body focus:outline-none focus:border-primary/40 transition placeholder:text-white/15"
-                            />
-                          </div>
-                          <div>
-                            <label className="text-[10px] text-white/30 font-body uppercase tracking-widest block mb-1">
-                              Telefone
-                            </label>
-                            <input
-                              placeholder="(51) 99999-0000"
-                              value={newClient.phone}
-                              onChange={(e) => setNewClient((c) => ({ ...c, phone: e.target.value }))}
-                              className="w-full bg-[#1a1a1f] border border-white/8 rounded-lg px-3 py-2 text-cream text-sm font-body focus:outline-none focus:border-primary/40 transition placeholder:text-white/15"
-                            />
-                          </div>
-                        </div>
-                        <div>
-                          <label className="text-[10px] text-white/30 font-body uppercase tracking-widest block mb-1">
-                            E-mail
-                          </label>
-                          <input
-                            placeholder="email@exemplo.com"
-                            type="email"
-                            value={newClient.email}
-                            onChange={(e) => setNewClient((c) => ({ ...c, email: e.target.value }))}
-                            className="w-full bg-[#1a1a1f] border border-white/8 rounded-lg px-3 py-2 text-cream text-sm font-body focus:outline-none focus:border-primary/40 transition placeholder:text-white/15"
-                          />
-                        </div>
-                      </div>
-                    ) : (
-                      /* Campo de busca unificado */
-                      <div className="border border-white/8 rounded-xl overflow-hidden">
-                        <div className="relative">
-                          <Search className="absolute left-3.5 top-1/2 -translate-y-1/2 w-3.5 h-3.5 text-white/20 pointer-events-none" />
-                          <input
-                            autoFocus={!editingId}
-                            placeholder="Digite o nome do hóspede..."
-                            value={clientSearch}
-                            onChange={(e) => setClientSearch(e.target.value)}
-                            className="w-full pl-10 pr-4 py-3 bg-[#0d0d10] text-cream text-sm font-body focus:outline-none border-b border-white/5 transition placeholder:text-white/15"
-                          />
-                        </div>
-                        <div className="max-h-48 overflow-y-auto divide-y divide-white/4">
-                          {filteredGuests.map((p) => (
-                            <button
-                              key={p.id}
-                              onClick={() => {
-                                setForm((f) => ({ ...f, client_id: p.id }));
-                                setSelectedName(p.full_name ?? "");
-                                setClientSearch("");
-                                setClientMode("search");
-                              }}
-                              className="w-full flex items-center gap-3 px-4 py-3 hover:bg-white/4 transition-colors text-left group"
-                            >
-                              <div className="w-7 h-7 rounded-full bg-white/5 border border-white/8 flex items-center justify-center shrink-0 group-hover:border-primary/30 transition-colors">
-                                <span className="text-white/30 text-xs font-display font-bold group-hover:text-primary/60 transition-colors">
-                                  {(p.full_name ?? "?")[0].toUpperCase()}
-                                </span>
-                              </div>
-                              <div className="min-w-0 flex-1">
-                                <p className="text-cream/80 text-sm font-body font-medium truncate">{p.full_name}</p>
-                                <p className="text-white/25 text-xs font-body truncate">
-                                  {p.phone || p.cpf || p.email || "—"}
-                                </p>
-                              </div>
-                            </button>
-                          ))}
-                          {/* Opção de criar novo cliente — aparece sempre que há texto digitado */}
-                          {clientSearch.trim().length > 1 && (
-                            <button
-                              onClick={() => {
-                                setClientMode("new");
-                                setNewClient((c) => ({ ...c, full_name: clientSearch.trim() }));
-                                setClientSearch("");
-                              }}
-                              className="w-full flex items-center gap-3 px-4 py-3 hover:bg-primary/8 transition-colors text-left group border-t border-primary/10"
-                            >
-                              <div className="w-7 h-7 rounded-full bg-primary/10 border border-primary/20 flex items-center justify-center shrink-0">
-                                <UserPlus className="w-3.5 h-3.5 text-primary/60 group-hover:text-primary transition-colors" />
-                              </div>
-                              <div className="min-w-0">
-                                <p className="text-primary/70 text-sm font-body font-medium group-hover:text-primary transition-colors">
-                                  Criar "{clientSearch.trim()}"
-                                </p>
-                                <p className="text-white/25 text-xs font-body">Novo hóspede</p>
-                              </div>
-                            </button>
-                          )}
-                          {filteredGuests.length === 0 && clientSearch.trim().length <= 1 && (
-                            <div className="flex flex-col items-center py-6 gap-2">
-                              <p className="text-white/25 text-xs font-body">Digite o nome para buscar ou criar</p>
-                            </div>
-                          )}
-                        </div>
-                      </div>
-                    )}
-                  </section>
-
-                  {/* 2. QUARTO */}
-                  <section>
+                <div className="px-6 py-5 space-y-4 overflow-y-auto flex-1">
+                  <div>
                     <label className="flex items-center gap-1.5 text-[10px] text-white/40 font-body uppercase tracking-widest mb-2">
-                      <BedDouble className="w-3 h-3" />
-                      Quarto
+                      <BedDouble className="w-3 h-3" /> Quarto
                     </label>
-                    <div className="space-y-2 max-h-40 overflow-y-auto pr-1">
+                    <div className="space-y-2 max-h-36 overflow-y-auto pr-1">
                       {rooms.map((room) => (
                         <button
                           key={room.id}
-                          onClick={() => setForm((f) => ({ ...f, room_id: room.id, guests_count: 1 }))}
-                          className={`w-full text-left px-4 py-3 rounded-xl border transition-all ${form.room_id === room.id ? "border-primary/50 bg-primary/8" : "border-white/8 bg-[#1a1a1f] hover:border-white/18"}`}
+                          onClick={() => setEditRoomId(room.id)}
+                          className={`w-full text-left px-4 py-3 rounded-xl border transition-all ${editRoomId === room.id ? "border-primary/50 bg-primary/8" : "border-white/8 bg-[#1a1a1f] hover:border-white/18"}`}
                         >
                           <div className="flex items-center justify-between">
                             <div>
                               <p className="text-cream text-sm font-body font-medium">{room.name}</p>
                               <p className="text-white/30 text-xs font-body mt-0.5">
-                                {room.category} · até {room.capacity} hóspedes
+                                {room.category} · até {room.capacity} hósp.
                               </p>
                             </div>
-                            <div className="text-right">
-                              <p className="text-primary font-display font-semibold text-sm">
-                                R$ {Number(room.promotional_price || room.price).toFixed(0)}
-                              </p>
-                              <p className="text-white/25 text-xs font-body">/noite</p>
-                            </div>
+                            <p className="text-primary font-display font-semibold text-sm">
+                              R$ {Number(room.promotional_price || room.price).toFixed(0)}
+                              <span className="text-white/25 text-xs">/n</span>
+                            </p>
                           </div>
                         </button>
                       ))}
                     </div>
-                  </section>
-
-                  {/* 3. DATAS */}
-                  <section className="grid grid-cols-2 gap-3">
+                  </div>
+                  <div className="grid grid-cols-2 gap-3">
                     {(
                       [
-                        ["Check-in", "check_in", today],
-                        ["Check-out", "check_out", form.check_in ? addDays(form.check_in, 1) : addDays(today, 1)],
+                        ["Check-in", editCheckIn, setEditCheckIn, today],
+                        [
+                          "Check-out",
+                          editCheckOut,
+                          setEditCheckOut,
+                          editCheckIn ? addDays(editCheckIn, 1) : addDays(today, 1),
+                        ],
                       ] as const
-                    ).map(([label, key, minDate]) => (
-                      <div key={key}>
+                    ).map(([label, val, setter, minDate]) => (
+                      <div key={label as string}>
                         <label className="flex items-center gap-1.5 text-[10px] text-white/40 font-body uppercase tracking-widest mb-2">
-                          <CalendarIcon className="w-3 h-3" />
-                          {label}
+                          <CalendarIcon className="w-3 h-3" /> {label as string}
                         </label>
                         <Popover>
                           <PopoverTrigger asChild>
                             <button
                               className={cn(
                                 "w-full flex items-center gap-2 px-3 py-2.5 bg-[#1a1a1f] border border-white/8 rounded-xl text-sm font-body hover:border-white/20 transition",
-                                form[key] ? "text-cream" : "text-white/25",
+                                val ? "text-cream" : "text-white/25",
                               )}
                             >
                               <CalendarIcon className="w-3.5 h-3.5 shrink-0" />
-                              {form[key] ? format(form[key]!, "dd/MM/yyyy") : "Selecionar"}
+                              {val ? format(val as Date, "dd/MM/yyyy") : "Selecionar"}
                             </button>
                           </PopoverTrigger>
                           <PopoverContent className="w-auto p-0" align="start">
                             <Calendar
                               mode="single"
-                              selected={form[key]}
+                              selected={val as Date | undefined}
                               initialFocus
-                              onSelect={(d) => setForm((f) => ({ ...f, [key]: d }))}
+                              onSelect={(d) => (setter as (d: Date | undefined) => void)(d)}
                               disabled={(date) => date < (minDate as Date)}
                               className="p-3 pointer-events-auto"
                             />
@@ -866,84 +989,29 @@ const AdminReservas = () => {
                         </Popover>
                       </div>
                     ))}
-                  </section>
-
-                  {/* 4. HÓSPEDES */}
-                  <section>
-                    <label className="flex items-center gap-1.5 text-[10px] text-white/40 font-body uppercase tracking-widest mb-2">
-                      <Users className="w-3 h-3" />
-                      Nº de Hóspedes
-                    </label>
-                    <input
-                      type="number"
-                      min={1}
-                      max={selectedRoom?.capacity ?? 10}
-                      value={form.guests_count}
-                      onChange={(e) =>
-                        setForm((f) => ({
-                          ...f,
-                          guests_count: Math.max(
-                            1,
-                            Math.min(selectedRoom?.capacity ?? 10, parseInt(e.target.value) || 1),
-                          ),
-                        }))
-                      }
-                      className="w-full bg-[#1a1a1f] border border-white/8 rounded-xl px-3 py-2.5 text-cream text-sm font-body focus:outline-none focus:border-primary/50 transition"
-                    />
-                    {selectedRoom && (
-                      <p className="text-white/20 text-xs font-body mt-1">Máximo: {selectedRoom.capacity} hóspedes</p>
-                    )}
-                  </section>
-
-                  {/* 5. OBSERVAÇÕES */}
-                  <section>
+                  </div>
+                  <div>
                     <label className="text-[10px] text-white/40 font-body uppercase tracking-widest block mb-2">
-                      Observações <span className="text-white/20 normal-case">(opcional)</span>
+                      Observações
                     </label>
                     <textarea
                       rows={2}
-                      placeholder="Ex: quarto com vista, mobilidade reduzida..."
-                      value={form.notes}
-                      onChange={(e) => setForm((f) => ({ ...f, notes: e.target.value }))}
-                      className="w-full bg-[#1a1a1f] border border-white/8 rounded-xl px-3 py-2.5 text-cream text-sm font-body focus:outline-none focus:border-primary/50 transition placeholder:text-white/15 resize-none"
+                      value={editNotes}
+                      onChange={(e) => setEditNotes(e.target.value)}
+                      className="w-full bg-[#1a1a1f] border border-white/8 rounded-xl px-3 py-2.5 text-cream text-sm font-body focus:outline-none focus:border-primary/50 transition resize-none"
                     />
-                  </section>
-
-                  {/* Preview total */}
-                  {totalPreview > 0 && (
-                    <div className="bg-primary/6 border border-primary/18 rounded-xl p-4">
-                      <div className="flex justify-between text-xs font-body text-white/40 mb-2">
-                        <span>
-                          {nights} {nights === 1 ? "diária" : "diárias"} × R${" "}
-                          {Number(selectedRoom!.promotional_price || selectedRoom!.price).toFixed(0)}
-                        </span>
-                        <span>R$ {totalPreview.toFixed(2).replace(".", ",")}</span>
-                      </div>
-                      <div className="flex justify-between items-center border-t border-primary/12 pt-2">
-                        <span className="font-display text-cream font-semibold text-sm">Total da hospedagem</span>
-                        <span className="font-display text-primary text-xl font-bold">
-                          R$ {totalPreview.toFixed(2).replace(".", ",")}
-                        </span>
-                      </div>
-                    </div>
-                  )}
+                  </div>
                 </div>
-
                 <div className="flex items-center justify-end gap-3 px-6 py-4 border-t border-white/5 shrink-0">
                   <button
-                    onClick={closeModal}
+                    onClick={() => setEditingRes(null)}
                     className="px-4 py-2 text-sm text-white/40 hover:text-cream font-body transition-colors"
                   >
                     Cancelar
                   </button>
-                  <button
-                    onClick={handleSave}
-                    disabled={saving}
-                    className="flex items-center gap-2 px-5 py-2.5 rounded-lg text-black text-sm font-body font-semibold hover:brightness-110 transition-all disabled:opacity-50"
-                    style={{ background: "linear-gradient(135deg,#C9A84C,#E5C97A)" }}
-                  >
-                    {saving ? <Loader2 className="w-4 h-4 animate-spin" /> : <CalendarDays className="w-4 h-4" />}
-                    {saving ? "Salvando..." : editingId ? "Salvar Alterações" : "Confirmar Reserva"}
+                  <button onClick={handleEditSave} disabled={editSaving} className={btnGold} style={goldBg}>
+                    {editSaving ? <Loader2 className="w-4 h-4 animate-spin" /> : <CheckCircle2 className="w-4 h-4" />}
+                    {editSaving ? "Salvando..." : "Salvar Alterações"}
                   </button>
                 </div>
               </div>
@@ -952,7 +1020,7 @@ const AdminReservas = () => {
         )}
       </AnimatePresence>
 
-      {/* Modal Excluir */}
+      {/* ═══ MODAL EXCLUIR ═══ */}
       <AnimatePresence>
         {deleteId && (
           <>
@@ -965,7 +1033,7 @@ const AdminReservas = () => {
               onClick={() => setDeleteId(null)}
             />
             <motion.div
-              key="dmod"
+              key="dm"
               initial={{ opacity: 0, scale: 0.95 }}
               animate={{ opacity: 1, scale: 1 }}
               exit={{ opacity: 0, scale: 0.95 }}
