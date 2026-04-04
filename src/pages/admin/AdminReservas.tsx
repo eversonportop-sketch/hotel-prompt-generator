@@ -383,20 +383,20 @@ const AdminReservas = () => {
       filter: "confirmed",
     },
     {
-      label: "Pendentes",
-      value: reservations.filter((r) => r.status === "pending").length,
-      color: "text-yellow-400",
-      border: "border-yellow-500/20",
-      bg: "bg-yellow-500/10",
-      filter: "pending",
-    },
-    {
-      label: "Concluídas",
-      value: reservations.filter((r) => r.status === "completed").length,
+      label: "Hospedados",
+      value: reservations.filter((r) => r.status === "checked_in").length,
       color: "text-blue-400",
       border: "border-blue-500/20",
       bg: "bg-blue-500/10",
-      filter: "completed",
+      filter: "checked_in",
+    },
+    {
+      label: "Finalizadas",
+      value: reservations.filter((r) => r.status === "checked_out").length,
+      color: "text-gray-400",
+      border: "border-gray-500/20",
+      bg: "bg-gray-500/10",
+      filter: "checked_out",
     },
   ];
 
