@@ -454,10 +454,10 @@ const AdminReservas = () => {
             className="appearance-none bg-charcoal-light border border-white/5 rounded-xl pl-4 pr-10 py-2.5 text-cream text-sm font-body focus:outline-none focus:border-primary/40 transition cursor-pointer"
           >
             <option value="all">Todos os status</option>
-            <option value="pending">Pendente</option>
             <option value="confirmed">Confirmada</option>
+            <option value="checked_in">Hospedado</option>
+            <option value="checked_out">Finalizada</option>
             <option value="canceled">Cancelada</option>
-            <option value="completed">Concluída</option>
           </select>
           <ChevronDown className="absolute right-3 top-1/2 -translate-y-1/2 w-4 h-4 text-white/30 pointer-events-none" />
         </div>
