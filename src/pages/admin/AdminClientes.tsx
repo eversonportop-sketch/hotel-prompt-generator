@@ -103,6 +103,7 @@ const AdminClientes = () => {
 
   /* ── Salvar cliente operacional (sem auth) ── */
   const handleSave = async () => {
+    if (!editClient) return; // creation only happens via reservations
     if (!form.full_name.trim()) {
       toast.error("Nome é obrigatório");
       return;
@@ -245,14 +246,7 @@ const AdminClientes = () => {
             <p className="text-white/30 text-xs mt-0.5 font-body">Cadastro de hóspedes presenciais</p>
           </div>
         </div>
-        <button
-          onClick={openNew}
-          className="flex items-center gap-2 px-4 py-2.5 rounded-lg text-black text-sm font-body font-semibold hover:brightness-110 transition-all"
-          style={{ background: "linear-gradient(135deg,#C9A84C,#E5C97A)" }}
-        >
-          <Plus className="w-4 h-4" />
-          Novo Cliente
-        </button>
+        <p className="text-white/20 text-xs font-body italic">Novos clientes são criados ao fazer uma reserva</p>
       </div>
 
       {/* KPIs */}
@@ -416,9 +410,7 @@ const AdminClientes = () => {
                 <div className="flex items-center justify-between px-6 py-5 border-b border-white/5">
                   <div className="flex items-center gap-2">
                     <Users className="w-4 h-4 text-primary" />
-                    <h2 className="font-display text-lg font-semibold text-cream">
-                      {editClient ? "Editar Cliente" : "Novo Cliente"}
-                    </h2>
+                    <h2 className="font-display text-lg font-semibold text-cream">Editar Cliente</h2>
                   </div>
                   <button
                     onClick={() => setModalOpen(false)}
@@ -438,10 +430,6 @@ const AdminClientes = () => {
                     {field("E-mail", "email", "joao@email.com", <Mail className="w-3 h-3" />, "email")}
                     {field("Cidade", "city", "Porto Alegre", <MapPin className="w-3 h-3" />)}
                   </div>
-                  <p className="text-white/20 text-[10px] font-body">
-                    Este cadastro é apenas operacional. Para dar acesso ao portal, use o botão "Portal" na lista de
-                    clientes.
-                  </p>
                 </div>
 
                 <div className="flex items-center justify-end gap-3 px-6 py-4 border-t border-white/5">
@@ -458,7 +446,7 @@ const AdminClientes = () => {
                     style={{ background: "linear-gradient(135deg,#C9A84C,#E5C97A)" }}
                   >
                     {saving ? <Loader2 className="w-4 h-4 animate-spin" /> : <Save className="w-4 h-4" />}
-                    {editClient ? "Salvar Alterações" : "Cadastrar Cliente"}
+                    Salvar Alterações
                   </button>
                 </div>
               </div>
