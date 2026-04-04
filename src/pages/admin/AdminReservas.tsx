@@ -60,19 +60,19 @@ interface Reservation {
 }
 
 const STATUS: Record<string, { label: string; color: string; icon: React.ReactNode }> = {
+  pending: {
+    label: "Pendente",
+    color: "bg-yellow-500/15 text-yellow-300 border-yellow-500/25",
+    icon: <Clock className="w-3 h-3" />,
+  },
   confirmed: {
     label: "Confirmada",
     color: "bg-emerald-500/15 text-emerald-300 border-emerald-500/25",
     icon: <CheckCircle2 className="w-3 h-3" />,
   },
-  checked_in: {
-    label: "Hospedado",
+  completed: {
+    label: "Concluída",
     color: "bg-blue-500/15 text-blue-300 border-blue-500/25",
-    icon: <Clock className="w-3 h-3" />,
-  },
-  checked_out: {
-    label: "Finalizada",
-    color: "bg-gray-500/15 text-gray-300 border-gray-500/25",
     icon: <CheckCircle2 className="w-3 h-3" />,
   },
   canceled: {
@@ -83,12 +83,13 @@ const STATUS: Record<string, { label: string; color: string; icon: React.ReactNo
 };
 
 const TRANSITIONS: Record<string, { value: string; label: string; style: string }[]> = {
-  confirmed: [
+  pending: [
+    { value: "confirmed", label: "Confirmar", style: "text-emerald-400 hover:bg-emerald-500/10" },
     { value: "canceled", label: "Cancelar", style: "text-red-400 hover:bg-red-500/10" },
   ],
-  checked_in: [],
-  checked_out: [],
-  canceled: [{ value: "confirmed", label: "Reativar", style: "text-emerald-400 hover:bg-emerald-500/10" }],
+  confirmed: [{ value: "canceled", label: "Cancelar", style: "text-red-400 hover:bg-red-500/10" }],
+  completed: [],
+  canceled: [{ value: "pending", label: "Reativar", style: "text-yellow-400 hover:bg-yellow-500/10" }],
 };
 
 const emptyForm = {
@@ -141,12 +142,10 @@ const AdminReservas = () => {
   const { data: reservations = [], isLoading } = useQuery({
     queryKey: ["admin-reservations"],
     queryFn: async () => {
-       const { data, error } = await supabase
-         .from("reservations")
-         .select(
-           "*, profiles(full_name), rooms(id,name,category)",
-         )
-         .order("created_at", { ascending: false });
+      const { data, error } = await supabase
+        .from("reservations")
+        .select("*, profiles(full_name), rooms(id,name,category)")
+        .order("created_at", { ascending: false });
       if (error) throw error;
       // Enrich with guest names
       const allData = (data || []) as any[];
@@ -168,13 +167,21 @@ const AdminReservas = () => {
   const { data: guestsList = [] } = useQuery({
     queryKey: ["admin-guests-select"],
     queryFn: async () => {
-      const { data, error } = await supabase
-        .from("profiles")
-        .select("id,full_name,email,phone,cpf")
-        .neq("role", "admin")
-        .order("full_name");
-      if (error) throw error;
-      return data as Guest[];
+      // Fetch from both profiles (portal users) and guests (walk-in) tables
+      const [profilesRes, guestsRes] = await Promise.all([
+        supabase.from("profiles").select("id,full_name,email,phone,cpf").neq("role", "admin").order("full_name"),
+        supabase.from("guests").select("id,full_name,email,phone,cpf").order("full_name"),
+      ]);
+      if (profilesRes.error) throw profilesRes.error;
+      const profiles = (profilesRes.data || []) as Guest[];
+      const guests = (guestsRes.data || []) as Guest[];
+      // Merge, deduplicate by id
+      const seen = new Set<string>();
+      return [...profiles, ...guests].filter((g) => {
+        if (seen.has(g.id)) return false;
+        seen.add(g.id);
+        return true;
+      });
     },
   });
 
@@ -246,17 +253,15 @@ const AdminReservas = () => {
     try {
       let guestId = form.client_id;
 
-      // If creating a new client, insert first
+      // If creating a new client, insert into guests table (no auth required)
       if (clientMode === "new" && !editingId) {
         const { data: gd, error: ge } = await supabase
-          .from("profiles")
+          .from("guests")
           .insert({
-            id: crypto.randomUUID(),
             full_name: newClient.full_name.trim(),
             email: newClient.email.trim() || null,
             phone: newClient.phone.trim() || null,
             cpf: newClient.cpf.trim() || null,
-            role: "guest",
           })
           .select("id")
           .single();
@@ -265,9 +270,9 @@ const AdminReservas = () => {
         qc.invalidateQueries({ queryKey: ["admin-guests-select"] });
       }
 
+      const isNewGuest = clientMode === "new" && !editingId;
       const payload = {
-        client_id: guestId,
-        profile_id: guestId,
+        ...(isNewGuest ? { guest_id: guestId } : { profile_id: guestId }),
         room_id: form.room_id,
         check_in: format(form.check_in, "yyyy-MM-dd"),
         check_out: format(form.check_out, "yyyy-MM-dd"),
@@ -383,20 +388,20 @@ const AdminReservas = () => {
       filter: "confirmed",
     },
     {
-      label: "Hospedados",
-      value: reservations.filter((r) => r.status === "checked_in").length,
+      label: "Pendentes",
+      value: reservations.filter((r) => r.status === "pending").length,
+      color: "text-yellow-400",
+      border: "border-yellow-500/20",
+      bg: "bg-yellow-500/10",
+      filter: "pending",
+    },
+    {
+      label: "Concluídas",
+      value: reservations.filter((r) => r.status === "completed").length,
       color: "text-blue-400",
       border: "border-blue-500/20",
       bg: "bg-blue-500/10",
-      filter: "checked_in",
-    },
-    {
-      label: "Finalizadas",
-      value: reservations.filter((r) => r.status === "checked_out").length,
-      color: "text-gray-400",
-      border: "border-gray-500/20",
-      bg: "bg-gray-500/10",
-      filter: "checked_out",
+      filter: "completed",
     },
   ];
 
@@ -454,10 +459,10 @@ const AdminReservas = () => {
             className="appearance-none bg-charcoal-light border border-white/5 rounded-xl pl-4 pr-10 py-2.5 text-cream text-sm font-body focus:outline-none focus:border-primary/40 transition cursor-pointer"
           >
             <option value="all">Todos os status</option>
+            <option value="pending">Pendente</option>
             <option value="confirmed">Confirmada</option>
-            <option value="checked_in">Hospedado</option>
-            <option value="checked_out">Finalizada</option>
             <option value="canceled">Cancelada</option>
+            <option value="completed">Concluída</option>
           </select>
           <ChevronDown className="absolute right-3 top-1/2 -translate-y-1/2 w-4 h-4 text-white/30 pointer-events-none" />
         </div>
@@ -502,7 +507,7 @@ const AdminReservas = () => {
                 const roomName = (r.rooms as any)?.name;
                 const roomCat = (r.rooms as any)?.category;
                 const n = differenceInDays(new Date(r.check_out + "T12:00:00"), new Date(r.check_in + "T12:00:00"));
-                const st = STATUS[r.status] ?? STATUS.confirmed;
+                const st = STATUS[r.status] ?? STATUS.pending;
                 const transitions = TRANSITIONS[r.status] ?? [];
                 return (
                   <motion.tr
