@@ -101,34 +101,18 @@ const AdminCheckout = () => {
     },
   });
 
-  // Histórico: status completed|checked_out OU checked_out_at preenchido
+  // Histórico: reservas com status checked_out
   const { data: history = [], isLoading: loadingHistory } = useQuery({
     queryKey: ["checkout-history"],
     queryFn: async () => {
       const { data, error } = await supabase
         .from("reservations")
         .select("*, rooms(name, price), profiles!reservations_profile_id_fkey(full_name, phone)")
-        .in("status", ["completed", "checked_out"])
+        .eq("status", "checked_out")
         .order("check_out", { ascending: false })
         .limit(50);
       if (error) throw error;
-
-      // também pegar reservas com checked_out_at preenchido mas status diferente
-      const { data: withCO, error: e2 } = await supabase
-        .from("reservations")
-        .select("*, rooms(name, price), profiles!reservations_profile_id_fkey(full_name, phone)")
-        .not("checked_out_at", "is", null)
-        .not("status", "in", "(completed,checked_out)")
-        .order("check_out", { ascending: false })
-        .limit(50);
-      if (e2) throw e2;
-
-      const seen = new Set<string>();
-      return [...(data || []), ...(withCO || [])].filter((r: any) => {
-        if (seen.has(r.id)) return false;
-        seen.add(r.id);
-        return true;
-      }) as Reservation[];
+      return (data || []) as Reservation[];
     },
   });
 
