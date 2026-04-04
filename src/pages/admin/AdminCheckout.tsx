@@ -161,7 +161,7 @@ const AdminCheckout = () => {
           );
         if (error) throw error;
       }
-      const { error } = await supabase.from("reservations").update({ status: "completed" }).eq("id", selectedRes.id);
+      const { error } = await supabase.from("reservations").update({ status: "checked_out", checked_out_at: new Date().toISOString() }).eq("id", selectedRes.id);
       if (error) throw error;
     },
     onSuccess: () => {

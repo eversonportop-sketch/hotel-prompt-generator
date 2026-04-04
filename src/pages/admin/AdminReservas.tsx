@@ -502,7 +502,7 @@ const AdminReservas = () => {
                 const roomName = (r.rooms as any)?.name;
                 const roomCat = (r.rooms as any)?.category;
                 const n = differenceInDays(new Date(r.check_out + "T12:00:00"), new Date(r.check_in + "T12:00:00"));
-                const st = STATUS[r.status] ?? STATUS.pending;
+                const st = STATUS[r.status] ?? STATUS.confirmed;
                 const transitions = TRANSITIONS[r.status] ?? [];
                 return (
                   <motion.tr

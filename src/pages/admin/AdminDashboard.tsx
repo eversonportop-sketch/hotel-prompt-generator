@@ -5,34 +5,29 @@ import {
   Users,
   LayoutDashboard,
   CalendarDays,
-  TrendingUp,
-  Clock,
   LogIn,
-  LogOut,
   ArrowRight,
 } from "lucide-react";
 import { useQuery } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
-import { computeOperationStatus } from "@/lib/operationStatus";
 
 const statusLabels: Record<string, string> = {
-  pending: "Pendente",
   confirmed: "Confirmada",
+  checked_in: "Hospedado",
+  checked_out: "Finalizada",
   canceled: "Cancelada",
-  completed: "Concluída",
-  active: "Ativo",
-  inactive: "Inativo",
 };
 const statusConfig: Record<string, { bg: string; dot: string; text: string }> = {
-  pending: { bg: "bg-amber-500/10", dot: "bg-amber-400", text: "text-amber-300" },
   confirmed: { bg: "bg-emerald-500/10", dot: "bg-emerald-400", text: "text-emerald-300" },
+  checked_in: { bg: "bg-blue-500/10", dot: "bg-blue-400", text: "text-blue-300" },
+  checked_out: { bg: "bg-gray-500/10", dot: "bg-gray-400", text: "text-gray-300" },
   canceled: { bg: "bg-red-500/10", dot: "bg-red-400", text: "text-red-300" },
-  completed: { bg: "bg-sky-500/10", dot: "bg-sky-400", text: "text-sky-300" },
-  active: { bg: "bg-emerald-500/10", dot: "bg-emerald-400", text: "text-emerald-300" },
-  inactive: { bg: "bg-red-500/10", dot: "bg-red-400", text: "text-red-300" },
 };
 
-const today = new Date().toISOString().split("T")[0];
+function localToday(): string {
+  const d = new Date();
+  return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")}-${String(d.getDate()).padStart(2, "0")}`;
+}
 
 const fadeUp = (delay = 0) => ({
   initial: { opacity: 0, y: 14 },
@@ -45,16 +40,14 @@ function formatDateFull(date: Date) {
   const months = ["Jan", "Fev", "Mar", "Abr", "Mai", "Jun", "Jul", "Ago", "Set", "Out", "Nov", "Dez"];
   return `${days[date.getDay()]}, ${date.getDate()} ${months[date.getMonth()]} ${date.getFullYear()}`;
 }
-function formatDateShort(date: Date) {
-  const months = ["Jan", "Fev", "Mar", "Abr", "Mai", "Jun", "Jul", "Ago", "Set", "Out", "Nov", "Dez"];
-  return `${date.getDate().toString().padStart(2, "0")} ${months[date.getMonth()]} ${date.getFullYear()}`;
-}
 
 const AdminDashboard = () => {
+  const today = localToday();
+
+  /* ── Quartos + ocupação ── */
   const { data: quartos = [] } = useQuery({
     queryKey: ["dash-rooms-occupancy"],
     queryFn: async () => {
-      const td = new Date().toISOString().split("T")[0];
       const { data: roomsData } = await supabase
         .from("rooms")
         .select("id, name, category")
@@ -62,94 +55,86 @@ const AdminDashboard = () => {
         .order("display_order");
       const { data: resData } = await supabase
         .from("reservations")
-        .select("id, room_id, check_in, check_out, status, profile_id, client_id, profiles!reservations_profile_id_fkey(full_name)")
-        .in("status", ["confirmed", "pending"])
-        .lte("check_in", td)
-        .gte("check_out", td);
+        .select("id, room_id, check_out, status, profile_id, client_id, profiles!reservations_profile_id_fkey(full_name)")
+        .eq("status", "checked_in");
       return (roomsData || []).map((room: any) => {
         const res = (resData || []).find((r: any) => r.room_id === room.id);
         return {
           ...room,
           ocupado: !!res,
-          hospede: (res?.profiles as any)?.full_name || null,
+          hospede: res ? ((res.profiles as any)?.full_name || null) : null,
           check_out: res?.check_out || null,
-          reservation_id: res?.id || null,
         };
       });
     },
   });
 
-  const { data: dailyOps = [] } = useQuery({
-    queryKey: ["dash-daily-operations"],
+  /* ── Reservas ativas para KPIs ── */
+  const { data: reservations = [] } = useQuery({
+    queryKey: ["dash-reservations-all"],
     queryFn: async () => {
       const { data, error } = await supabase
-        .from("daily_operations")
-        .select("*")
-        .order("check_in", { ascending: true });
+        .from("reservations")
+        .select("id, check_in, check_out, status")
+        .in("status", ["confirmed", "checked_in", "checked_out"])
+        .order("check_in");
       if (error) throw error;
-      return ((data as any[]) || []).map((op) => ({
-        ...op,
-        operation_status: computeOperationStatus(op),
-      }));
+      return (data || []) as { id: string; check_in: string; check_out: string; status: string }[];
     },
   });
 
+  /* ── Perfis para contagem de clientes ── */
   const { data: profiles = [] } = useQuery({
     queryKey: ["dash-profiles"],
     queryFn: async () => {
       const { data, error } = await supabase.from("profiles").select("id");
       if (error) throw error;
-      return data;
+      return data || [];
     },
   });
 
   const totalRooms = quartos.length;
-  const activeRooms = totalRooms;
-  const totalReservations = dailyOps.length;
-  const confirmedReservations = dailyOps.filter((r: any) => r.status === "confirmed").length;
-  const todayCheckins = dailyOps.filter((r: any) => r.operation_status === "arriving_today").length;
-  const todayCheckouts = dailyOps.filter((r: any) => r.operation_status === "departing_today").length;
-  const inHouse = dailyOps.filter((r: any) => r.operation_status === "in_house").length;
+  const occupiedRooms = quartos.filter((q: any) => q.ocupado).length;
+  const freeRooms = totalRooms - occupiedRooms;
+  const arrivingToday = reservations.filter((r) => r.status === "confirmed" && r.check_in.slice(0, 10) === today).length;
+  const inHouse = reservations.filter((r) => r.status === "checked_in").length;
+  const departingToday = reservations.filter((r) => r.status === "checked_in" && r.check_out.slice(0, 10) === today).length;
   const totalProfiles = profiles.length;
 
   const reservationsByStatus: Record<string, number> = {};
-  dailyOps.forEach((r: any) => {
+  reservations.forEach((r) => {
     reservationsByStatus[r.status] = (reservationsByStatus[r.status] || 0) + 1;
   });
 
-  const todayActivity = dailyOps.filter((r: any) =>
-    r.operation_status === "arriving_today" || r.operation_status === "departing_today"
-  );
-
   const kpis = [
     {
-      label: "Quartos Ativos",
-      value: activeRooms,
+      label: "Quartos Livres",
+      value: freeRooms,
       total: `de ${totalRooms} total`,
       icon: BedDouble,
-      color: "text-amber-400",
-      bg: "bg-amber-500/10",
-      border: "border-amber-500/20",
-      href: "/admin/quartos",
-    },
-    {
-      label: "Reservas",
-      value: totalReservations,
-      total: `${confirmedReservations} confirmadas`,
-      icon: CalendarDays,
       color: "text-emerald-400",
       bg: "bg-emerald-500/10",
       border: "border-emerald-500/20",
-      href: "/admin/reservas",
+      href: "/admin/quartos",
     },
     {
-      label: "Movimento Hoje",
-      value: todayCheckins + todayCheckouts,
-      total: `${todayCheckins} in · ${todayCheckouts} out`,
-      icon: TrendingUp,
-      color: "text-sky-400",
-      bg: "bg-sky-500/10",
-      border: "border-sky-500/20",
+      label: "Chegando Hoje",
+      value: arrivingToday,
+      total: "reservas confirmadas",
+      icon: LogIn,
+      color: "text-amber-400",
+      bg: "bg-amber-500/10",
+      border: "border-amber-500/20",
+      href: "/admin/checkin",
+    },
+    {
+      label: "Hospedados",
+      value: inHouse,
+      total: `${departingToday} saindo hoje`,
+      icon: Users,
+      color: "text-blue-400",
+      bg: "bg-blue-500/10",
+      border: "border-blue-500/20",
       href: "/admin/checkin",
     },
     {
@@ -199,8 +184,8 @@ const AdminDashboard = () => {
         ))}
       </div>
 
-      {/* Status + Movimentação */}
-      <div className="grid grid-cols-1 lg:grid-cols-3 gap-4">
+      {/* Status Quartos + Status Reservas */}
+      <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
         {/* Status Quartos */}
         <motion.div {...fadeUp(0.2)} className="rounded-xl bg-charcoal-light border border-white/5 p-5">
           <div className="flex items-center justify-between mb-4">
@@ -278,65 +263,7 @@ const AdminDashboard = () => {
             </div>
           )}
         </motion.div>
-
-        {/* Movimentação Hoje */}
-        <motion.div {...fadeUp(0.28)} className="rounded-xl bg-charcoal-light border border-white/5 p-5">
-          <div className="flex items-center gap-2 mb-4">
-            <Clock className="w-3.5 h-3.5 text-primary" />
-            <h3 className="text-xs font-semibold uppercase tracking-widest text-white/30 font-body">
-              Movimentação Hoje · {formatDateShort(new Date())}
-            </h3>
-          </div>
-
-          {/* mini contadores */}
-          <div className="grid grid-cols-2 gap-2 mb-4">
-            <div className="bg-emerald-500/10 rounded-lg px-3 py-2 flex items-center gap-2">
-              <LogIn className="w-3.5 h-3.5 text-emerald-400" />
-              <div>
-                <p className="text-emerald-400 font-bold text-lg font-display leading-none">{todayCheckins}</p>
-                <p className="text-emerald-400/60 text-[10px] font-body">Check-ins</p>
-              </div>
-            </div>
-            <div className="bg-sky-500/10 rounded-lg px-3 py-2 flex items-center gap-2">
-              <LogOut className="w-3.5 h-3.5 text-sky-400" />
-              <div>
-                <p className="text-sky-400 font-bold text-lg font-display leading-none">{todayCheckouts}</p>
-                <p className="text-sky-400/60 text-[10px] font-body">Checkouts</p>
-              </div>
-            </div>
-          </div>
-
-          {todayActivity.length === 0 ? (
-            <p className="text-white/20 text-sm font-body text-center py-2">Nenhuma movimentação hoje</p>
-          ) : (
-            <div className="space-y-2">
-              {todayActivity.slice(0, 4).map((r: any) => {
-                const isIn = r.operation_status === "arriving_today";
-                return (
-                  <div
-                    key={r.reservation_id || r.id}
-                    className="flex items-center justify-between py-1.5 border-b border-white/5 last:border-0"
-                  >
-                    <div className="flex items-center gap-2">
-                      <span
-                        className={`flex items-center gap-1 px-1.5 py-0.5 rounded text-[10px] font-bold font-body ${isIn ? "bg-emerald-500/15 text-emerald-400" : "bg-sky-500/15 text-sky-400"}`}
-                      >
-                        {isIn ? <LogIn className="w-2.5 h-2.5" /> : <LogOut className="w-2.5 h-2.5" />}
-                        {isIn ? "IN" : "OUT"}
-                      </span>
-                      <span className="text-sm text-cream/70 font-body truncate max-w-[100px]">
-                        {r.guest_name || "—"}
-                      </span>
-                    </div>
-                    <span className="text-xs text-white/30 font-body">{r.room_name || "—"}</span>
-                  </div>
-                );
-              })}
-            </div>
-          )}
-        </motion.div>
       </div>
-
     </div>
   );
 };

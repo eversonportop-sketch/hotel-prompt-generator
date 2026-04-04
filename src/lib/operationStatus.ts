@@ -1,6 +1,8 @@
 /**
  * Unified operation status logic for reservations.
- * Must be the single source of truth across Dashboard, Checkin, and Checkout.
+ * Single source of truth across Dashboard, Checkin, and Checkout.
+ *
+ * DB statuses: confirmed | checked_in | checked_out | canceled
  */
 
 export type OperationStatus = "arriving_today" | "departing_today" | "in_house" | "checked_out" | "upcoming";
@@ -18,7 +20,7 @@ function toDateOnly(v: string): string {
   return v.slice(0, 10);
 }
 
-/** Local today as YYYY-MM-DD (avoids UTC shift issues) */
+/** Local today as YYYY-MM-DD */
 function localToday(): string {
   const d = new Date();
   const yyyy = d.getFullYear();
@@ -32,40 +34,32 @@ export function computeOperationStatus(r: ReservationForStatus): OperationStatus
   const checkIn = toDateOnly(r.check_in);
   const checkOut = toDateOnly(r.check_out);
 
-  // 1. Already checked out (highest priority)
-  if (r.checked_out_at || r.status === "completed" || r.status === "checked_out") {
+  // 1. Already checked out
+  if (r.status === "checked_out" || r.checked_out_at) {
     return "checked_out";
   }
 
-  // 2. Departing today
-  if (checkOut === today && r.checked_in_at && !r.checked_out_at) {
-    return "departing_today";
-  }
-
-  // 3. In house (before arriving_today so same-day stays with check-in done are in_house)
-  if (r.checked_in_at && !r.checked_out_at && today >= checkIn && today < checkOut) {
-    return "in_house";
-  }
-
-  // 4. Arriving today
-  if (checkIn === today && !r.checked_in_at && !r.checked_out_at && ["pending", "confirmed"].includes(r.status)) {
-    return "arriving_today";
-  }
-
-  // 5. Upcoming
-  if (checkIn > today && !r.checked_in_at && !r.checked_out_at && ["pending", "confirmed"].includes(r.status)) {
-    return "upcoming";
-  }
-
-  // 6. Fallback for checked-in guests past their checkout date
-  if (r.checked_in_at && !r.checked_out_at) {
-    return "in_house";
-  }
-
-  // 7. Past reservations without check-in = no-show, treat as checked_out
-  if (checkIn <= today) {
+  // 2. Canceled = treat as finished
+  if (r.status === "canceled") {
     return "checked_out";
   }
 
-  return "upcoming";
+  // 3. Checked in (status = checked_in OR has checked_in_at)
+  if (r.status === "checked_in" || r.checked_in_at) {
+    if (checkOut === today) return "departing_today";
+    // Still in house (even if past checkout date — needs manual checkout)
+    return "in_house";
+  }
+
+  // 4. Confirmed — not yet checked in
+  if (r.status === "confirmed") {
+    if (checkIn === today) return "arriving_today";
+    if (checkIn > today) return "upcoming";
+    // Past check-in date without check-in = no-show
+    return "checked_out";
+  }
+
+  // Fallback for any unknown status
+  if (checkIn > today) return "upcoming";
+  return "checked_out";
 }
