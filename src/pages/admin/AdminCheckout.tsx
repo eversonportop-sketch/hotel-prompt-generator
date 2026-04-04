@@ -1,826 +1,390 @@
-// ─── AdminCheckout ─────────────────────────────────────────────────────────────
-// Checkout completo: conta do hóspede, histórico e recibo PDF
-import { useState, useRef } from "react";
-import { Link } from "react-router-dom";
+import { useState } from "react";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
-import { motion, AnimatePresence } from "framer-motion";
-import {
-  ArrowLeft,
-  Receipt,
-  Search,
-  BedDouble,
-  UtensilsCrossed,
-  CheckCircle2,
-  Loader2,
-  X,
-  FileText,
-  DollarSign,
-  History,
-  Printer,
-  Calendar,
-  User,
-  Star,
-} from "lucide-react";
+import { LogOut, Search, BedDouble, CalendarDays, Loader2, CheckCircle2, X, Clock, History } from "lucide-react";
 import { format, differenceInDays } from "date-fns";
 import { ptBR } from "date-fns/locale";
 import { toast } from "sonner";
-import hotelLogo from "@/assets/hotel-sb-logo.png";
 
+// ─── Tipos ────────────────────────────────────────────────────────────────────
 interface Reservation {
   id: string;
-  room_id: string;
-  client_id: string;
   check_in: string;
   check_out: string;
   total_price: number;
-  status: string;
-  notes: string | null;
-  rooms: { name: string; price: number } | null;
-  profiles: { full_name: string | null; phone: string | null } | null;
+  guests_count: number;
+  checked_in_at: string | null;
+  checked_out_at: string | null;
+  guest_id: string | null;
+  profile_id: string | null;
+  rooms: { name: string; category: string } | null;
+  guestName: string;
 }
 
-interface ConsumptionOrder {
-  id: string;
-  room_number: string;
-  item_name: string;
-  quantity: number;
-  unit_price: number;
-  total: number;
-  status: string;
-  notes: string | null;
-  created_at: string;
-}
+const goldBg = { background: "linear-gradient(135deg,#C9A84C,#E5C97A)" };
+const fmt = (d: string) => format(new Date(d + "T12:00:00"), "dd/MM/yyyy");
+const fmtShort = (d: string) => format(new Date(d + "T12:00:00"), "dd MMM", { locale: ptBR });
+const fmtDateTime = (d: string) => format(new Date(d), "dd/MM/yyyy HH:mm");
 
+const fetchWithNames = async (status: string) => {
+  const { data, error } = await supabase
+    .from("reservations")
+    .select(
+      "id, check_in, check_out, total_price, guests_count, checked_in_at, checked_out_at, guest_id, profile_id, rooms(name,category)",
+    )
+    .eq("status", status)
+    .order("check_in", { ascending: true });
+  if (error) throw error;
+
+  const rows = (data || []) as any[];
+  const gids = [...new Set(rows.filter((r) => r.guest_id).map((r) => r.guest_id as string))];
+  const pids = [...new Set(rows.filter((r) => r.profile_id).map((r) => r.profile_id as string))];
+  const nameMap: Record<string, string> = {};
+
+  if (gids.length) {
+    const { data: gd } = await supabase.from("guests").select("id,full_name").in("id", gids);
+    (gd || []).forEach((g: any) => {
+      nameMap[g.id] = g.full_name;
+    });
+  }
+  if (pids.length) {
+    const { data: pd } = await supabase.from("profiles").select("id,full_name").in("id", pids);
+    (pd || []).forEach((p: any) => {
+      nameMap[p.id] = p.full_name;
+    });
+  }
+
+  return rows.map((r) => ({
+    ...r,
+    guestName: (r.guest_id && nameMap[r.guest_id]) || (r.profile_id && nameMap[r.profile_id]) || "—",
+  })) as Reservation[];
+};
+
+// ═════════════════════════════════════════════════════════════════════════════
 const AdminCheckout = () => {
   const qc = useQueryClient();
-  const [tab, setTab] = useState<"open" | "history">("open");
+  const [tab, setTab] = useState<"pendentes" | "historico">("pendentes");
   const [search, setSearch] = useState("");
-  const [historySearch, setHistorySearch] = useState("");
-  const [selectedRes, setSelectedRes] = useState<Reservation | null>(null);
-  const [confirmModal, setConfirmModal] = useState(false);
-  const [receiptRes, setReceiptRes] = useState<Reservation | null>(null);
-  const [receiptOrders, setReceiptOrders] = useState<ConsumptionOrder[]>([]);
-  const printRef = useRef<HTMLDivElement>(null);
+  const [confirmId, setConfirmId] = useState<string | null>(null);
 
-  // Contas abertas: checked_in_at NOT NULL e checked_out_at IS NULL
-  const { data: openReservations = [], isLoading } = useQuery({
-    queryKey: ["checkout-open"],
-    queryFn: async () => {
-      // Buscar reservas com check-in feito e check-out pendente
-      // checked_in_at e checked_out_at estão diretamente na tabela reservations
-      const { data, error } = await supabase
-        .from("reservations")
-        .select("*, rooms(name, price), profiles!reservations_profile_id_fkey(full_name, phone)")
-        .eq("status", "checked_in")
-        .not("checked_in_at", "is", null)
-        .is("checked_out_at", null)
-        .order("check_in", { ascending: false });
-      if (error) throw error;
-
-      // Todos os resultados já possuem check-in feito e checkout pendente
-      const filtered = data || [];
-
-      // Buscar consumo aberto agrupado por reservation_id
-      const ids = filtered.map((r: any) => r.id);
-      let consumoMap: Record<string, number> = {};
-      if (ids.length > 0) {
-        const { data: consumos } = await supabase
-          .from("consumption_orders")
-          .select("reservation_id, total")
-          .in("reservation_id", ids)
-          .in("status", ["pending", "delivered"]);
-        (consumos || []).forEach((c: any) => {
-          consumoMap[c.reservation_id] = (consumoMap[c.reservation_id] || 0) + Number(c.total);
-        });
-      }
-
-      return filtered.map((r: any) => ({ ...r, _consumoTotal: consumoMap[r.id] || 0 })) as (Reservation & {
-        _consumoTotal: number;
-      })[];
-    },
+  // ─── Queries ───────────────────────────────────────────────────────────────
+  const { data: hospedados = [], isLoading: loadingHosp } = useQuery({
+    queryKey: ["checkout-hospedados"],
+    queryFn: () => fetchWithNames("checked_in"),
   });
 
-  // Histórico: reservas com status checked_out
-  const { data: history = [], isLoading: loadingHistory } = useQuery({
-    queryKey: ["checkout-history"],
-    queryFn: async () => {
-      const { data, error } = await supabase
-        .from("reservations")
-        .select("*, rooms(name, price), profiles!reservations_profile_id_fkey(full_name, phone)")
-        .eq("status", "checked_out")
-        .order("check_out", { ascending: false })
-        .limit(50);
-      if (error) throw error;
-      return (data || []) as Reservation[];
-    },
+  const { data: historico = [], isLoading: loadingHist } = useQuery({
+    queryKey: ["checkout-historico"],
+    queryFn: () => fetchWithNames("checked_out"),
+    enabled: tab === "historico",
   });
 
-  // Consumos da reserva selecionada
-  const { data: orders = [], isLoading: loadingOrders } = useQuery({
-    queryKey: ["checkout-orders", selectedRes?.id],
-    enabled: !!selectedRes,
-    queryFn: async () => {
-      if (!selectedRes) return [];
-
-      // Tenta primeiro por reservation_id (confiável, independe do nome do quarto)
-      const { data: byResId } = await (supabase as any)
-        .from("consumption_orders")
-        .select("*")
-        .eq("reservation_id", selectedRes.id)
-        .in("status", ["pending", "delivered"])
-        .order("created_at", { ascending: true });
-
-      if (byResId && byResId.length > 0) return byResId as ConsumptionOrder[];
-
-      // Fallback: busca por room_number (compatibilidade com dados antigos)
-      const roomName = (selectedRes.rooms as any)?.name;
-      if (!roomName) return [];
-      const { data, error } = await supabase
-        .from("consumption_orders")
-        .select("*")
-        .eq("room_number", roomName)
-        .in("status", ["pending", "delivered"])
-        .order("created_at", { ascending: true });
-      if (error) throw error;
-      return data as ConsumptionOrder[];
-    },
-  });
-
-  // Finalizar checkout
+  // ─── Mutation: confirmar checkout ─────────────────────────────────────────
   const checkoutMutation = useMutation({
-    mutationFn: async () => {
-      if (!selectedRes) throw new Error("Nenhuma reserva selecionada.");
-      if (orders.length > 0) {
-        const { error } = await supabase
-          .from("consumption_orders")
-          .update({ status: "billed" })
-          .in(
-            "id",
-            orders.map((o) => o.id),
-          );
-        if (error) throw error;
-      }
-      const { error } = await supabase.from("reservations").update({ status: "checked_out", checked_out_at: new Date().toISOString() }).eq("id", selectedRes.id);
+    mutationFn: async (id: string) => {
+      const { error } = await supabase
+        .from("reservations")
+        .update({
+          status: "checked_out",
+          checked_out_at: new Date().toISOString(),
+        })
+        .eq("id", id);
       if (error) throw error;
     },
     onSuccess: () => {
-      toast.success("Checkout finalizado!");
-      // Salva para exibir recibo
-      setReceiptRes(selectedRes);
-      setReceiptOrders(orders);
-      qc.invalidateQueries({ queryKey: ["checkout-open"] });
-      qc.invalidateQueries({ queryKey: ["checkout-history"] });
-      setConfirmModal(false);
-      setSelectedRes(null);
+      toast.success("Check-out realizado!");
+      qc.invalidateQueries({ queryKey: ["checkout-hospedados"] });
+      qc.invalidateQueries({ queryKey: ["checkout-historico"] });
+      qc.invalidateQueries({ queryKey: ["reservas-lista"] });
+      setConfirmId(null);
     },
-    onError: (e: Error) => toast.error(e.message || "Erro ao finalizar checkout."),
+    onError: () => toast.error("Erro ao realizar check-out."),
   });
 
-  // Calculos
-  const nights = selectedRes
-    ? Math.max(1, differenceInDays(new Date(selectedRes.check_out), new Date(selectedRes.check_in)))
-    : 0;
-  const roomPrice = (selectedRes?.rooms as any)?.price ?? 0;
-  const roomTotal = (roomPrice * nights || selectedRes?.total_price) ?? 0;
-  const consumoTotal = orders.reduce((s, o) => s + Number(o.total), 0);
-  const grandTotal = roomTotal + consumoTotal;
-
-  // Calculos do recibo
-  const receiptNights = receiptRes
-    ? Math.max(1, differenceInDays(new Date(receiptRes.check_out), new Date(receiptRes.check_in)))
-    : 0;
-  const receiptRoomPrice = (receiptRes?.rooms as any)?.price ?? 0;
-  const receiptRoomTotal = (receiptRoomPrice * receiptNights || receiptRes?.total_price) ?? 0;
-  const receiptConsumoTotal = receiptOrders.reduce((s, o) => s + Number(o.total), 0);
-  const receiptGrandTotal = receiptRoomTotal + receiptConsumoTotal;
-
-  const handlePrint = () => {
-    const content = printRef.current?.innerHTML;
-    if (!content) return;
-    const win = window.open("", "_blank");
-    if (!win) return;
-    win.document.write(`
-      <html><head><title>Recibo - SB Hotel</title>
-      <style>
-        body { font-family: Georgia, serif; max-width: 500px; margin: 40px auto; color: #111; }
-        .gold { color: #C9A84C; }
-        .header { text-align: center; border-bottom: 2px solid #C9A84C; padding-bottom: 20px; margin-bottom: 20px; }
-        .row { display: flex; justify-content: space-between; padding: 8px 0; border-bottom: 1px solid #eee; font-size: 14px; }
-        .total-row { display: flex; justify-content: space-between; padding: 12px 0; font-size: 18px; font-weight: bold; border-top: 2px solid #C9A84C; margin-top: 8px; }
-        .section-title { font-size: 11px; letter-spacing: 2px; text-transform: uppercase; color: #C9A84C; margin: 16px 0 8px; }
-        .footer { text-align: center; margin-top: 30px; font-size: 12px; color: #999; }
-        @media print { body { margin: 20px; } }
-      </style></head><body>${content}</body></html>
-    `);
-    win.document.close();
-    win.focus();
-    setTimeout(() => {
-      win.print();
-      win.close();
-    }, 500);
-  };
-
-  const filteredOpen = openReservations.filter((r) => {
+  const filter = (list: Reservation[]) => {
+    if (!search.trim()) return list;
     const q = search.toLowerCase();
-    return (
-      !q ||
-      (r.profiles as any)?.full_name?.toLowerCase().includes(q) ||
-      (r.rooms as any)?.name?.toLowerCase().includes(q)
-    );
-  });
-
-  const filteredHistory = history.filter((r) => {
-    const q = historySearch.toLowerCase();
-    return (
-      !q ||
-      (r.profiles as any)?.full_name?.toLowerCase().includes(q) ||
-      (r.rooms as any)?.name?.toLowerCase().includes(q)
-    );
-  });
-
-  const ResCard = ({
-    res,
-    selected,
-    onClick,
-  }: {
-    res: Reservation & { _consumoTotal?: number };
-    selected: boolean;
-    onClick: () => void;
-  }) => {
-    const n = Math.max(1, differenceInDays(new Date(res.check_out), new Date(res.check_in)));
-    const rp = (res.rooms as any)?.price ?? 0;
-    const diarias = rp * n || res.total_price || 0;
-    const consumo = (res as any)._consumoTotal || 0;
-    const estimado = diarias + consumo;
-    return (
-      <button
-        onClick={onClick}
-        className={`w-full text-left p-4 rounded-xl border transition-all duration-200 ${
-          selected ? "border-primary/50 bg-primary/10" : "border-gold/10 bg-charcoal-light hover:border-gold/25"
-        }`}
-      >
-        <div className="flex items-center justify-between mb-1.5">
-          <p className="text-cream font-body font-semibold text-sm">{(res.profiles as any)?.full_name ?? "Hóspede"}</p>
-          <span className="font-display font-bold text-primary text-sm">R$ {estimado.toFixed(2)}</span>
-        </div>
-        <p className="text-cream/50 font-body text-xs mb-1">{(res.rooms as any)?.name ?? "—"}</p>
-        <div className="flex items-center gap-3 text-xs text-cream/40 font-body">
-          <span>
-            <Calendar className="w-3 h-3 inline mr-1" />
-            {format(new Date(res.check_in + "T12:00:00"), "dd/MM", { locale: ptBR })} →{" "}
-            {format(new Date(res.check_out + "T12:00:00"), "dd/MM", { locale: ptBR })} · {n}n
-          </span>
-          {consumo > 0 && <span>+ consumo R$ {consumo.toFixed(2)}</span>}
-        </div>
-      </button>
+    return list.filter(
+      (r) => r.guestName.toLowerCase().includes(q) || (r.rooms as any)?.name?.toLowerCase().includes(q),
     );
   };
 
+  const filteredHosp = filter(hospedados);
+  const filteredHist = filter(historico);
+  const confirmRes = hospedados.find((r) => r.id === confirmId);
+
+  const todayStr = new Date().toISOString().slice(0, 10);
+
+  // ─── Render ───────────────────────────────────────────────────────────────
   return (
-    <div className="min-h-screen bg-charcoal">
-      <header className="bg-charcoal-light border-b border-gold/10 px-6 py-4 flex items-center justify-between">
-        <div className="flex items-center gap-3">
-          <img src={hotelLogo} alt="SB Hotel" className="h-10 w-auto object-contain" />
-          <span className="text-cream/40 text-xs font-body">Admin</span>
+    <div className="p-6 md:p-8 space-y-6 text-cream">
+      {/* Header */}
+      <div className="flex items-center gap-3">
+        <div className="p-2.5 rounded-xl bg-blue-500/10 border border-blue-500/20">
+          <LogOut className="w-5 h-5 text-blue-400" />
         </div>
-        <Link to="/" className="text-cream/50 text-sm font-body hover:text-primary transition-colors">
-          Ver Site →
-        </Link>
-      </header>
-
-      <div className="p-6 md:p-10">
-        <div className="flex items-center gap-3 mb-8">
-          <Link
-            to="/admin"
-            className="inline-flex items-center gap-2 text-cream/50 hover:text-primary text-sm font-body transition-colors"
-          >
-            <ArrowLeft className="w-4 h-4" /> Dashboard
-          </Link>
-          <span className="text-cream/20">/</span>
-          <Receipt className="w-5 h-5 text-primary" />
-          <h1 className="font-display text-2xl font-bold text-cream">Checkout</h1>
+        <div>
+          <h1 className="font-display text-2xl font-semibold text-cream leading-none">Checkout</h1>
+          <p className="text-white/30 text-xs mt-0.5 font-body">Hóspedes hospedados e histórico</p>
         </div>
-
-        {/* Tabs */}
-        <div className="flex gap-1 mb-6 bg-charcoal-light border border-gold/10 rounded-xl p-1 w-fit">
-          {[
-            { key: "open", label: "Contas Abertas", icon: DollarSign },
-            { key: "history", label: "Histórico", icon: History },
-          ].map((t) => (
-            <button
-              key={t.key}
-              onClick={() => setTab(t.key as any)}
-              className={`flex items-center gap-2 px-5 py-2 rounded-lg text-sm font-body transition-all ${
-                tab === t.key
-                  ? "bg-primary/20 text-primary border border-primary/30"
-                  : "text-cream/40 hover:text-cream/70"
-              }`}
-            >
-              <t.icon className="w-4 h-4" />
-              {t.label}
-            </button>
-          ))}
-        </div>
-
-        {/* ── Tab: Contas Abertas ── */}
-        {tab === "open" && (
-          <div className="grid grid-cols-1 lg:grid-cols-5 gap-6">
-            {/* Lista */}
-            <div className="lg:col-span-2 space-y-3">
-              <div className="relative">
-                <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-cream/30" />
-                <input
-                  className="w-full pl-10 pr-4 py-2.5 bg-charcoal-light border border-gold/10 rounded-lg text-cream text-sm placeholder:text-cream/30 focus:border-primary/40 focus:outline-none transition"
-                  placeholder="Buscar hóspede ou quarto..."
-                  value={search}
-                  onChange={(e) => setSearch(e.target.value)}
-                />
-              </div>
-              {isLoading ? (
-                <div className="text-center py-10">
-                  <Loader2 className="w-6 h-6 animate-spin text-primary/40 mx-auto" />
-                </div>
-              ) : filteredOpen.length === 0 ? (
-                <div className="text-center py-10">
-                  <CheckCircle2 className="w-10 h-10 text-green-400/30 mx-auto mb-3" />
-                  <p className="text-cream/30 font-body text-sm">Nenhuma conta aberta</p>
-                </div>
-              ) : (
-                filteredOpen.map((res) => (
-                  <ResCard
-                    key={res.id}
-                    res={res}
-                    selected={selectedRes?.id === res.id}
-                    onClick={() => setSelectedRes(res)}
-                  />
-                ))
-              )}
-            </div>
-
-            {/* Conta */}
-            <div className="lg:col-span-3">
-              {!selectedRes ? (
-                <div className="flex flex-col items-center justify-center h-80 rounded-2xl border border-dashed border-gold/15">
-                  <Receipt className="w-12 h-12 text-primary/20 mb-4" />
-                  <p className="text-cream/30 font-body text-sm">Selecione uma reserva para ver a conta</p>
-                </div>
-              ) : (
-                <motion.div
-                  initial={{ opacity: 0, y: 16 }}
-                  animate={{ opacity: 1, y: 0 }}
-                  className="bg-charcoal-light border border-gold/15 rounded-2xl overflow-hidden"
-                >
-                  {/* Header */}
-                  <div
-                    className="relative p-6 border-b border-gold/10"
-                    style={{ background: "linear-gradient(135deg,rgba(201,168,76,0.1),rgba(201,168,76,0.02))" }}
-                  >
-                    <div
-                      className="absolute top-0 right-0 w-32 h-32 rounded-full blur-3xl opacity-10"
-                      style={{ background: "radial-gradient(circle,#C9A84C,transparent)" }}
-                    />
-                    <div className="relative flex items-center justify-between">
-                      <div>
-                        <p className="text-xs text-primary/70 font-body tracking-widest uppercase mb-1">
-                          Conta do hóspede
-                        </p>
-                        <h2 className="font-display text-xl font-bold text-cream">
-                          {(selectedRes.profiles as any)?.full_name ?? "Hóspede"} —{" "}
-                          {(selectedRes.rooms as any)?.name ?? "Quarto"}
-                        </h2>
-                        <p className="text-cream/40 font-body text-sm mt-0.5">
-                          {nights} {nights === 1 ? "noite" : "noites"}
-                        </p>
-                      </div>
-                      <button
-                        onClick={() => setSelectedRes(null)}
-                        className="text-cream/30 hover:text-cream transition-colors"
-                      >
-                        <X className="w-5 h-5" />
-                      </button>
-                    </div>
-                  </div>
-
-                  <div className="p-6 space-y-5">
-                    {/* Hospedagem */}
-                    <div>
-                      <div className="flex items-center gap-2 mb-3">
-                        <BedDouble className="w-4 h-4 text-primary" />
-                        <p className="text-xs text-primary/70 font-body tracking-widest uppercase">Hospedagem</p>
-                      </div>
-                      <div className="bg-charcoal rounded-xl border border-white/5 p-4">
-                        <div className="flex items-center justify-between">
-                          <div>
-                            <p className="text-cream font-body text-sm font-medium">
-                              {(selectedRes.rooms as any)?.name}
-                            </p>
-                            <p className="text-cream/40 font-body text-xs mt-0.5">
-                              {format(new Date(selectedRes.check_in + "T12:00:00"), "dd/MM/yyyy", { locale: ptBR })} →{" "}
-                              {format(new Date(selectedRes.check_out + "T12:00:00"), "dd/MM/yyyy", { locale: ptBR })} ·{" "}
-                              {nights} {nights === 1 ? "noite" : "noites"} · R$ {roomPrice.toFixed(2)}/noite
-                            </p>
-                          </div>
-                          <p className="font-display font-bold text-cream">R$ {roomTotal.toFixed(2)}</p>
-                        </div>
-                      </div>
-                    </div>
-
-                    {/* Consumos */}
-                    <div>
-                      <div className="flex items-center gap-2 mb-3">
-                        <UtensilsCrossed className="w-4 h-4 text-primary" />
-                        <p className="text-xs text-primary/70 font-body tracking-widest uppercase">Consumos</p>
-                        {loadingOrders && <Loader2 className="w-3 h-3 animate-spin text-cream/30" />}
-                      </div>
-                      {orders.length === 0 ? (
-                        <div className="bg-charcoal rounded-xl border border-white/5 p-4 text-center">
-                          <p className="text-cream/30 font-body text-sm">Nenhum consumo pendente</p>
-                        </div>
-                      ) : (
-                        <div className="bg-charcoal rounded-xl border border-white/5 divide-y divide-white/5">
-                          {orders.map((o) => (
-                            <div key={o.id} className="flex items-center justify-between px-4 py-3">
-                              <div>
-                                <p className="text-cream font-body text-sm">{o.item_name}</p>
-                                <p className="text-cream/30 font-body text-xs">
-                                  {o.quantity}× · R$ {Number(o.unit_price).toFixed(2)} ·{" "}
-                                  {format(new Date(o.created_at), "dd/MM HH:mm", { locale: ptBR })}
-                                  {o.notes && ` · "${o.notes}"`}
-                                </p>
-                              </div>
-                              <p className="font-body font-semibold text-cream text-sm">
-                                R$ {Number(o.total).toFixed(2)}
-                              </p>
-                            </div>
-                          ))}
-                        </div>
-                      )}
-                    </div>
-
-                    {/* Total */}
-                    <div
-                      className="relative overflow-hidden rounded-xl border border-gold/20 p-5"
-                      style={{ background: "linear-gradient(135deg,rgba(201,168,76,0.1),rgba(201,168,76,0.02))" }}
-                    >
-                      <div className="space-y-2 mb-4">
-                        <div className="flex justify-between text-sm font-body text-cream/60">
-                          <span>Hospedagem ({nights}n)</span>
-                          <span>R$ {roomTotal.toFixed(2)}</span>
-                        </div>
-                        <div className="flex justify-between text-sm font-body text-cream/60">
-                          <span>Consumos ({orders.length} itens)</span>
-                          <span>R$ {consumoTotal.toFixed(2)}</span>
-                        </div>
-                        <div className="h-px bg-gold/15 my-2" />
-                        <div className="flex justify-between items-center">
-                          <span className="font-display font-bold text-cream text-lg">Total</span>
-                          <span className="font-display font-bold text-primary text-2xl">
-                            R$ {grandTotal.toFixed(2)}
-                          </span>
-                        </div>
-                      </div>
-                    </div>
-
-                    <button
-                      onClick={() => setConfirmModal(true)}
-                      className="w-full flex items-center justify-center gap-2 py-4 rounded-xl font-body font-semibold text-sm tracking-wide transition-all hover:scale-[1.01] hover:shadow-[0_0_30px_rgba(201,168,76,0.3)]"
-                      style={{ background: "linear-gradient(135deg,#C9A84C,#E5C97A)", color: "#000" }}
-                    >
-                      <CheckCircle2 className="w-5 h-5" />
-                      Finalizar Checkout — R$ {grandTotal.toFixed(2)}
-                    </button>
-                  </div>
-                </motion.div>
-              )}
-            </div>
-          </div>
-        )}
-
-        {/* ── Tab: Histórico ── */}
-        {tab === "history" && (
-          <motion.div initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }}>
-            <div className="relative mb-4 max-w-md">
-              <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-cream/30" />
-              <input
-                className="w-full pl-10 pr-4 py-2.5 bg-charcoal-light border border-gold/10 rounded-lg text-cream text-sm placeholder:text-cream/30 focus:border-primary/40 focus:outline-none transition"
-                placeholder="Buscar no histórico..."
-                value={historySearch}
-                onChange={(e) => setHistorySearch(e.target.value)}
-              />
-            </div>
-            {loadingHistory ? (
-              <div className="text-center py-20">
-                <Loader2 className="w-6 h-6 animate-spin text-primary/40 mx-auto" />
-              </div>
-            ) : filteredHistory.length === 0 ? (
-              <div className="text-center py-20">
-                <History className="w-12 h-12 text-primary/20 mx-auto mb-4" />
-                <p className="text-cream/30 font-body">Nenhum checkout concluído ainda.</p>
-              </div>
-            ) : (
-              <div className="space-y-3">
-                {filteredHistory.map((res, i) => {
-                  const n = Math.max(1, differenceInDays(new Date(res.check_out), new Date(res.check_in)));
-                  const rp = (res.rooms as any)?.price ?? 0;
-                  const rt = rp * n || res.total_price;
-                  return (
-                    <motion.div
-                      key={res.id}
-                      initial={{ opacity: 0, y: 10 }}
-                      animate={{ opacity: 1, y: 0 }}
-                      transition={{ delay: i * 0.03 }}
-                      className="bg-charcoal-light border border-gold/10 rounded-xl p-5 flex flex-col sm:flex-row sm:items-center gap-4 hover:border-gold/20 transition-all"
-                    >
-                      <div className="flex-1">
-                        <div className="flex items-center gap-2 mb-1">
-                          <User className="w-4 h-4 text-primary/60" />
-                          <p className="text-cream font-body font-semibold text-sm">
-                            {(res.profiles as any)?.full_name ?? "Hóspede"}
-                          </p>
-                          <span className="text-xs px-2 py-0.5 rounded-full bg-blue-500/20 text-blue-400 border border-blue-500/30 font-body">
-                            Concluída
-                          </span>
-                        </div>
-                        <div className="flex items-center gap-4 text-xs text-cream/40 font-body">
-                          <span className="flex items-center gap-1">
-                            <BedDouble className="w-3 h-3" />
-                            {(res.rooms as any)?.name ?? "—"}
-                          </span>
-                          <span>
-                            {format(new Date(res.check_in + "T12:00:00"), "dd/MM/yyyy", { locale: ptBR })} →{" "}
-                            {format(new Date(res.check_out + "T12:00:00"), "dd/MM/yyyy", { locale: ptBR })}
-                          </span>
-                          <span>
-                            {n} {n === 1 ? "noite" : "noites"}
-                          </span>
-                        </div>
-                      </div>
-                      <div className="flex items-center gap-4">
-                        <p className="font-display font-bold text-primary text-lg">R$ {rt.toFixed(2)}</p>
-                        <button
-                          onClick={async () => {
-                            const roomName = (res.rooms as any)?.name;
-                            if (roomName) {
-                              const { data } = await supabase
-                                .from("consumption_orders")
-                                .select("*")
-                                .eq("room_number", roomName)
-                                .eq("status", "billed")
-                                .gte("created_at", res.check_in)
-                                .lte("created_at", res.check_out + "T23:59:59");
-                              setReceiptOrders(data ?? []);
-                            } else {
-                              setReceiptOrders([]);
-                            }
-                            setReceiptRes(res);
-                          }}
-                          className="flex items-center gap-1.5 px-4 py-2 rounded-lg border border-gold/20 text-cream/60 hover:text-primary hover:border-primary/40 text-sm font-body transition-all"
-                        >
-                          <FileText className="w-4 h-4" /> Recibo
-                        </button>
-                      </div>
-                    </motion.div>
-                  );
-                })}
-              </div>
-            )}
-          </motion.div>
-        )}
       </div>
 
-      {/* ── Modal confirmação checkout ── */}
-      <AnimatePresence>
-        {confirmModal && (
-          <motion.div
-            initial={{ opacity: 0 }}
-            animate={{ opacity: 1 }}
-            exit={{ opacity: 0 }}
-            className="fixed inset-0 z-50 bg-black/70 backdrop-blur-sm flex items-center justify-center px-4"
+      {/* Tabs */}
+      <div className="flex gap-2">
+        <button
+          onClick={() => setTab("pendentes")}
+          className={`flex items-center gap-2 px-4 py-2 rounded-xl text-sm font-body border transition-all ${
+            tab === "pendentes"
+              ? "bg-blue-500/15 border-blue-500/30 text-blue-400"
+              : "bg-white/5 border-white/8 text-white/40 hover:text-cream hover:border-white/20"
+          }`}
+        >
+          <Clock className="w-4 h-4" /> Hospedados
+          <span
+            className={`text-xs px-1.5 py-0.5 rounded-full font-semibold ${tab === "pendentes" ? "bg-blue-500/20 text-blue-300" : "bg-white/8 text-white/30"}`}
           >
-            <motion.div
-              initial={{ scale: 0.9, opacity: 0 }}
-              animate={{ scale: 1, opacity: 1 }}
-              exit={{ scale: 0.9, opacity: 0 }}
-              className="bg-charcoal border border-gold/20 rounded-2xl p-8 max-w-sm w-full text-center"
-            >
-              <div className="w-16 h-16 rounded-full bg-primary/15 border border-primary/30 flex items-center justify-center mx-auto mb-5">
-                <DollarSign className="w-8 h-8 text-primary" />
-              </div>
-              <h3 className="font-display text-xl font-bold text-cream mb-2">Confirmar Checkout?</h3>
-              <p className="text-cream/50 text-sm font-body mb-1">
-                {(selectedRes?.profiles as any)?.full_name ?? "Hóspede"} · {(selectedRes?.rooms as any)?.name}
+            {hospedados.length}
+          </span>
+        </button>
+        <button
+          onClick={() => setTab("historico")}
+          className={`flex items-center gap-2 px-4 py-2 rounded-xl text-sm font-body border transition-all ${
+            tab === "historico"
+              ? "bg-white/10 border-white/20 text-cream"
+              : "bg-white/5 border-white/8 text-white/40 hover:text-cream hover:border-white/20"
+          }`}
+        >
+          <History className="w-4 h-4" /> Histórico
+        </button>
+      </div>
+
+      {/* Busca */}
+      <div className="relative">
+        <Search className="absolute left-3.5 top-1/2 -translate-y-1/2 w-4 h-4 text-white/25" />
+        <input
+          className="w-full pl-10 pr-4 py-2.5 bg-charcoal-light border border-white/5 rounded-xl text-cream text-sm focus:border-primary/40 focus:outline-none transition placeholder:text-white/20 font-body"
+          placeholder="Buscar hóspede ou quarto..."
+          value={search}
+          onChange={(e) => setSearch(e.target.value)}
+        />
+      </div>
+
+      {/* ═══ TAB HOSPEDADOS ═══ */}
+      {tab === "pendentes" && (
+        <>
+          {loadingHosp ? (
+            <div className="flex items-center justify-center py-20 text-white/20 gap-2 font-body">
+              <Loader2 className="w-4 h-4 animate-spin" /> Carregando...
+            </div>
+          ) : filteredHosp.length === 0 ? (
+            <div className="text-center py-20">
+              <CheckCircle2 className="w-12 h-12 text-emerald-400/20 mx-auto mb-3" />
+              <p className="text-white/30 font-body text-sm">
+                {hospedados.length === 0 ? "Nenhum hóspede hospedado no momento." : "Nenhum resultado para a busca."}
               </p>
-              <div className="my-4 space-y-1 text-sm font-body">
-                <div className="flex justify-between text-cream/50 px-4">
-                  <span>Hospedagem</span>
-                  <span>R$ {roomTotal.toFixed(2)}</span>
+            </div>
+          ) : (
+            <div className="space-y-3">
+              {filteredHosp.map((r) => {
+                const n = differenceInDays(new Date(r.check_out + "T12:00:00"), new Date(r.check_in + "T12:00:00"));
+                const saidaHoje = r.check_out === todayStr;
+                return (
+                  <div
+                    key={r.id}
+                    className={`bg-charcoal-light border rounded-xl p-4 flex flex-col md:flex-row md:items-center gap-4 transition-colors ${
+                      saidaHoje ? "border-blue-500/25 hover:border-blue-500/40" : "border-white/5 hover:border-white/10"
+                    }`}
+                  >
+                    <div className="flex-1 space-y-2.5">
+                      {saidaHoje && (
+                        <span className="inline-flex items-center gap-1 text-[10px] px-2 py-0.5 rounded-full bg-blue-500/15 text-blue-400 border border-blue-500/25 font-body">
+                          <span className="w-1.5 h-1.5 rounded-full bg-blue-400" /> Saindo hoje
+                        </span>
+                      )}
+                      <div className="flex items-center gap-2">
+                        <div className="w-8 h-8 rounded-full bg-white/5 border border-white/8 flex items-center justify-center shrink-0">
+                          <span className="text-white/40 text-sm font-bold">
+                            {r.guestName[0]?.toUpperCase() ?? "?"}
+                          </span>
+                        </div>
+                        <p className="text-cream font-body font-medium text-sm">{r.guestName}</p>
+                      </div>
+                      <div className="flex flex-wrap gap-x-4 gap-y-1 text-white/40 text-xs font-body">
+                        <span className="flex items-center gap-1">
+                          <BedDouble className="w-3.5 h-3.5" />
+                          <strong className="text-cream/70">{(r.rooms as any)?.name ?? "—"}</strong> ·{" "}
+                          {(r.rooms as any)?.category}
+                        </span>
+                        <span className="flex items-center gap-1">
+                          <CalendarDays className="w-3.5 h-3.5" />
+                          {fmtShort(r.check_in)} → {fmtShort(r.check_out)} · {n}n
+                        </span>
+                      </div>
+                      {r.checked_in_at && (
+                        <p className="text-white/20 text-xs font-body">Entrada: {fmtDateTime(r.checked_in_at)}</p>
+                      )}
+                    </div>
+                    <div className="text-right shrink-0">
+                      <p className="font-display text-lg font-bold text-primary">
+                        R$ {Number(r.total_price).toFixed(2).replace(".", ",")}
+                      </p>
+                    </div>
+                    <button
+                      onClick={() => setConfirmId(r.id)}
+                      className="flex items-center gap-2 px-4 py-2.5 rounded-lg text-sm font-semibold bg-blue-500/15 border border-blue-500/30 text-blue-400 hover:bg-blue-500/25 transition-colors shrink-0"
+                    >
+                      <LogOut className="w-4 h-4" /> Check-out
+                    </button>
+                  </div>
+                );
+              })}
+            </div>
+          )}
+        </>
+      )}
+
+      {/* ═══ TAB HISTÓRICO ═══ */}
+      {tab === "historico" && (
+        <>
+          {loadingHist ? (
+            <div className="flex items-center justify-center py-20 text-white/20 gap-2 font-body">
+              <Loader2 className="w-4 h-4 animate-spin" /> Carregando...
+            </div>
+          ) : filteredHist.length === 0 ? (
+            <div className="text-center py-20">
+              <History className="w-12 h-12 text-white/10 mx-auto mb-3" />
+              <p className="text-white/30 font-body text-sm">Nenhuma hospedagem finalizada ainda.</p>
+            </div>
+          ) : (
+            <div className="bg-charcoal-light border border-white/5 rounded-xl overflow-x-auto">
+              <table className="w-full">
+                <thead>
+                  <tr className="border-b border-white/5">
+                    {["Hóspede", "Quarto", "Período", "Total", "Saída"].map((h) => (
+                      <th
+                        key={h}
+                        className="text-left px-5 py-3.5 text-[10px] uppercase tracking-widest text-white/25 font-body"
+                      >
+                        {h}
+                      </th>
+                    ))}
+                  </tr>
+                </thead>
+                <tbody>
+                  {filteredHist.map((r) => {
+                    const n = differenceInDays(new Date(r.check_out + "T12:00:00"), new Date(r.check_in + "T12:00:00"));
+                    return (
+                      <tr
+                        key={r.id}
+                        className="border-b border-white/5 last:border-0 hover:bg-white/[0.02] transition-colors"
+                      >
+                        <td className="px-5 py-4">
+                          <div className="flex items-center gap-2">
+                            <div className="w-6 h-6 rounded-full bg-white/5 border border-white/8 flex items-center justify-center shrink-0">
+                              <span className="text-white/40 text-[10px] font-bold">
+                                {r.guestName[0]?.toUpperCase() ?? "?"}
+                              </span>
+                            </div>
+                            <span className="text-cream/70 text-sm font-body">{r.guestName}</span>
+                          </div>
+                        </td>
+                        <td className="px-5 py-4">
+                          <p className="text-cream/70 text-sm font-body">{(r.rooms as any)?.name ?? "—"}</p>
+                          <p className="text-white/25 text-xs font-body">{(r.rooms as any)?.category}</p>
+                        </td>
+                        <td className="px-5 py-4 whitespace-nowrap">
+                          <p className="text-white/50 text-xs font-body">
+                            {fmt(r.check_in)} → {fmt(r.check_out)}
+                          </p>
+                          <p className="text-white/25 text-xs font-body">{n}n</p>
+                        </td>
+                        <td className="px-5 py-4">
+                          <span className="text-primary font-semibold text-sm">
+                            R$ {Number(r.total_price).toFixed(2).replace(".", ",")}
+                          </span>
+                        </td>
+                        <td className="px-5 py-4">
+                          <span className="inline-flex items-center gap-1.5 text-xs px-2.5 py-1 rounded-full border bg-white/5 border-white/10 text-white/30 font-body">
+                            <CheckCircle2 className="w-3 h-3" />
+                            {r.checked_out_at ? fmtDateTime(r.checked_out_at) : fmt(r.check_out)}
+                          </span>
+                        </td>
+                      </tr>
+                    );
+                  })}
+                </tbody>
+              </table>
+            </div>
+          )}
+        </>
+      )}
+
+      {/* ═══ MODAL CONFIRMAR CHECKOUT ═══ */}
+      {confirmRes && (
+        <>
+          <div className="fixed inset-0 z-50 bg-black/70 backdrop-blur-sm" onClick={() => setConfirmId(null)} />
+          <div className="fixed inset-0 z-50 flex items-center justify-center p-4 pointer-events-none">
+            <div
+              className="bg-[#111114] border border-white/10 rounded-2xl w-full max-w-sm shadow-2xl pointer-events-auto p-6 space-y-5"
+              onClick={(e) => e.stopPropagation()}
+            >
+              <div className="flex items-center justify-between">
+                <div className="flex items-center gap-3">
+                  <div className="p-2.5 rounded-xl bg-blue-500/10 border border-blue-500/20">
+                    <LogOut className="w-5 h-5 text-blue-400" />
+                  </div>
+                  <h3 className="font-display text-lg font-semibold text-cream">Confirmar Check-out</h3>
                 </div>
-                <div className="flex justify-between text-cream/50 px-4">
-                  <span>Consumos</span>
-                  <span>R$ {consumoTotal.toFixed(2)}</span>
-                </div>
-                <div className="flex justify-between text-primary font-bold text-base px-4 pt-2 border-t border-gold/15">
-                  <span>Total</span>
-                  <span>R$ {grandTotal.toFixed(2)}</span>
-                </div>
+                <button onClick={() => setConfirmId(null)} className="text-white/25 hover:text-cream transition-colors">
+                  <X className="w-5 h-5" />
+                </button>
               </div>
-              <div className="bg-yellow-500/10 border border-yellow-500/20 rounded-lg p-3 mb-6">
-                <p className="text-yellow-400 text-xs font-body">A reserva será concluída e consumos faturados.</p>
+
+              <div className="bg-white/5 border border-white/8 rounded-xl p-4 space-y-1">
+                <p className="text-cream font-body font-semibold">{confirmRes.guestName}</p>
+                <p className="text-white/40 text-sm font-body">
+                  {(confirmRes.rooms as any)?.name} · {(confirmRes.rooms as any)?.category}
+                </p>
+                <p className="text-white/30 text-xs font-body">
+                  {fmt(confirmRes.check_in)} → {fmt(confirmRes.check_out)}
+                </p>
+                {confirmRes.checked_in_at && (
+                  <p className="text-white/20 text-xs font-body">Entrada: {fmtDateTime(confirmRes.checked_in_at)}</p>
+                )}
+                <p className="text-primary font-semibold text-sm font-display mt-2">
+                  R$ {Number(confirmRes.total_price).toFixed(2).replace(".", ",")}
+                </p>
               </div>
+
+              <p className="text-white/30 text-xs font-body text-center">
+                Isso vai marcar como <span className="text-white/50 font-semibold">Finalizada</span> e registrar o
+                horário de saída.
+              </p>
+
               <div className="flex gap-3">
                 <button
-                  onClick={() => setConfirmModal(false)}
-                  className="flex-1 border border-gold/20 text-cream/60 rounded-lg py-3 text-sm font-body hover:text-cream transition"
+                  onClick={() => setConfirmId(null)}
+                  className="flex-1 py-2.5 text-sm text-white/40 hover:text-cream font-body border border-white/10 rounded-xl transition-colors"
                 >
                   Cancelar
                 </button>
                 <button
-                  onClick={() => checkoutMutation.mutate()}
+                  onClick={() => checkoutMutation.mutate(confirmId!)}
                   disabled={checkoutMutation.isPending}
-                  className="flex-1 rounded-lg py-3 text-sm font-semibold font-body transition-all disabled:opacity-50"
-                  style={{ background: "linear-gradient(135deg,#C9A84C,#E5C97A)", color: "#000" }}
+                  className="flex-1 flex items-center justify-center gap-2 py-2.5 rounded-xl text-sm font-semibold bg-blue-500/15 border border-blue-500/30 text-blue-400 hover:bg-blue-500/25 transition-colors disabled:opacity-50"
                 >
                   {checkoutMutation.isPending ? (
-                    <span className="flex items-center justify-center gap-2">
-                      <Loader2 className="w-4 h-4 animate-spin" />
-                      Processando...
-                    </span>
+                    <Loader2 className="w-4 h-4 animate-spin" />
                   ) : (
-                    "Confirmar"
+                    <CheckCircle2 className="w-4 h-4" />
                   )}
+                  {checkoutMutation.isPending ? "Processando..." : "Confirmar"}
                 </button>
               </div>
-            </motion.div>
-          </motion.div>
-        )}
-      </AnimatePresence>
-
-      {/* ── Modal Recibo ── */}
-      <AnimatePresence>
-        {receiptRes && (
-          <motion.div
-            initial={{ opacity: 0 }}
-            animate={{ opacity: 1 }}
-            exit={{ opacity: 0 }}
-            className="fixed inset-0 z-50 bg-black/80 backdrop-blur-sm flex items-center justify-center px-4"
-            onClick={(e) => e.target === e.currentTarget && setReceiptRes(null)}
-          >
-            <motion.div
-              initial={{ scale: 0.95, opacity: 0 }}
-              animate={{ scale: 1, opacity: 1 }}
-              exit={{ scale: 0.95, opacity: 0 }}
-              className="bg-white rounded-2xl w-full max-w-md shadow-2xl overflow-hidden"
-            >
-              {/* Conteúdo imprimível */}
-              <div ref={printRef} className="p-8">
-                <div className="header text-center border-b-2 border-[#C9A84C] pb-5 mb-5">
-                  <p style={{ fontSize: 28, fontWeight: "bold", color: "#111", letterSpacing: 3 }}>SB HOTEL</p>
-                  <p
-                    style={{
-                      fontSize: 11,
-                      color: "#C9A84C",
-                      letterSpacing: 4,
-                      textTransform: "uppercase",
-                      marginTop: 4,
-                    }}
-                  >
-                    Sleep Better · Butiá, RS
-                  </p>
-                  <p style={{ fontSize: 13, color: "#666", marginTop: 8 }}>RECIBO DE HOSPEDAGEM</p>
-                  <p style={{ fontSize: 12, color: "#999", marginTop: 4 }}>
-                    {format(new Date(), "dd/MM/yyyy 'às' HH:mm", { locale: ptBR })}
-                  </p>
-                </div>
-
-                <div style={{ marginBottom: 16 }}>
-                  <p
-                    style={{
-                      fontSize: 11,
-                      letterSpacing: 2,
-                      textTransform: "uppercase",
-                      color: "#C9A84C",
-                      marginBottom: 8,
-                    }}
-                  >
-                    Hóspede
-                  </p>
-                  <p style={{ fontSize: 15, fontWeight: "bold", color: "#111" }}>
-                    {(receiptRes.profiles as any)?.full_name ?? "Hóspede"}
-                  </p>
-                  {(receiptRes.profiles as any)?.phone && (
-                    <p style={{ fontSize: 13, color: "#666" }}>{(receiptRes.profiles as any)?.phone}</p>
-                  )}
-                </div>
-
-                <div style={{ marginBottom: 16 }}>
-                  <p
-                    style={{
-                      fontSize: 11,
-                      letterSpacing: 2,
-                      textTransform: "uppercase",
-                      color: "#C9A84C",
-                      marginBottom: 8,
-                    }}
-                  >
-                    Hospedagem
-                  </p>
-                  <div
-                    className="row"
-                    style={{
-                      display: "flex",
-                      justifyContent: "space-between",
-                      padding: "8px 0",
-                      borderBottom: "1px solid #eee",
-                      fontSize: 14,
-                    }}
-                  >
-                    <div>
-                      <p style={{ fontWeight: "bold", color: "#111" }}>{(receiptRes.rooms as any)?.name}</p>
-                      <p style={{ color: "#888", fontSize: 12 }}>
-                        {format(new Date(receiptRes.check_in + "T12:00:00"), "dd/MM/yyyy", { locale: ptBR })} →{" "}
-                        {format(new Date(receiptRes.check_out + "T12:00:00"), "dd/MM/yyyy", { locale: ptBR })} ·{" "}
-                        {receiptNights} {receiptNights === 1 ? "noite" : "noites"}
-                      </p>
-                    </div>
-                    <p style={{ fontWeight: "bold", color: "#111" }}>R$ {receiptRoomTotal.toFixed(2)}</p>
-                  </div>
-                </div>
-
-                {receiptOrders.length > 0 && (
-                  <div style={{ marginBottom: 16 }}>
-                    <p
-                      style={{
-                        fontSize: 11,
-                        letterSpacing: 2,
-                        textTransform: "uppercase",
-                        color: "#C9A84C",
-                        marginBottom: 8,
-                      }}
-                    >
-                      Consumos
-                    </p>
-                    {receiptOrders.map((o) => (
-                      <div
-                        key={o.id}
-                        style={{
-                          display: "flex",
-                          justifyContent: "space-between",
-                          padding: "6px 0",
-                          borderBottom: "1px solid #eee",
-                          fontSize: 13,
-                        }}
-                      >
-                        <span style={{ color: "#333" }}>
-                          {o.item_name} × {o.quantity}
-                        </span>
-                        <span style={{ fontWeight: "bold", color: "#111" }}>R$ {Number(o.total).toFixed(2)}</span>
-                      </div>
-                    ))}
-                  </div>
-                )}
-
-                <div
-                  style={{
-                    display: "flex",
-                    justifyContent: "space-between",
-                    padding: "14px 0",
-                    borderTop: "2px solid #C9A84C",
-                    marginTop: 8,
-                    fontSize: 18,
-                    fontWeight: "bold",
-                  }}
-                >
-                  <span style={{ color: "#111" }}>TOTAL</span>
-                  <span style={{ color: "#C9A84C" }}>R$ {receiptGrandTotal.toFixed(2)}</span>
-                </div>
-
-                <div style={{ textAlign: "center", marginTop: 24, paddingTop: 16, borderTop: "1px solid #eee" }}>
-                  <p style={{ fontSize: 12, color: "#999" }}>Obrigado pela sua estadia!</p>
-                  <p style={{ fontSize: 11, color: "#bbb", marginTop: 4 }}>SB Hotel · Sleep Better · sbhotel.com</p>
-                </div>
-              </div>
-
-              {/* Botões */}
-              <div className="flex gap-3 p-5 bg-gray-50 border-t">
-                <button
-                  onClick={() => setReceiptRes(null)}
-                  className="flex-1 border border-gray-200 text-gray-500 rounded-lg py-2.5 text-sm font-body hover:bg-gray-100 transition"
-                >
-                  Fechar
-                </button>
-                <button
-                  onClick={handlePrint}
-                  className="flex-1 flex items-center justify-center gap-2 rounded-lg py-2.5 text-sm font-semibold font-body transition-all"
-                  style={{ background: "linear-gradient(135deg,#C9A84C,#E5C97A)", color: "#000" }}
-                >
-                  <Printer className="w-4 h-4" /> Imprimir / PDF
-                </button>
-              </div>
-            </motion.div>
-          </motion.div>
-        )}
-      </AnimatePresence>
+            </div>
+          </div>
+        </>
+      )}
     </div>
   );
 };
