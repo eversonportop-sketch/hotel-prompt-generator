@@ -73,7 +73,7 @@ const opStatusConfig: Record<OperationStatus, { label: string; color: string; ic
     icon: Home,
   },
   checked_out: {
-    label: "Finalizada",
+    label: "Check-out feito",
     color: "bg-gray-500/20 text-gray-400 border-gray-500/30",
     icon: CheckCircle2,
   },
@@ -97,7 +97,7 @@ const AdminCheckin = () => {
   const queryClient = useQueryClient();
 
   const [search, setSearch] = useState("");
-  const [filter, setFilter] = useState<string>("arriving_today");
+  const [filter, setFilter] = useState<string>("all");
 
   const [checkinDialog, setCheckinDialog] = useState<DailyOp | null>(null);
   const [ciDoc, setCiDoc] = useState("");
