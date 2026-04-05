@@ -14,8 +14,9 @@ import {
   CheckCircle2,
   Clock,
   Ban,
+  TrendingUp,
 } from "lucide-react";
-import { format, differenceInDays, addDays } from "date-fns";
+import { format, differenceInDays, addDays, startOfDay, startOfWeek, startOfMonth, startOfYear } from "date-fns";
 import { ptBR } from "date-fns/locale";
 import { Calendar } from "@/components/ui/calendar";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
@@ -216,6 +217,24 @@ const AdminReservas = () => {
     },
   ];
 
+  // ─── Faturamento finalizadas ───────────────────────────────────────────────
+  const finalizadas = reservations.filter((r) => r.status === "checked_out");
+  const now = new Date();
+  const faturamento = {
+    hoje: finalizadas
+      .filter((r) => r.check_out >= format(startOfDay(now), "yyyy-MM-dd") && r.check_out <= format(now, "yyyy-MM-dd"))
+      .reduce((s, r) => s + Number(r.total_price), 0),
+    semana: finalizadas
+      .filter((r) => r.check_out >= format(startOfWeek(now, { weekStartsOn: 1 }), "yyyy-MM-dd"))
+      .reduce((s, r) => s + Number(r.total_price), 0),
+    mes: finalizadas
+      .filter((r) => r.check_out >= format(startOfMonth(now), "yyyy-MM-dd"))
+      .reduce((s, r) => s + Number(r.total_price), 0),
+    ano: finalizadas
+      .filter((r) => r.check_out >= format(startOfYear(now), "yyyy-MM-dd"))
+      .reduce((s, r) => s + Number(r.total_price), 0),
+  };
+
   const openEdit = (r: Reservation) => {
     setEditRes(r);
     setEditRoomId(r.rooms ? (r.rooms as any).id : "");
@@ -290,6 +309,31 @@ const AdminReservas = () => {
         ))}
       </div>
 
+      {/* Faturamento */}
+      <div className="bg-charcoal-light border border-white/5 rounded-xl p-5">
+        <div className="flex items-center gap-2 mb-4">
+          <TrendingUp className="w-3.5 h-3.5 text-primary" />
+          <h3 className="text-xs font-semibold uppercase tracking-widest text-white/30 font-body">
+            Faturamento — Reservas Finalizadas
+          </h3>
+        </div>
+        <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
+          {[
+            { label: "Hoje", value: faturamento.hoje },
+            { label: "Esta semana", value: faturamento.semana },
+            { label: "Este mês", value: faturamento.mes },
+            { label: "Este ano", value: faturamento.ano },
+          ].map((f) => (
+            <div key={f.label} className="bg-white/[0.03] border border-white/5 rounded-lg px-4 py-3">
+              <p className="text-[10px] text-white/30 font-body uppercase tracking-widest mb-1">{f.label}</p>
+              <p className="font-display text-lg font-bold text-primary">
+                R$ {f.value.toLocaleString("pt-BR", { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
+              </p>
+            </div>
+          ))}
+        </div>
+      </div>
+
       {/* Search + Filter */}
       <div className="flex flex-col sm:flex-row gap-3">
         <div className="relative flex-1">
@@ -332,7 +376,7 @@ const AdminReservas = () => {
           <table className="w-full">
             <thead>
               <tr className="border-b border-white/5">
-                {["Hóspede", "Quarto", "Período", "Noites", "Total", "Status", ""].map((h) => (
+                {["Hóspede", "Quarto", "Período", "Noites", "Status", ""].map((h) => (
                   <th
                     key={h}
                     className="text-left px-5 py-3.5 text-[10px] uppercase tracking-widest text-white/25 font-body"
@@ -371,11 +415,6 @@ const AdminReservas = () => {
                     </td>
                     <td className="px-5 py-4">
                       <span className="text-white/40 text-sm font-body">{n2}n</span>
-                    </td>
-                    <td className="px-5 py-4">
-                      <span className="text-primary font-semibold text-sm">
-                        R$ {Number(r.total_price).toFixed(2).replace(".", ",")}
-                      </span>
                     </td>
                     <td className="px-5 py-4">
                       <span
