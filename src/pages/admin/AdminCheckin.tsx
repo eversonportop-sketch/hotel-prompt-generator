@@ -102,7 +102,11 @@ const AdminCheckin = () => {
     return r.guestName.toLowerCase().includes(q) || (r.rooms as any)?.name?.toLowerCase().includes(q);
   });
 
-  const todayStr = new Date().toISOString().slice(0, 10);
+  function localToday() {
+    const d = new Date();
+    return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")}-${String(d.getDate()).padStart(2, "0")}`;
+  }
+  const todayStr = localToday();
   const chegandoHoje = reservations.filter((r) => r.check_in === todayStr).length;
 
   const confirmRes = reservations.find((r) => r.id === confirmId);
