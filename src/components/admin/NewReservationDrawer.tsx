@@ -62,27 +62,69 @@ interface Props {
   onClose: () => void;
 }
 
+// ─── Máscaras de formatação ───────────────────────────────────────────────
+function maskCPF(v: string) {
+  return v
+    .replace(/\D/g, "")
+    .slice(0, 11)
+    .replace(/(\d{3})(\d)/, "$1.$2")
+    .replace(/(\d{3})(\d)/, "$1.$2")
+    .replace(/(\d{3})(\d{1,2})$/, "$1-$2");
+}
+function maskRG(v: string) {
+  return v
+    .replace(/\D/g, "")
+    .slice(0, 9)
+    .replace(/(\d{2})(\d)/, "$1.$2")
+    .replace(/(\d{3})(\d)/, "$1.$2")
+    .replace(/(\d{3})(\d{1})$/, "$1-$2");
+}
+function maskPhone(v: string) {
+  const d = v.replace(/\D/g, "").slice(0, 11);
+  if (d.length <= 2) return d.replace(/(\d{1,2})/, "($1");
+  if (d.length <= 6) return d.replace(/(\d{2})(\d{1,4})/, "($1) $2");
+  if (d.length <= 10) return d.replace(/(\d{2})(\d{4})(\d{0,4})/, "($1) $2-$3");
+  return d.replace(/(\d{2})(\d{5})(\d{0,4})/, "($1) $2-$3");
+}
+function maskCEP(v: string) {
+  return v
+    .replace(/\D/g, "")
+    .slice(0, 8)
+    .replace(/(\d{5})(\d{1,3})$/, "$1-$2");
+}
+
 const Field = ({
   label,
   placeholder,
   value,
   onChange,
+  mask,
 }: {
   label: string;
   placeholder: string;
   value: string;
   onChange: (v: string) => void;
-}) => (
-  <div>
-    <label className="text-[10px] text-white/30 font-body uppercase tracking-widest block mb-1.5">{label}</label>
-    <input
-      placeholder={placeholder}
-      value={value}
-      onChange={(e) => onChange(e.target.value)}
-      className="w-full bg-white/[0.03] border border-white/8 rounded-lg px-3.5 py-2.5 text-cream text-sm font-body focus:outline-none focus:border-primary/40 transition placeholder:text-white/15"
-    />
-  </div>
-);
+  mask?: "cpf" | "rg" | "phone" | "cep";
+}) => {
+  const applyMask = (raw: string) => {
+    if (mask === "cpf") return maskCPF(raw);
+    if (mask === "rg") return maskRG(raw);
+    if (mask === "phone") return maskPhone(raw);
+    if (mask === "cep") return maskCEP(raw);
+    return raw;
+  };
+  return (
+    <div>
+      <label className="text-[10px] text-white/30 font-body uppercase tracking-widest block mb-1.5">{label}</label>
+      <input
+        placeholder={placeholder}
+        value={value}
+        onChange={(e) => onChange(applyMask(e.target.value))}
+        className="w-full bg-white/[0.03] border border-white/8 rounded-lg px-3.5 py-2.5 text-cream text-sm font-body focus:outline-none focus:border-primary/40 transition placeholder:text-white/15"
+      />
+    </div>
+  );
+};
 
 const SummaryRow = ({ label, children }: { label: string; children: React.ReactNode }) => (
   <div className="px-5 py-4">
@@ -487,12 +529,14 @@ const NewReservationDrawer = ({ open, onClose }: Props) => {
                             placeholder="000.000.000-00"
                             value={guestData.cpf}
                             onChange={(v) => setGuestData((d) => ({ ...d, cpf: v }))}
+                            mask="cpf"
                           />
                           <Field
                             label="RG"
                             placeholder="00.000.000-0"
                             value={guestData.rg}
                             onChange={(v) => setGuestData((d) => ({ ...d, rg: v }))}
+                            mask="rg"
                           />
                         </div>
                         <Field
@@ -513,6 +557,7 @@ const NewReservationDrawer = ({ open, onClose }: Props) => {
                             placeholder="(51) 99999-0000"
                             value={guestData.phone}
                             onChange={(v) => setGuestData((d) => ({ ...d, phone: v }))}
+                            mask="phone"
                           />
                           <Field
                             label="E-mail"
@@ -552,6 +597,7 @@ const NewReservationDrawer = ({ open, onClose }: Props) => {
                           placeholder="00000-000"
                           value={guestData.zip_code}
                           onChange={(v) => setGuestData((d) => ({ ...d, zip_code: v }))}
+                          mask="cep"
                         />
                       </div>
                     </div>
