@@ -375,7 +375,7 @@ const NewReservationDrawer = ({ open, onClose }: Props) => {
                               <ChevronRight className="w-4 h-4 text-white/20 group-hover:text-primary/50 transition-colors" />
                             </button>
                           ))}
-                          {nameInput.trim().length >= 2 && (
+                          {nameInput.trim().length >= 1 && (
                             <button
                               onClick={() => {
                                 setIsNewGuest(true);
