@@ -37,6 +37,7 @@ interface Reservation {
   id: string;
   check_in: string;
   check_out: string;
+  checked_out_at: string | null;
   total_price: number;
   status: string;
   notes: string | null;
@@ -90,6 +91,7 @@ const AdminReservas = () => {
   const [statusFilter, setStatusFilter] = useState("all");
   const [deleteId, setDeleteId] = useState<string | null>(null);
   const [drawerOpen, setDrawerOpen] = useState(false);
+  const [periodoFat, setPeriodoFat] = useState<"hoje" | "semana" | "mes" | "ano">("hoje");
 
   // Modal Editar
   const [editRes, setEditRes] = useState<Reservation | null>(null);
@@ -106,7 +108,7 @@ const AdminReservas = () => {
       const { data, error } = await supabase
         .from("reservations")
         .select(
-          "id, check_in, check_out, total_price, status, notes, guest_id, profile_id, room_id, guests_count, rooms(id,name,category)",
+          "id, check_in, check_out, checked_out_at, total_price, status, notes, guest_id, profile_id, room_id, guests_count, rooms(id,name,category)",
         )
         .order("created_at", { ascending: false });
       if (error) throw error;
@@ -218,22 +220,8 @@ const AdminReservas = () => {
   ];
 
   // ─── Faturamento finalizadas ───────────────────────────────────────────────
-  const finalizadas = reservations.filter((r) => r.status === "checked_out");
+  const finalizadas = reservations.filter((r) => r.status === "checked_out" && r.checked_out_at);
   const now = new Date();
-  const faturamento = {
-    hoje: finalizadas
-      .filter((r) => r.check_out >= format(startOfDay(now), "yyyy-MM-dd") && r.check_out <= format(now, "yyyy-MM-dd"))
-      .reduce((s, r) => s + Number(r.total_price), 0),
-    semana: finalizadas
-      .filter((r) => r.check_out >= format(startOfWeek(now, { weekStartsOn: 1 }), "yyyy-MM-dd"))
-      .reduce((s, r) => s + Number(r.total_price), 0),
-    mes: finalizadas
-      .filter((r) => r.check_out >= format(startOfMonth(now), "yyyy-MM-dd"))
-      .reduce((s, r) => s + Number(r.total_price), 0),
-    ano: finalizadas
-      .filter((r) => r.check_out >= format(startOfYear(now), "yyyy-MM-dd"))
-      .reduce((s, r) => s + Number(r.total_price), 0),
-  };
 
   const openEdit = (r: Reservation) => {
     setEditRes(r);
@@ -310,28 +298,142 @@ const AdminReservas = () => {
       </div>
 
       {/* Faturamento */}
-      <div className="bg-charcoal-light border border-white/5 rounded-xl p-5">
-        <div className="flex items-center gap-2 mb-4">
-          <TrendingUp className="w-3.5 h-3.5 text-primary" />
-          <h3 className="text-xs font-semibold uppercase tracking-widest text-white/30 font-body">
-            Faturamento — Reservas Finalizadas
-          </h3>
+      <div className="bg-charcoal-light border border-white/5 rounded-xl p-5 space-y-4">
+        {/* Header + combo */}
+        <div className="flex items-center justify-between">
+          <div className="flex items-center gap-2">
+            <TrendingUp className="w-3.5 h-3.5 text-primary" />
+            <h3 className="text-xs font-semibold uppercase tracking-widest text-white/30 font-body">
+              Faturamento — Finalizadas
+            </h3>
+          </div>
+          <select
+            value={periodoFat}
+            onChange={(e) => setPeriodoFat(e.target.value as any)}
+            className="text-xs bg-white/5 border border-white/10 text-cream/60 font-body rounded-lg px-3 py-1.5 outline-none cursor-pointer hover:text-cream transition-colors"
+          >
+            <option value="hoje">Hoje</option>
+            <option value="semana">Esta semana</option>
+            <option value="mes">Este mês</option>
+            <option value="ano">Este ano</option>
+          </select>
         </div>
-        <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
-          {[
-            { label: "Hoje", value: faturamento.hoje },
-            { label: "Esta semana", value: faturamento.semana },
-            { label: "Este mês", value: faturamento.mes },
-            { label: "Este ano", value: faturamento.ano },
-          ].map((f) => (
-            <div key={f.label} className="bg-white/[0.03] border border-white/5 rounded-lg px-4 py-3">
-              <p className="text-[10px] text-white/30 font-body uppercase tracking-widest mb-1">{f.label}</p>
-              <p className="font-display text-lg font-bold text-primary">
-                R$ {f.value.toLocaleString("pt-BR", { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
-              </p>
-            </div>
-          ))}
-        </div>
+
+        {/* Cards resumo */}
+        {(() => {
+          const desde =
+            periodoFat === "hoje"
+              ? startOfDay(now)
+              : periodoFat === "semana"
+                ? startOfWeek(now, { weekStartsOn: 1 })
+                : periodoFat === "mes"
+                  ? startOfMonth(now)
+                  : startOfYear(now);
+          const resPeriodo = finalizadas.filter((r) => new Date(r.checked_out_at!) >= desde);
+          const totalPeriodo = resPeriodo.reduce((s, r) => s + Number(r.total_price), 0);
+          const ticketMedio = resPeriodo.length > 0 ? totalPeriodo / resPeriodo.length : 0;
+          return (
+            <>
+              <div className="grid grid-cols-3 gap-3">
+                <div className="bg-primary/8 border border-primary/20 rounded-lg px-4 py-3">
+                  <p className="text-[10px] text-primary/50 font-body uppercase tracking-widest mb-1">Total</p>
+                  <p className="font-display text-xl font-bold text-primary">
+                    R$ {totalPeriodo.toLocaleString("pt-BR", { minimumFractionDigits: 2 })}
+                  </p>
+                </div>
+                <div className="bg-white/[0.03] border border-white/5 rounded-lg px-4 py-3">
+                  <p className="text-[10px] text-white/30 font-body uppercase tracking-widest mb-1">Checkouts</p>
+                  <p className="font-display text-xl font-bold text-cream/80">{resPeriodo.length}</p>
+                </div>
+                <div className="bg-white/[0.03] border border-white/5 rounded-lg px-4 py-3">
+                  <p className="text-[10px] text-white/30 font-body uppercase tracking-widest mb-1">Ticket médio</p>
+                  <p className="font-display text-xl font-bold text-cream/80">
+                    R$ {ticketMedio.toLocaleString("pt-BR", { minimumFractionDigits: 2 })}
+                  </p>
+                </div>
+              </div>
+
+              {/* Tabela detalhada */}
+              {resPeriodo.length === 0 ? (
+                <p className="text-center text-white/20 text-sm font-body py-4">Nenhum checkout no período.</p>
+              ) : (
+                <div className="overflow-x-auto rounded-lg border border-white/5">
+                  <table className="w-full text-sm">
+                    <thead>
+                      <tr className="border-b border-white/5 bg-white/[0.02]">
+                        {["Hóspede", "Quarto", "Período", "Checkout", "Valor"].map((h) => (
+                          <th
+                            key={h}
+                            className="text-left px-4 py-2.5 text-[10px] uppercase tracking-widest text-white/25 font-body"
+                          >
+                            {h}
+                          </th>
+                        ))}
+                      </tr>
+                    </thead>
+                    <tbody>
+                      {resPeriodo.map((r) => {
+                        const n2 = nights(r.check_in, r.check_out);
+                        return (
+                          <tr
+                            key={r.id}
+                            className="border-b border-white/5 last:border-0 hover:bg-white/[0.02] transition-colors"
+                          >
+                            <td className="px-4 py-3">
+                              <div className="flex items-center gap-2">
+                                <div className="w-6 h-6 rounded-full bg-white/5 border border-white/8 flex items-center justify-center shrink-0">
+                                  <span className="text-white/40 text-[10px] font-bold">
+                                    {r.guestName[0]?.toUpperCase() ?? "?"}
+                                  </span>
+                                </div>
+                                <span className="text-cream/80 font-body">{r.guestName}</span>
+                              </div>
+                            </td>
+                            <td className="px-4 py-3">
+                              <p className="text-cream/70 font-body">{(r.rooms as any)?.name ?? "—"}</p>
+                              <p className="text-white/30 text-xs font-body">{(r.rooms as any)?.category}</p>
+                            </td>
+                            <td className="px-4 py-3 whitespace-nowrap">
+                              <p className="text-white/50 text-xs font-body">
+                                {fmt(r.check_in)} → {fmt(r.check_out)}
+                              </p>
+                              <p className="text-white/25 text-xs font-body">{n2}n</p>
+                            </td>
+                            <td className="px-4 py-3 whitespace-nowrap">
+                              <p className="text-white/50 text-xs font-body">
+                                {format(new Date(r.checked_out_at!), "dd/MM/yyyy HH:mm", { locale: ptBR })}
+                              </p>
+                            </td>
+                            <td className="px-4 py-3">
+                              <span className="text-primary font-semibold font-body">
+                                R$ {Number(r.total_price).toLocaleString("pt-BR", { minimumFractionDigits: 2 })}
+                              </span>
+                            </td>
+                          </tr>
+                        );
+                      })}
+                    </tbody>
+                    <tfoot>
+                      <tr className="border-t border-primary/20 bg-primary/5">
+                        <td
+                          colSpan={4}
+                          className="px-4 py-3 text-xs text-white/30 font-body font-semibold uppercase tracking-wider"
+                        >
+                          Total do período
+                        </td>
+                        <td className="px-4 py-3">
+                          <span className="text-primary font-display font-bold text-base">
+                            R$ {totalPeriodo.toLocaleString("pt-BR", { minimumFractionDigits: 2 })}
+                          </span>
+                        </td>
+                      </tr>
+                    </tfoot>
+                  </table>
+                </div>
+              )}
+            </>
+          );
+        })()}
       </div>
 
       {/* Search + Filter */}
