@@ -215,7 +215,9 @@ const QuartoDetalhe = () => {
   const [checkOut, setCheckOut] = useState<Date>();
   const [guestsCount, setGuestsCount] = useState(1);
   const [available, setAvailable] = useState<boolean | null>(null);
-  const [categoryAvail, setCategoryAvail] = useState<{ free: number; total: number; freeRoomId: string | null } | null>(null);
+  const [categoryAvail, setCategoryAvail] = useState<{ free: number; total: number; freeRoomId: string | null } | null>(
+    null,
+  );
   const [checking, setChecking] = useState(false);
 
   // Restaura intenção de reserva após login
@@ -286,8 +288,7 @@ const QuartoDetalhe = () => {
   // Cria reserva usando profile_id (correto)
   const reservationMutation = useMutation({
     mutationFn: async () => {
-      if (!user || !room || !checkIn || !checkOut || !categoryAvail?.freeRoomId)
-        throw new Error("Dados incompletos");
+      if (!user || !room || !checkIn || !checkOut || !categoryAvail?.freeRoomId) throw new Error("Dados incompletos");
       const nights = differenceInDays(checkOut, checkIn);
       const price = Number(room.promotional_price || room.price);
 
@@ -301,7 +302,7 @@ const QuartoDetalhe = () => {
         check_out: format(checkOut, "yyyy-MM-dd"),
         guests_count: guestsCount,
         total_price: nights * price,
-        status: "pending",
+        status: "confirmed",
       });
       if (error) throw error;
     },
@@ -527,7 +528,11 @@ const QuartoDetalhe = () => {
                           : "text-destructive bg-destructive/10",
                       )}
                     >
-                      {categoryAvail.free > 0 ? <CheckCircle className="w-4 h-4" /> : <AlertCircle className="w-4 h-4" />}
+                      {categoryAvail.free > 0 ? (
+                        <CheckCircle className="w-4 h-4" />
+                      ) : (
+                        <AlertCircle className="w-4 h-4" />
+                      )}
                       {categoryAvail.free === 0
                         ? "Indisponível nas datas selecionadas"
                         : categoryAvail.free === 1
@@ -551,7 +556,13 @@ const QuartoDetalhe = () => {
                     <Button
                       variant="gold"
                       className="flex-1"
-                      disabled={!checkIn || !checkOut || !available || !categoryAvail?.freeRoomId || reservationMutation.isPending}
+                      disabled={
+                        !checkIn ||
+                        !checkOut ||
+                        !available ||
+                        !categoryAvail?.freeRoomId ||
+                        reservationMutation.isPending
+                      }
                       onClick={() => {
                         if (!user) {
                           // Salva intenção e redireciona para cadastro/login
