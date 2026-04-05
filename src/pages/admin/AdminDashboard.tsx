@@ -140,16 +140,6 @@ const AdminDashboard = () => {
       border: "border-blue-500/20",
       href: "/admin/checkin",
     },
-    {
-      label: "Clientes",
-      value: totalClientes,
-      total: "cadastrados",
-      icon: Users,
-      color: "text-purple-400",
-      bg: "bg-purple-500/10",
-      border: "border-purple-500/20",
-      href: "/admin/clientes",
-    },
   ];
 
   return (
@@ -168,7 +158,7 @@ const AdminDashboard = () => {
       </motion.div>
 
       {/* KPIs */}
-      <div className="grid grid-cols-2 xl:grid-cols-4 gap-4">
+      <div className="grid grid-cols-2 xl:grid-cols-3 gap-4">
         {kpis.map((kpi, i) => (
           <motion.div key={kpi.label} {...fadeUp(0.05 * i)}>
             <Link
@@ -180,16 +170,14 @@ const AdminDashboard = () => {
               </div>
               <p className={`font-display text-4xl font-bold mb-1 tabular-nums ${kpi.color}`}>{kpi.value}</p>
               <p className="text-xs font-semibold text-white/60 tracking-wide font-body">{kpi.label}</p>
-              <p className="text-xs text-white/25 mt-0.5 font-body">{kpi.total}</p>
               <ArrowRight className="absolute top-4 right-4 w-3.5 h-3.5 text-white/10 group-hover:text-white/30 transition-colors" />
             </Link>
           </motion.div>
         ))}
       </div>
 
-      {/* Status Quartos + Status Reservas */}
-      <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
-        {/* Status Quartos */}
+      {/* Status Quartos */}
+      <div className="grid grid-cols-1 gap-4">
         <motion.div {...fadeUp(0.2)} className="rounded-xl bg-charcoal-light border border-white/5 p-5">
           <div className="flex items-center justify-between mb-4">
             <div className="flex items-center gap-2">
@@ -229,42 +217,6 @@ const AdminDashboard = () => {
                   )}
                 </div>
               ))}
-            </div>
-          )}
-        </motion.div>
-
-        {/* Status Reservas */}
-        <motion.div {...fadeUp(0.24)} className="rounded-xl bg-charcoal-light border border-white/5 p-5">
-          <div className="flex items-center justify-between mb-4">
-            <div className="flex items-center gap-2">
-              <CalendarDays className="w-3.5 h-3.5 text-primary" />
-              <h3 className="text-xs font-semibold uppercase tracking-widest text-white/30 font-body">
-                Status das Reservas
-              </h3>
-            </div>
-            <Link
-              to="/admin/reservas"
-              className="text-[10px] text-primary/50 hover:text-primary font-body transition-colors"
-            >
-              Ver todas →
-            </Link>
-          </div>
-          {Object.keys(reservationsByStatus).length === 0 ? (
-            <p className="text-white/20 text-sm font-body">Nenhuma reserva encontrada</p>
-          ) : (
-            <div className="space-y-2">
-              {Object.entries(reservationsByStatus).map(([status, count]) => {
-                const cfg = statusConfig[status] || { bg: "bg-white/5", dot: "bg-white/30", text: "text-white/50" };
-                return (
-                  <div key={status} className={`flex items-center justify-between px-3 py-2.5 rounded-lg ${cfg.bg}`}>
-                    <div className="flex items-center gap-2.5">
-                      <span className={`w-1.5 h-1.5 rounded-full flex-shrink-0 ${cfg.dot}`} />
-                      <span className={`text-sm font-body ${cfg.text}`}>{statusLabels[status] || status}</span>
-                    </div>
-                    <span className={`text-sm font-bold font-body ${cfg.text}`}>{count}</span>
-                  </div>
-                );
-              })}
             </div>
           )}
         </motion.div>
