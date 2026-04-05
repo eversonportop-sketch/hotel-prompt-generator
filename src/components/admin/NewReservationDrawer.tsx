@@ -33,6 +33,7 @@ interface Guest {
   cpf: string | null;
   email?: string | null;
   rg?: string | null;
+  _source?: "guest" | "profile";
 }
 interface Room {
   id: string;
@@ -171,7 +172,10 @@ const NewReservationDrawer = ({ open, onClose }: Props) => {
         supabase.from("guests").select("id,full_name,phone,cpf,email,rg").order("full_name"),
         supabase.from("profiles").select("id,full_name,phone,cpf").neq("role", "admin").order("full_name"),
       ]);
-      const all = [...(g.data || []), ...(p.data || [])] as Guest[];
+      const all = [
+        ...(g.data || []).map((x: any) => ({ ...x, _source: "guest" as const })),
+        ...(p.data || []).map((x: any) => ({ ...x, _source: "profile" as const })),
+      ] as Guest[];
       const seen = new Set<string>();
       return all.filter((x) => {
         if (seen.has(x.id)) return false;
@@ -280,8 +284,10 @@ const NewReservationDrawer = ({ open, onClose }: Props) => {
       }
       const status = doCheckin ? "checked_in" : "confirmed";
       const notesText = [notes, paymentMethod ? `Pagamento: ${paymentMethod}` : ""].filter(Boolean).join(" | ") || null;
+      const isProfile = selectedGuest?._source === "profile";
       const { error } = await supabase.from("reservations").insert({
-        guest_id: guestId,
+        guest_id: isProfile ? null : guestId,
+        profile_id: isProfile ? guestId : null,
         room_id: roomId,
         check_in: format(checkIn!, "yyyy-MM-dd"),
         check_out: format(checkOut!, "yyyy-MM-dd"),
