@@ -67,8 +67,6 @@ const AdminCheckout = () => {
   const { data: openReservations = [], isLoading } = useQuery({
     queryKey: ["checkout-open"],
     queryFn: async () => {
-      // Buscar reservas com check-in feito e check-out pendente
-      // checked_in_at e checked_out_at estão diretamente na tabela reservations
       const { data, error } = await supabase
         .from("reservations")
         .select("*, rooms(name, price), profiles!reservations_profile_id_fkey(full_name, phone)")
@@ -78,8 +76,17 @@ const AdminCheckout = () => {
         .order("check_in", { ascending: false });
       if (error) throw error;
 
-      // Todos os resultados já possuem check-in feito e checkout pendente
       const filtered = data || [];
+
+      // Buscar nomes de hóspedes presenciais (tabela guests) para reservas sem profile
+      const guestIds = filtered.filter((r: any) => !r.profiles && r.client_id).map((r: any) => r.client_id);
+      let guestMap: Record<string, { full_name: string; phone: string | null }> = {};
+      if (guestIds.length > 0) {
+        const { data: guestsData } = await supabase.from("guests").select("id, full_name, phone").in("id", guestIds);
+        (guestsData || []).forEach((g: any) => {
+          guestMap[g.id] = { full_name: g.full_name, phone: g.phone };
+        });
+      }
 
       // Buscar consumo aberto agrupado por reservation_id
       const ids = filtered.map((r: any) => r.id);
@@ -95,9 +102,12 @@ const AdminCheckout = () => {
         });
       }
 
-      return filtered.map((r: any) => ({ ...r, _consumoTotal: consumoMap[r.id] || 0 })) as (Reservation & {
-        _consumoTotal: number;
-      })[];
+      return filtered.map((r: any) => ({
+        ...r,
+        _consumoTotal: consumoMap[r.id] || 0,
+        // Se não tem profile (reserva presencial), usa dados da tabela guests
+        profiles: r.profiles ?? (r.client_id && guestMap[r.client_id] ? guestMap[r.client_id] : null),
+      })) as (Reservation & { _consumoTotal: number })[];
     },
   });
 
