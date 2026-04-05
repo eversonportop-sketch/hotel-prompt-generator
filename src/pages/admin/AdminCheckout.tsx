@@ -69,27 +69,38 @@ const AdminCheckout = () => {
     queryFn: async () => {
       const { data, error } = await supabase
         .from("reservations")
-        .select("*, rooms(name, price), profiles!reservations_profile_id_fkey(full_name, phone)")
+        .select("*, rooms(name, price)")
         .eq("status", "checked_in")
         .not("checked_in_at", "is", null)
         .is("checked_out_at", null)
         .order("check_in", { ascending: false });
       if (error) throw error;
 
-      const filtered = data || [];
+      const rows = data || [];
 
-      // Buscar nomes de hóspedes presenciais (tabela guests) para reservas sem profile
-      const guestIds = filtered.filter((r: any) => !r.profiles && r.client_id).map((r: any) => r.client_id);
-      let guestMap: Record<string, { full_name: string; phone: string | null }> = {};
-      if (guestIds.length > 0) {
-        const { data: guestsData } = await supabase.from("guests").select("id, full_name, phone").in("id", guestIds);
-        (guestsData || []).forEach((g: any) => {
-          guestMap[g.id] = { full_name: g.full_name, phone: g.phone };
+      // Buscar nomes: guest_id → tabela guests, profile_id → tabela profiles
+      const gids = [...new Set(rows.filter((r: any) => r.guest_id).map((r: any) => r.guest_id as string))];
+      const pids = [...new Set(rows.filter((r: any) => r.profile_id).map((r: any) => r.profile_id as string))];
+      const nameMap: Record<string, string> = {};
+      const phoneMap: Record<string, string> = {};
+
+      if (gids.length) {
+        const { data: gd } = await supabase.from("guests").select("id,full_name,phone").in("id", gids);
+        (gd || []).forEach((g: any) => {
+          nameMap[g.id] = g.full_name;
+          phoneMap[g.id] = g.phone;
+        });
+      }
+      if (pids.length) {
+        const { data: pd } = await supabase.from("profiles").select("id,full_name,phone").in("id", pids);
+        (pd || []).forEach((p: any) => {
+          nameMap[p.id] = p.full_name;
+          phoneMap[p.id] = p.phone;
         });
       }
 
-      // Buscar consumo aberto agrupado por reservation_id
-      const ids = filtered.map((r: any) => r.id);
+      // Consumo aberto agrupado por reservation_id
+      const ids = rows.map((r: any) => r.id);
       let consumoMap: Record<string, number> = {};
       if (ids.length > 0) {
         const { data: consumos } = await supabase
@@ -102,12 +113,14 @@ const AdminCheckout = () => {
         });
       }
 
-      return filtered.map((r: any) => ({
-        ...r,
-        _consumoTotal: consumoMap[r.id] || 0,
-        // Se não tem profile (reserva presencial), usa dados da tabela guests
-        profiles: r.profiles ?? (r.client_id && guestMap[r.client_id] ? guestMap[r.client_id] : null),
-      })) as (Reservation & { _consumoTotal: number })[];
+      return rows.map((r: any) => {
+        const ref = r.guest_id || r.profile_id;
+        return {
+          ...r,
+          _consumoTotal: consumoMap[r.id] || 0,
+          profiles: { full_name: (ref && nameMap[ref]) || null, phone: (ref && phoneMap[ref]) || null },
+        };
+      }) as (Reservation & { _consumoTotal: number })[];
     },
   });
 
@@ -117,12 +130,35 @@ const AdminCheckout = () => {
     queryFn: async () => {
       const { data, error } = await supabase
         .from("reservations")
-        .select("*, rooms(name, price), profiles!reservations_profile_id_fkey(full_name, phone)")
+        .select("*, rooms(name, price)")
         .eq("status", "checked_out")
         .order("check_out", { ascending: false })
         .limit(50);
       if (error) throw error;
-      return (data || []) as Reservation[];
+
+      const rows = data || [];
+      const gids = [...new Set(rows.filter((r: any) => r.guest_id).map((r: any) => r.guest_id as string))];
+      const pids = [...new Set(rows.filter((r: any) => r.profile_id).map((r: any) => r.profile_id as string))];
+      const nameMap: Record<string, string> = {};
+      const phoneMap: Record<string, string> = {};
+      if (gids.length) {
+        const { data: gd } = await supabase.from("guests").select("id,full_name,phone").in("id", gids);
+        (gd || []).forEach((g: any) => {
+          nameMap[g.id] = g.full_name;
+          phoneMap[g.id] = g.phone;
+        });
+      }
+      if (pids.length) {
+        const { data: pd } = await supabase.from("profiles").select("id,full_name,phone").in("id", pids);
+        (pd || []).forEach((p: any) => {
+          nameMap[p.id] = p.full_name;
+          phoneMap[p.id] = p.phone;
+        });
+      }
+      return rows.map((r: any) => {
+        const ref = r.guest_id || r.profile_id;
+        return { ...r, profiles: { full_name: (ref && nameMap[ref]) || null, phone: (ref && phoneMap[ref]) || null } };
+      }) as Reservation[];
     },
   });
 
