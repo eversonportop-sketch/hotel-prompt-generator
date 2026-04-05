@@ -9,14 +9,12 @@ const statusLabels: Record<string, string> = {
   checked_in: "Hospedado",
   checked_out: "Finalizada",
   canceled: "Cancelada",
-  pending: "Pendente",
 };
 const statusConfig: Record<string, { bg: string; dot: string; text: string }> = {
   confirmed: { bg: "bg-emerald-500/10", dot: "bg-emerald-400", text: "text-emerald-300" },
   checked_in: { bg: "bg-blue-500/10", dot: "bg-blue-400", text: "text-blue-300" },
   checked_out: { bg: "bg-gray-500/10", dot: "bg-gray-400", text: "text-gray-300" },
   canceled: { bg: "bg-red-500/10", dot: "bg-red-400", text: "text-red-300" },
-  pending: { bg: "bg-yellow-500/10", dot: "bg-yellow-400", text: "text-yellow-300" },
 };
 
 function localToday(): string {
@@ -103,7 +101,7 @@ const AdminDashboard = () => {
   ).length;
 
   // Só mostra status relevantes no painel (exclui canceladas para não poluir)
-  const statusParaPainel = ["confirmed", "checked_in", "checked_out", "pending"];
+  const statusParaPainel = ["confirmed", "checked_in", "checked_out"];
   const reservationsByStatus: Record<string, number> = {};
   reservations
     .filter((r) => statusParaPainel.includes(r.status))

@@ -542,7 +542,7 @@ const AdminCheckout = () => {
                             {(res.profiles as any)?.full_name ?? "Hóspede"}
                           </p>
                           <span className="text-xs px-2 py-0.5 rounded-full bg-blue-500/20 text-blue-400 border border-blue-500/30 font-body">
-                            Concluída
+                            Finalizada
                           </span>
                         </div>
                         <div className="flex items-center gap-4 text-xs text-cream/40 font-body">
