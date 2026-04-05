@@ -1,42 +1,92 @@
 import { useState } from "react";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
-import { Users, Search, Pencil, Trash2, X, Loader2, CheckCircle2, Link as LinkIcon } from "lucide-react";
+import {
+  Users,
+  Search,
+  Pencil,
+  Trash2,
+  X,
+  Loader2,
+  CheckCircle2,
+  Phone,
+  Mail,
+  CreditCard,
+  MapPin,
+  ChevronDown,
+  UserPlus,
+} from "lucide-react";
 import { format } from "date-fns";
 import { ptBR } from "date-fns/locale";
 import { toast } from "sonner";
 
-// ─── Tipos ────────────────────────────────────────────────────────────────────
 interface Cliente {
   id: string;
   full_name: string;
   email: string | null;
   phone: string | null;
   cpf: string | null;
+  rg: string | null;
+  nationality: string | null;
+  address: string | null;
+  city: string | null;
+  state: string | null;
   created_at: string;
   source: "guest" | "profile";
+  reservations_count?: number;
 }
 
 const goldBg = { background: "linear-gradient(135deg,#C9A84C,#E5C97A)" };
 const fmt = (d: string) => format(new Date(d), "dd MMM yyyy", { locale: ptBR });
 
-// ═════════════════════════════════════════════════════════════════════════════
+const Field = ({
+  label,
+  placeholder,
+  value,
+  onChange,
+}: {
+  label: string;
+  placeholder: string;
+  value: string;
+  onChange: (v: string) => void;
+}) => (
+  <div>
+    <label className="text-[10px] text-white/30 font-body uppercase tracking-widest block mb-1.5">{label}</label>
+    <input
+      placeholder={placeholder}
+      value={value}
+      onChange={(e) => onChange(e.target.value)}
+      className="w-full bg-white/[0.03] border border-white/8 rounded-lg px-3.5 py-2.5 text-cream text-sm font-body focus:outline-none focus:border-primary/40 transition placeholder:text-white/15"
+    />
+  </div>
+);
+
 const AdminClientes = () => {
   const qc = useQueryClient();
   const [search, setSearch] = useState("");
   const [editCliente, setEditCliente] = useState<Cliente | null>(null);
-  const [editData, setEditData] = useState({ full_name: "", phone: "", cpf: "" });
+  const [editData, setEditData] = useState({
+    full_name: "",
+    phone: "",
+    cpf: "",
+    rg: "",
+    email: "",
+    nationality: "Brasileira",
+    address: "",
+    city: "",
+    state: "",
+  });
   const [editSaving, setEditSaving] = useState(false);
-  const [deleteId, setDeleteId] = useState<{ id: string; source: "guest" | "profile" } | null>(null);
+  const [deleteId, setDeleteId] = useState<{ id: string; source: "guest" | "profile"; name: string } | null>(null);
+  const [expandedId, setExpandedId] = useState<string | null>(null);
 
-  // ─── Query: todos os clientes (guests + profiles não-admin) ───────────────
   const { data: clientes = [], isLoading } = useQuery({
     queryKey: ["clientes-lista"],
     queryFn: async () => {
       const [g, p] = await Promise.all([
         supabase
           .from("guests")
-          .select("id,full_name,email,phone,cpf,created_at")
+          .select("id,full_name,email,phone,cpf,rg,nationality,address,city,state,created_at")
           .order("created_at", { ascending: false }),
         supabase
           .from("profiles")
@@ -44,34 +94,83 @@ const AdminClientes = () => {
           .neq("role", "admin")
           .order("created_at", { ascending: false }),
       ]);
+      // Contar reservas por guest
+      const { data: reservas } = await supabase.from("reservations").select("guest_id, profile_id");
+      const countMap: Record<string, number> = {};
+      (reservas || []).forEach((r: any) => {
+        const ref = r.guest_id || r.profile_id;
+        if (ref) countMap[ref] = (countMap[ref] || 0) + 1;
+      });
+
       const guests: Cliente[] = (g.data || []).map((x: any) => ({
         ...x,
-        email: x.email || null,
         source: "guest" as const,
+        reservations_count: countMap[x.id] || 0,
       }));
-      const profiles: Cliente[] = (p.data || []).map((x: any) => ({ ...x, email: null, source: "profile" as const }));
+      const profiles: Cliente[] = (p.data || []).map((x: any) => ({
+        ...x,
+        email: null,
+        rg: null,
+        nationality: null,
+        address: null,
+        city: null,
+        state: null,
+        source: "profile" as const,
+        reservations_count: countMap[x.id] || 0,
+      }));
       return [...guests, ...profiles].sort(
         (a, b) => new Date(b.created_at).getTime() - new Date(a.created_at).getTime(),
       );
     },
   });
 
-  // ─── Mutations ─────────────────────────────────────────────────────────────
+  const openEdit = (c: Cliente) => {
+    setEditCliente(c);
+    setEditData({
+      full_name: c.full_name || "",
+      phone: c.phone || "",
+      cpf: c.cpf || "",
+      rg: c.rg || "",
+      email: c.email || "",
+      nationality: c.nationality || "Brasileira",
+      address: c.address || "",
+      city: c.city || "",
+      state: c.state || "",
+    });
+  };
+
   const saveEdit = async () => {
     if (!editCliente) return;
     if (!editData.full_name.trim()) return toast.error("Nome é obrigatório.");
     setEditSaving(true);
     try {
-      const table = editCliente.source === "guest" ? "guests" : "profiles";
-      const { error } = await supabase
-        .from(table)
-        .update({
-          full_name: editData.full_name.trim(),
-          phone: editData.phone || null,
-          cpf: editData.cpf || null,
-        })
-        .eq("id", editCliente.id);
-      if (error) throw error;
+      if (editCliente.source === "guest") {
+        const { error } = await supabase
+          .from("guests")
+          .update({
+            full_name: editData.full_name.trim(),
+            phone: editData.phone || null,
+            cpf: editData.cpf || null,
+            rg: editData.rg || null,
+            email: editData.email || null,
+            nationality: editData.nationality || null,
+            address: editData.address || null,
+            city: editData.city || null,
+            state: editData.state || null,
+          })
+          .eq("id", editCliente.id);
+        if (error) throw error;
+      } else {
+        const { error } = await supabase
+          .from("profiles")
+          .update({
+            full_name: editData.full_name.trim(),
+            phone: editData.phone || null,
+            cpf: editData.cpf || null,
+          })
+          .eq("id", editCliente.id);
+        if (error) throw error;
+      }
       toast.success("Cliente atualizado!");
       qc.invalidateQueries({ queryKey: ["clientes-lista"] });
       setEditCliente(null);
@@ -96,27 +195,33 @@ const AdminClientes = () => {
     onError: () => toast.error("Erro ao excluir. Verifique se não há reservas vinculadas."),
   });
 
-  // ─── Filtro ───────────────────────────────────────────────────────────────
   const filtered = clientes.filter((c) => {
     if (!search.trim()) return true;
     const q = search.toLowerCase();
     return (
-      c.full_name.toLowerCase().includes(q) ||
-      c.phone?.includes(q) ||
+      c.full_name?.toLowerCase().includes(q) ||
       c.cpf?.includes(q) ||
+      c.phone?.includes(q) ||
       c.email?.toLowerCase().includes(q)
     );
   });
 
-  const todayStr = new Date().toISOString().slice(0, 10);
-  const cadastradosHoje = clientes.filter((c) => c.created_at.slice(0, 10) === todayStr).length;
+  const initials = (name: string) =>
+    name
+      .split(" ")
+      .map((n) => n[0])
+      .slice(0, 2)
+      .join("")
+      .toUpperCase();
+  const colors = [
+    "bg-blue-500/20 text-blue-300",
+    "bg-purple-500/20 text-purple-300",
+    "bg-emerald-500/20 text-emerald-300",
+    "bg-amber-500/20 text-amber-300",
+    "bg-pink-500/20 text-pink-300",
+  ];
+  const colorFor = (id: string) => colors[id.charCodeAt(0) % colors.length];
 
-  const openEdit = (c: Cliente) => {
-    setEditCliente(c);
-    setEditData({ full_name: c.full_name, phone: c.phone || "", cpf: c.cpf || "" });
-  };
-
-  // ─── Render ───────────────────────────────────────────────────────────────
   return (
     <div className="p-6 md:p-8 space-y-6 text-cream">
       {/* Header */}
@@ -127,24 +232,18 @@ const AdminClientes = () => {
           </div>
           <div>
             <h1 className="font-display text-2xl font-semibold text-cream leading-none">Clientes</h1>
-            <p className="text-white/30 text-xs mt-0.5 font-body">Cadastro de hóspedes</p>
+            <p className="text-white/30 text-xs mt-0.5 font-body">{clientes.length} cadastrados</p>
           </div>
         </div>
-        <p className="text-white/20 text-xs font-body hidden md:block">
-          Novos clientes são criados ao fazer uma reserva
-        </p>
       </div>
 
-      {/* KPIs */}
-      <div className="grid grid-cols-2 gap-4">
-        <div className="bg-purple-500/10 border border-purple-500/20 rounded-xl p-4">
-          <p className="text-white/30 text-xs font-body uppercase tracking-wider mb-1">Total</p>
-          <p className="font-display text-3xl font-bold text-purple-400">{clientes.length}</p>
-        </div>
-        <div className="bg-white/5 border border-white/10 rounded-xl p-4">
-          <p className="text-white/30 text-xs font-body uppercase tracking-wider mb-1">Cadastrados hoje</p>
-          <p className="font-display text-3xl font-bold text-cream">{cadastradosHoje}</p>
-        </div>
+      {/* Info */}
+      <div className="bg-blue-500/8 border border-blue-500/20 rounded-xl px-4 py-3 flex items-start gap-3">
+        <UserPlus className="w-4 h-4 text-blue-400 mt-0.5 shrink-0" />
+        <p className="text-blue-300/80 text-xs font-body">
+          Para cadastrar um novo cliente, use <strong className="text-blue-300">+ Nova Reserva</strong> na aba Reservas
+          — o cliente é criado automaticamente na ficha do hóspede.
+        </p>
       </div>
 
       {/* Busca */}
@@ -152,104 +251,129 @@ const AdminClientes = () => {
         <Search className="absolute left-3.5 top-1/2 -translate-y-1/2 w-4 h-4 text-white/25" />
         <input
           className="w-full pl-10 pr-4 py-2.5 bg-charcoal-light border border-white/5 rounded-xl text-cream text-sm focus:border-primary/40 focus:outline-none transition placeholder:text-white/20 font-body"
-          placeholder="Buscar por nome, telefone, email, CPF..."
+          placeholder="Buscar por nome, CPF, telefone ou e-mail..."
           value={search}
           onChange={(e) => setSearch(e.target.value)}
         />
       </div>
 
-      {/* Tabela */}
+      {/* Lista */}
       {isLoading ? (
         <div className="flex items-center justify-center py-20 text-white/20 gap-2 font-body">
           <Loader2 className="w-4 h-4 animate-spin" /> Carregando...
         </div>
       ) : filtered.length === 0 ? (
         <div className="text-center py-20">
-          <Users className="w-12 h-12 text-purple-400/20 mx-auto mb-3" />
+          <Users className="w-12 h-12 text-primary/20 mx-auto mb-3" />
           <p className="text-white/30 font-body text-sm">Nenhum cliente encontrado.</p>
         </div>
       ) : (
-        <div className="bg-charcoal-light border border-white/5 rounded-xl overflow-x-auto">
-          <table className="w-full">
-            <thead>
-              <tr className="border-b border-white/5">
-                {["Cliente", "Contato", "CPF", "Cadastro", ""].map((h) => (
-                  <th
-                    key={h}
-                    className="text-left px-5 py-3.5 text-[10px] uppercase tracking-widest text-white/25 font-body"
+        <div className="space-y-2">
+          {filtered.map((c) => {
+            const isExpanded = expandedId === c.id;
+            return (
+              <div
+                key={c.id}
+                className="bg-charcoal-light border border-white/5 rounded-xl overflow-hidden transition-all hover:border-white/10"
+              >
+                {/* Row principal */}
+                <div className="flex items-center gap-4 px-5 py-4">
+                  {/* Avatar */}
+                  <div
+                    className={`w-10 h-10 rounded-full flex items-center justify-center shrink-0 border ${colorFor(c.id)} border-white/10`}
                   >
-                    {h}
-                  </th>
-                ))}
-              </tr>
-            </thead>
-            <tbody>
-              {filtered.map((c) => (
-                <tr
-                  key={`${c.source}-${c.id}`}
-                  className="border-b border-white/5 last:border-0 hover:bg-white/[0.02] transition-colors group"
-                >
-                  <td className="px-5 py-4">
-                    <div className="flex items-center gap-3">
-                      <div className="w-8 h-8 rounded-full bg-white/5 border border-white/8 flex items-center justify-center shrink-0">
-                        <span className="text-white/40 text-sm font-bold">{c.full_name[0]?.toUpperCase() ?? "?"}</span>
-                      </div>
-                      <div>
-                        <p className="text-cream text-sm font-body font-medium">{c.full_name}</p>
-                        {c.email && <p className="text-white/30 text-xs font-body">{c.email}</p>}
-                      </div>
-                    </div>
-                  </td>
-                  <td className="px-5 py-4">
-                    <p className="text-white/50 text-sm font-body">{c.phone || "—"}</p>
-                  </td>
-                  <td className="px-5 py-4">
-                    <p className="text-white/40 text-sm font-body">{c.cpf || "—"}</p>
-                  </td>
-                  <td className="px-5 py-4">
-                    <p className="text-white/30 text-xs font-body">{fmt(c.created_at)}</p>
-                  </td>
-                  <td className="px-5 py-4">
-                    <div className="flex items-center gap-1 opacity-0 group-hover:opacity-100 transition-opacity">
+                    <span className="text-sm font-bold">{initials(c.full_name)}</span>
+                  </div>
+                  {/* Info */}
+                  <div className="flex-1 min-w-0">
+                    <div className="flex items-center gap-2 flex-wrap">
+                      <p className="text-cream font-body font-semibold text-sm">{c.full_name}</p>
                       {c.source === "profile" && (
-                        <span className="text-[10px] px-1.5 py-0.5 rounded bg-blue-500/15 text-blue-400 border border-blue-500/25 font-body mr-1">
+                        <span className="text-[10px] px-1.5 py-0.5 rounded bg-blue-500/15 text-blue-400 border border-blue-500/25 font-body">
                           Portal
                         </span>
                       )}
-                      <button
-                        onClick={() => openEdit(c)}
-                        className="p-1.5 rounded-lg text-white/25 hover:text-cream hover:bg-white/8 transition-colors"
-                      >
-                        <Pencil className="w-3.5 h-3.5" />
-                      </button>
-                      <button
-                        onClick={() => setDeleteId({ id: c.id, source: c.source })}
-                        className="p-1.5 rounded-lg text-white/25 hover:text-red-400 hover:bg-red-500/10 transition-colors"
-                      >
-                        <Trash2 className="w-3.5 h-3.5" />
-                      </button>
+                      {(c.reservations_count || 0) > 0 && (
+                        <span className="text-[10px] px-1.5 py-0.5 rounded bg-primary/10 text-primary/70 border border-primary/20 font-body">
+                          {c.reservations_count} reserva{(c.reservations_count || 0) > 1 ? "s" : ""}
+                        </span>
+                      )}
                     </div>
-                  </td>
-                </tr>
-              ))}
-            </tbody>
-          </table>
+                    <div className="flex items-center gap-3 mt-0.5 flex-wrap">
+                      {c.email && (
+                        <span className="flex items-center gap-1 text-white/35 text-xs font-body">
+                          <Mail className="w-3 h-3" /> {c.email}
+                        </span>
+                      )}
+                      {c.phone && (
+                        <span className="flex items-center gap-1 text-white/35 text-xs font-body">
+                          <Phone className="w-3 h-3" /> {c.phone}
+                        </span>
+                      )}
+                      {c.cpf && (
+                        <span className="flex items-center gap-1 text-white/35 text-xs font-body">
+                          <CreditCard className="w-3 h-3" /> {c.cpf}
+                        </span>
+                      )}
+                      {!c.email && !c.phone && !c.cpf && (
+                        <span className="text-white/20 text-xs font-body">Sem contato cadastrado</span>
+                      )}
+                    </div>
+                  </div>
+                  {/* Data + ações */}
+                  <div className="flex items-center gap-2 shrink-0">
+                    <span className="text-white/20 text-xs font-body hidden md:block">{fmt(c.created_at)}</span>
+                    <button
+                      onClick={() => setExpandedId(isExpanded ? null : c.id)}
+                      className={`p-1.5 rounded-lg text-white/25 hover:text-cream hover:bg-white/8 transition-all ${isExpanded ? "bg-white/5 text-cream" : ""}`}
+                    >
+                      <ChevronDown className={`w-4 h-4 transition-transform ${isExpanded ? "rotate-180" : ""}`} />
+                    </button>
+                    <button
+                      onClick={() => openEdit(c)}
+                      className="p-1.5 rounded-lg text-white/25 hover:text-cream hover:bg-white/8 transition-colors"
+                    >
+                      <Pencil className="w-3.5 h-3.5" />
+                    </button>
+                    <button
+                      onClick={() => setDeleteId({ id: c.id, source: c.source, name: c.full_name })}
+                      className="p-1.5 rounded-lg text-white/25 hover:text-red-400 hover:bg-red-500/10 transition-colors"
+                    >
+                      <Trash2 className="w-3.5 h-3.5" />
+                    </button>
+                  </div>
+                </div>
+
+                {/* Expandido: detalhes */}
+                {isExpanded && (
+                  <div className="border-t border-white/5 px-5 py-4 grid grid-cols-2 md:grid-cols-4 gap-4">
+                    <DetailItem label="RG" value={c.rg} />
+                    <DetailItem label="Nacionalidade" value={c.nationality} />
+                    <DetailItem label="Cidade" value={c.city ? `${c.city}${c.state ? ` / ${c.state}` : ""}` : null} />
+                    <DetailItem label="Endereço" value={c.address} />
+                    <DetailItem label="Cadastrado em" value={fmt(c.created_at)} />
+                    <DetailItem label="Origem" value={c.source === "guest" ? "Recepção" : "Portal online"} />
+                  </div>
+                )}
+              </div>
+            );
+          })}
         </div>
       )}
 
-      {/* ═══ MODAL EDITAR ═══ */}
+      {/* ══ MODAL EDITAR ══ */}
       {editCliente && (
         <>
           <div className="fixed inset-0 z-50 bg-black/70 backdrop-blur-sm" onClick={() => setEditCliente(null)} />
           <div className="fixed inset-0 z-50 flex items-center justify-center p-4 pointer-events-none">
             <div
-              className="bg-[#111114] border border-white/10 rounded-2xl w-full max-w-sm shadow-2xl pointer-events-auto p-6 space-y-5"
+              className="bg-[#111114] border border-white/10 rounded-2xl w-full max-w-lg shadow-2xl pointer-events-auto flex flex-col max-h-[90vh]"
               onClick={(e) => e.stopPropagation()}
             >
-              <div className="flex items-center justify-between">
+              <div className="flex items-center justify-between px-6 py-5 border-b border-white/5 shrink-0">
                 <div className="flex items-center gap-2">
                   <Pencil className="w-4 h-4 text-primary" />
-                  <h3 className="font-display text-lg font-semibold text-cream">Editar Cliente</h3>
+                  <h2 className="font-display text-lg font-semibold text-cream">Editar Cliente</h2>
                 </div>
                 <button
                   onClick={() => setEditCliente(null)}
@@ -258,39 +382,87 @@ const AdminClientes = () => {
                   <X className="w-5 h-5" />
                 </button>
               </div>
-
-              <div className="space-y-3">
-                {[
-                  ["Nome completo", "full_name", "text", "Nome do hóspede"],
-                  ["Telefone", "phone", "text", "(51) 99999-0000"],
-                  ["CPF", "cpf", "text", "000.000.000-00"],
-                ].map(([label, key, type, ph]) => (
-                  <div key={key as string}>
-                    <label className="text-[10px] text-white/40 font-body uppercase tracking-widest block mb-1.5">
-                      {label as string}
-                    </label>
-                    <input
-                      type={type as string}
-                      placeholder={ph as string}
-                      value={(editData as any)[key as string]}
-                      onChange={(e) => setEditData((d) => ({ ...d, [key as string]: e.target.value }))}
-                      className="w-full bg-white/5 border border-white/8 rounded-xl px-3 py-2.5 text-cream text-sm font-body focus:outline-none focus:border-primary/40 transition placeholder:text-white/20"
+              <div className="px-6 py-5 space-y-4 overflow-y-auto flex-1">
+                <Field
+                  label="Nome completo *"
+                  placeholder="Nome"
+                  value={editData.full_name}
+                  onChange={(v) => setEditData((d) => ({ ...d, full_name: v }))}
+                />
+                <div className="grid grid-cols-2 gap-3">
+                  <Field
+                    label="CPF"
+                    placeholder="000.000.000-00"
+                    value={editData.cpf}
+                    onChange={(v) => setEditData((d) => ({ ...d, cpf: v }))}
+                  />
+                  {editCliente.source === "guest" && (
+                    <Field
+                      label="RG"
+                      placeholder="00.000.000-0"
+                      value={editData.rg}
+                      onChange={(v) => setEditData((d) => ({ ...d, rg: v }))}
                     />
-                  </div>
-                ))}
+                  )}
+                </div>
+                <div className="grid grid-cols-2 gap-3">
+                  <Field
+                    label="Telefone"
+                    placeholder="(51) 99999-0000"
+                    value={editData.phone}
+                    onChange={(v) => setEditData((d) => ({ ...d, phone: v }))}
+                  />
+                  {editCliente.source === "guest" && (
+                    <Field
+                      label="E-mail"
+                      placeholder="email@exemplo.com"
+                      value={editData.email}
+                      onChange={(v) => setEditData((d) => ({ ...d, email: v }))}
+                    />
+                  )}
+                </div>
+                {editCliente.source === "guest" && (
+                  <>
+                    <Field
+                      label="Nacionalidade"
+                      placeholder="Brasileira"
+                      value={editData.nationality}
+                      onChange={(v) => setEditData((d) => ({ ...d, nationality: v }))}
+                    />
+                    <Field
+                      label="Endereço"
+                      placeholder="Rua, número"
+                      value={editData.address}
+                      onChange={(v) => setEditData((d) => ({ ...d, address: v }))}
+                    />
+                    <div className="grid grid-cols-2 gap-3">
+                      <Field
+                        label="Cidade"
+                        placeholder="Cidade"
+                        value={editData.city}
+                        onChange={(v) => setEditData((d) => ({ ...d, city: v }))}
+                      />
+                      <Field
+                        label="Estado"
+                        placeholder="RS"
+                        value={editData.state}
+                        onChange={(v) => setEditData((d) => ({ ...d, state: v }))}
+                      />
+                    </div>
+                  </>
+                )}
               </div>
-
-              <div className="flex gap-3">
+              <div className="flex items-center justify-end gap-3 px-6 py-4 border-t border-white/5 shrink-0">
                 <button
                   onClick={() => setEditCliente(null)}
-                  className="flex-1 py-2.5 text-sm text-white/40 hover:text-cream font-body border border-white/10 rounded-xl transition-colors"
+                  className="px-4 py-2 text-sm text-white/40 hover:text-cream font-body transition-colors"
                 >
                   Cancelar
                 </button>
                 <button
                   onClick={saveEdit}
                   disabled={editSaving}
-                  className="flex-1 flex items-center justify-center gap-2 py-2.5 rounded-xl text-black text-sm font-semibold hover:brightness-110 transition-all disabled:opacity-50"
+                  className="flex items-center gap-2 px-5 py-2.5 rounded-lg text-black text-sm font-semibold hover:brightness-110 transition-all disabled:opacity-50"
                   style={goldBg}
                 >
                   {editSaving ? <Loader2 className="w-4 h-4 animate-spin" /> : <CheckCircle2 className="w-4 h-4" />}
@@ -302,7 +474,7 @@ const AdminClientes = () => {
         </>
       )}
 
-      {/* ═══ MODAL EXCLUIR ═══ */}
+      {/* ══ MODAL EXCLUIR ══ */}
       {deleteId && (
         <>
           <div className="fixed inset-0 z-50 bg-black/60 backdrop-blur-sm" onClick={() => setDeleteId(null)} />
@@ -317,9 +489,12 @@ const AdminClientes = () => {
                 </div>
                 <div>
                   <h3 className="font-display text-base font-semibold text-cream">Excluir cliente?</h3>
-                  <p className="text-white/30 text-xs font-body mt-0.5">Essa ação não pode ser desfeita.</p>
+                  <p className="text-white/30 text-xs font-body mt-0.5">{deleteId.name}</p>
                 </div>
               </div>
+              <p className="text-white/25 text-xs font-body">
+                Se o cliente tiver reservas, a exclusão pode falhar. Essa ação não pode ser desfeita.
+              </p>
               <div className="flex gap-3">
                 <button
                   onClick={() => setDeleteId(null)}
@@ -328,7 +503,7 @@ const AdminClientes = () => {
                   Cancelar
                 </button>
                 <button
-                  onClick={() => deleteCliente.mutate(deleteId!)}
+                  onClick={() => deleteCliente.mutate({ id: deleteId.id, source: deleteId.source })}
                   disabled={deleteCliente.isPending}
                   className="flex-1 py-2.5 text-sm font-semibold rounded-xl bg-red-500/15 hover:bg-red-500/25 text-red-400 border border-red-500/25 transition-colors disabled:opacity-50"
                 >
@@ -342,5 +517,12 @@ const AdminClientes = () => {
     </div>
   );
 };
+
+const DetailItem = ({ label, value }: { label: string; value: string | null | undefined }) => (
+  <div>
+    <p className="text-[10px] text-white/25 font-body uppercase tracking-widest mb-0.5">{label}</p>
+    <p className="text-cream/70 text-sm font-body">{value || "—"}</p>
+  </div>
+);
 
 export default AdminClientes;
