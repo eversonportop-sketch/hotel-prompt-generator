@@ -401,9 +401,18 @@ const NewReservationDrawer = ({ open, onClose }: Props) => {
                           <div className="w-14 h-14 rounded-full bg-white/[0.03] border border-white/8 flex items-center justify-center mx-auto mb-3">
                             <User className="w-6 h-6 text-white/15" />
                           </div>
-                          <p className="text-white/20 text-xs font-body">
+                          <p className="text-white/20 text-xs font-body mb-5">
                             Digite para buscar ou cadastrar novo hóspede
                           </p>
+                          <button
+                            onClick={() => {
+                              setIsNewGuest(true);
+                              setGuestData((d) => ({ ...d, full_name: "" }));
+                            }}
+                            className="inline-flex items-center gap-2 px-5 py-2.5 rounded-xl border border-dashed border-primary/30 hover:border-primary/60 hover:bg-primary/5 transition-all text-primary/60 hover:text-primary text-sm font-body"
+                          >
+                            <Plus className="w-4 h-4" /> Novo cliente
+                          </button>
                         </div>
                       )}
                     </>
