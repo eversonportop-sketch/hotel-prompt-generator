@@ -310,12 +310,21 @@ const AdminReservas = () => {
           <select
             value={periodoFat}
             onChange={(e) => setPeriodoFat(e.target.value as any)}
-            className="text-xs bg-white/5 border border-white/10 text-cream/60 font-body rounded-lg px-3 py-1.5 outline-none cursor-pointer hover:text-cream transition-colors"
+            className="text-xs border border-white/10 text-cream font-body rounded-lg px-3 py-1.5 outline-none cursor-pointer transition-colors appearance-none"
+            style={{ background: "#1a1a20" }}
           >
-            <option value="hoje">Hoje</option>
-            <option value="semana">Esta semana</option>
-            <option value="mes">Este mês</option>
-            <option value="ano">Este ano</option>
+            <option value="hoje" style={{ background: "#1a1a20" }}>
+              Hoje
+            </option>
+            <option value="semana" style={{ background: "#1a1a20" }}>
+              Esta semana
+            </option>
+            <option value="mes" style={{ background: "#1a1a20" }}>
+              Este mês
+            </option>
+            <option value="ano" style={{ background: "#1a1a20" }}>
+              Este ano
+            </option>
           </select>
         </div>
 
