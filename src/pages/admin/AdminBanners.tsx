@@ -30,12 +30,19 @@ interface Banner {
   id: string;
   title: string | null;
   image_url: string;
+  mobile_image_url: string | null;
   active: boolean;
   display_order: number;
   created_at: string;
 }
 
-const EMPTY_FORM = { title: "", image_url: "", file: null as File | null };
+const EMPTY_FORM = {
+  title: "",
+  image_url: "",
+  file: null as File | null,
+  mobile_image_url: "",
+  mobileFile: null as File | null,
+};
 
 // ── Utilitário: faz upload para o bucket e retorna URL pública ─────────────────
 async function uploadImage(file: File): Promise<string> {
@@ -54,15 +61,20 @@ const AdminBanners = () => {
   const [modalOpen, setModalOpen] = useState(false);
   const [form, setForm] = useState(EMPTY_FORM);
   const [previewUrl, setPreviewUrl] = useState<string | null>(null);
+  const [mobilePreviewUrl, setMobilePreviewUrl] = useState<string | null>(null);
   const [uploading, setUploading] = useState(false);
   const [deleteConfirm, setDeleteConfirm] = useState<string | null>(null);
   const fileInputRef = useRef<HTMLInputElement>(null);
+  const mobileFileInputRef = useRef<HTMLInputElement>(null);
 
   // ── Busca banners do Supabase ────────────────────────────────────────────────
   const { data: banners = [], isLoading } = useQuery({
     queryKey: ["admin-banners"],
     queryFn: async () => {
-      const { data, error } = await supabase.from("banners" as any).select("*").order("display_order", { ascending: true });
+      const { data, error } = await supabase
+        .from("banners" as any)
+        .select("*")
+        .order("display_order", { ascending: true });
       if (error) throw error;
       return data as unknown as Banner[];
     },
@@ -72,24 +84,24 @@ const AdminBanners = () => {
   const addMutation = useMutation({
     mutationFn: async () => {
       let imageUrl = form.image_url;
+      let mobileImageUrl = form.mobile_image_url || null;
 
-      // Se tem arquivo selecionado, faz upload primeiro
-      if (form.file) {
-        setUploading(true);
-        try {
-          imageUrl = await uploadImage(form.file);
-        } finally {
-          setUploading(false);
-        }
+      setUploading(true);
+      try {
+        if (form.file) imageUrl = await uploadImage(form.file);
+        if (form.mobileFile) mobileImageUrl = await uploadImage(form.mobileFile);
+      } finally {
+        setUploading(false);
       }
 
-      if (!imageUrl) throw new Error("Nenhuma imagem selecionada.");
+      if (!imageUrl) throw new Error("Nenhuma imagem desktop selecionada.");
 
       const maxOrder = banners.length ? Math.max(...banners.map((b) => b.display_order)) : -1;
 
       const { error } = await supabase.from("banners" as any).insert({
         title: form.title || null,
         image_url: imageUrl,
+        mobile_image_url: mobileImageUrl || null,
         active: true,
         display_order: maxOrder + 1,
       });
@@ -106,7 +118,10 @@ const AdminBanners = () => {
   // ── Toggle ativo/inativo ─────────────────────────────────────────────────────
   const toggleMutation = useMutation({
     mutationFn: async ({ id, active }: { id: string; active: boolean }) => {
-      const { error } = await supabase.from("banners" as any).update({ active: !active }).eq("id", id);
+      const { error } = await supabase
+        .from("banners" as any)
+        .update({ active: !active })
+        .eq("id", id);
       if (error) throw error;
     },
     onSuccess: () => queryClient.invalidateQueries({ queryKey: ["admin-banners"] }),
@@ -115,7 +130,10 @@ const AdminBanners = () => {
   // ── Deletar banner ───────────────────────────────────────────────────────────
   const deleteMutation = useMutation({
     mutationFn: async (id: string) => {
-      const { error } = await supabase.from("banners" as any).delete().eq("id", id);
+      const { error } = await supabase
+        .from("banners" as any)
+        .delete()
+        .eq("id", id);
       if (error) throw error;
     },
     onSuccess: () => {
@@ -130,12 +148,12 @@ const AdminBanners = () => {
     setModalOpen(false);
     setForm(EMPTY_FORM);
     setPreviewUrl(null);
+    setMobilePreviewUrl(null);
   };
 
   const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
     if (!file) return;
-    // Validação básica
     if (!file.type.startsWith("image/")) {
       toast.error("Selecione um arquivo de imagem (JPG, PNG, WebP…)");
       return;
@@ -144,9 +162,23 @@ const AdminBanners = () => {
       toast.error("Imagem muito grande. Máximo 10 MB.");
       return;
     }
-    const objectUrl = URL.createObjectURL(file);
-    setPreviewUrl(objectUrl);
+    setPreviewUrl(URL.createObjectURL(file));
     setForm({ ...form, file, image_url: "" });
+  };
+
+  const handleMobileFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+    if (!file.type.startsWith("image/")) {
+      toast.error("Selecione um arquivo de imagem (JPG, PNG, WebP…)");
+      return;
+    }
+    if (file.size > 10 * 1024 * 1024) {
+      toast.error("Imagem muito grande. Máximo 10 MB.");
+      return;
+    }
+    setMobilePreviewUrl(URL.createObjectURL(file));
+    setForm({ ...form, mobileFile: file, mobile_image_url: "" });
   };
 
   return (
@@ -223,14 +255,38 @@ const AdminBanners = () => {
                   b.active ? "border-gold/15" : "border-red-900/30 opacity-60"
                 }`}
               >
-                <div className="aspect-[16/7] overflow-hidden relative">
-                  <img
-                    src={b.image_url}
-                    alt={b.title ?? "Banner"}
-                    className="w-full h-full object-cover hover:scale-105 transition-transform duration-500"
-                  />
+                <div className="grid grid-cols-2 gap-2 overflow-hidden relative">
+                  <div className="relative">
+                    <img
+                      src={b.image_url}
+                      alt={b.title ?? "Banner Desktop"}
+                      className="w-full h-28 object-cover hover:scale-105 transition-transform duration-500"
+                    />
+                    <span className="absolute bottom-1 left-1 text-[10px] bg-black/60 text-white/70 px-1.5 py-0.5 rounded font-body">
+                      Desktop
+                    </span>
+                  </div>
+                  <div className="relative bg-black/20">
+                    {b.mobile_image_url ? (
+                      <>
+                        <img
+                          src={b.mobile_image_url}
+                          alt="Banner Mobile"
+                          className="w-full h-28 object-cover hover:scale-105 transition-transform duration-500"
+                        />
+                        <span className="absolute bottom-1 left-1 text-[10px] bg-black/60 text-white/70 px-1.5 py-0.5 rounded font-body">
+                          Mobile
+                        </span>
+                      </>
+                    ) : (
+                      <div className="w-full h-28 flex flex-col items-center justify-center gap-1">
+                        <ImageIcon className="w-5 h-5 text-white/10" />
+                        <span className="text-[10px] text-white/20 font-body">Sem mobile</span>
+                      </div>
+                    )}
+                  </div>
                   <span
-                    className={`absolute top-3 right-3 text-xs font-body px-2 py-1 rounded-full border ${
+                    className={`absolute top-2 right-2 text-xs font-body px-2 py-1 rounded-full border ${
                       b.active
                         ? "bg-green-500/20 text-green-400 border-green-500/30"
                         : "bg-red-500/20 text-red-400 border-red-500/30"
@@ -308,41 +364,34 @@ const AdminBanners = () => {
                   />
                 </div>
 
-                {/* Upload de imagem */}
+                {/* Upload desktop */}
                 <div>
                   <label className="block text-xs uppercase tracking-widest text-primary/70 mb-1.5">
-                    Imagem do banner *
+                    Imagem Desktop * <span className="normal-case text-cream/30">1920 × 680 px · proporção 16:6</span>
                   </label>
-
-                  {/* Área de upload */}
                   <div
                     onClick={() => fileInputRef.current?.click()}
                     className="relative cursor-pointer border-2 border-dashed border-gold/20 hover:border-primary/40 rounded-xl transition-all overflow-hidden"
                   >
                     {previewUrl ? (
                       <div className="relative">
-                        <img src={previewUrl} alt="Preview" className="w-full h-40 object-cover" />
+                        <img src={previewUrl} alt="Preview Desktop" className="w-full h-36 object-cover" />
                         <div className="absolute inset-0 bg-black/50 flex items-center justify-center opacity-0 hover:opacity-100 transition-opacity">
                           <p className="text-cream text-sm font-body">Clique para trocar</p>
                         </div>
                       </div>
                     ) : (
-                      <div className="h-40 flex flex-col items-center justify-center gap-3 p-4">
+                      <div className="h-36 flex flex-col items-center justify-center gap-3 p-4">
                         <div className="w-12 h-12 rounded-xl bg-primary/10 border border-primary/20 flex items-center justify-center">
                           <Upload className="w-5 h-5 text-primary" />
                         </div>
                         <div className="text-center">
-                          <p className="text-cream/60 text-sm font-body">Clique para enviar imagem do PC</p>
+                          <p className="text-cream/60 text-sm font-body">Clique para enviar imagem desktop</p>
                           <p className="text-cream/30 text-xs font-body mt-1">JPG, PNG, WebP · Máx 10 MB</p>
-                          <p className="text-cream/20 text-xs font-body mt-0.5">
-                            Tamanho ideal: 1920 × 680 px (proporção 16:6)
-                          </p>
                         </div>
                       </div>
                     )}
                   </div>
-
-                  {/* Input file oculto */}
                   <input
                     ref={fileInputRef}
                     type="file"
@@ -350,20 +399,73 @@ const AdminBanners = () => {
                     className="hidden"
                     onChange={handleFileChange}
                   />
-
-                  {/* Separador OU url */}
                   <div className="flex items-center gap-3 my-3">
                     <div className="flex-1 h-px bg-gold/10" />
                     <span className="text-cream/20 text-xs font-body">ou cole uma URL</span>
                     <div className="flex-1 h-px bg-gold/10" />
                   </div>
-
                   <input
                     className="w-full bg-black/50 border border-gold/20 rounded-lg px-4 py-3 text-cream text-sm focus:border-primary focus:outline-none transition"
                     value={form.image_url}
                     onChange={(e) => {
                       setForm({ ...form, image_url: e.target.value, file: null });
                       setPreviewUrl(e.target.value || null);
+                    }}
+                    placeholder="https://..."
+                  />
+                </div>
+
+                {/* Upload mobile */}
+                <div>
+                  <label className="block text-xs uppercase tracking-widest text-primary/70 mb-1.5">
+                    Imagem Mobile{" "}
+                    <span className="normal-case text-cream/30">opcional · 750 × 1200 px · proporção 9:16</span>
+                  </label>
+                  <div
+                    onClick={() => mobileFileInputRef.current?.click()}
+                    className="relative cursor-pointer border-2 border-dashed border-gold/20 hover:border-primary/40 rounded-xl transition-all overflow-hidden"
+                  >
+                    {mobilePreviewUrl ? (
+                      <div className="relative">
+                        <img
+                          src={mobilePreviewUrl}
+                          alt="Preview Mobile"
+                          className="w-full h-36 object-cover object-top"
+                        />
+                        <div className="absolute inset-0 bg-black/50 flex items-center justify-center opacity-0 hover:opacity-100 transition-opacity">
+                          <p className="text-cream text-sm font-body">Clique para trocar</p>
+                        </div>
+                      </div>
+                    ) : (
+                      <div className="h-36 flex flex-col items-center justify-center gap-3 p-4">
+                        <div className="w-12 h-12 rounded-xl bg-blue-500/10 border border-blue-500/20 flex items-center justify-center">
+                          <Upload className="w-5 h-5 text-blue-400" />
+                        </div>
+                        <div className="text-center">
+                          <p className="text-cream/60 text-sm font-body">Clique para enviar imagem mobile</p>
+                          <p className="text-cream/30 text-xs font-body mt-1">JPG, PNG, WebP · Máx 10 MB</p>
+                        </div>
+                      </div>
+                    )}
+                  </div>
+                  <input
+                    ref={mobileFileInputRef}
+                    type="file"
+                    accept="image/*"
+                    className="hidden"
+                    onChange={handleMobileFileChange}
+                  />
+                  <div className="flex items-center gap-3 my-3">
+                    <div className="flex-1 h-px bg-gold/10" />
+                    <span className="text-cream/20 text-xs font-body">ou cole uma URL</span>
+                    <div className="flex-1 h-px bg-gold/10" />
+                  </div>
+                  <input
+                    className="w-full bg-black/50 border border-gold/20 rounded-lg px-4 py-3 text-cream text-sm focus:border-primary focus:outline-none transition"
+                    value={form.mobile_image_url}
+                    onChange={(e) => {
+                      setForm({ ...form, mobile_image_url: e.target.value, mobileFile: null });
+                      setMobilePreviewUrl(e.target.value || null);
                     }}
                     placeholder="https://..."
                   />
