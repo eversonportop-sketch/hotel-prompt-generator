@@ -1,7 +1,6 @@
 import { useState, useEffect, useRef } from "react";
 import { supabase } from "@/integrations/supabase/client";
 
-// Table not yet in generated types — use explicit typing
 const fromHomeSections = () => supabase.from("home_sections" as any);
 import { toast } from "sonner";
 import { Save, Plus, Trash2, Eye, EyeOff, ArrowUp, ArrowDown, Loader2, Upload } from "lucide-react";
@@ -33,13 +32,23 @@ const emptySection: Omit<HomeSection, "id"> = {
   display_order: 0,
 };
 
-const AdminHomeDestaque = () => {
-  const [sections, setSections] = useState<HomeSection[]>([]);
-  const [loading, setLoading] = useState(true);
-  const [saving, setSaving] = useState<string | null>(null);
-  const [editingId, setEditingId] = useState<string | null>(null);
-  const [form, setForm] = useState<Omit<HomeSection, "id">>(emptySection);
-  const [isNew, setIsNew] = useState(false);
+const SectionForm = ({
+  form,
+  setForm,
+  onSave,
+  saving,
+  inputClass,
+  labelClass,
+  isNew,
+}: {
+  form: Omit<HomeSection, "id">;
+  setForm: (f: Omit<HomeSection, "id">) => void;
+  onSave: () => void;
+  saving: boolean;
+  inputClass: string;
+  labelClass: string;
+  isNew: boolean;
+}) => {
   const [uploading, setUploading] = useState(false);
   const fileInputRef = useRef<HTMLInputElement>(null);
 
@@ -63,7 +72,7 @@ const AdminHomeDestaque = () => {
         .upload(path, file, { upsert: false, contentType: file.type });
       if (error) throw error;
       const { data } = supabase.storage.from("hotel-images").getPublicUrl(path);
-      setForm((f) => ({ ...f, image_url: data.publicUrl }));
+      setForm({ ...form, image_url: data.publicUrl });
       toast.success("Imagem enviada!");
     } catch {
       toast.error("Erro ao enviar imagem.");
@@ -72,10 +81,133 @@ const AdminHomeDestaque = () => {
     }
   };
 
+  return (
+    <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+      {isNew && (
+        <div>
+          <label className={labelClass}>Section Key</label>
+          <input
+            className={inputClass}
+            placeholder="ex: destaque_quarto"
+            value={form.section_key}
+            onChange={(e) => setForm({ ...form, section_key: e.target.value })}
+          />
+        </div>
+      )}
+      <div>
+        <label className={labelClass}>Título</label>
+        <input
+          className={inputClass}
+          value={form.title}
+          onChange={(e) => setForm({ ...form, title: e.target.value })}
+        />
+      </div>
+      <div>
+        <label className={labelClass}>Subtítulo</label>
+        <input
+          className={inputClass}
+          value={form.subtitle || ""}
+          onChange={(e) => setForm({ ...form, subtitle: e.target.value })}
+        />
+      </div>
+      <div className="md:col-span-2">
+        <label className={labelClass}>Descrição</label>
+        <textarea
+          className={inputClass + " min-h-[80px] resize-y"}
+          value={form.description}
+          onChange={(e) => setForm({ ...form, description: e.target.value })}
+        />
+      </div>
+      <div>
+        <label className={labelClass}>URL da Imagem</label>
+        <div className="flex gap-2">
+          <input
+            className={inputClass + " flex-1"}
+            placeholder="https://..."
+            value={form.image_url || ""}
+            onChange={(e) => setForm({ ...form, image_url: e.target.value })}
+          />
+          <button
+            type="button"
+            onClick={() => fileInputRef.current?.click()}
+            disabled={uploading}
+            className="flex items-center gap-1.5 px-3 py-2 bg-primary/10 border border-primary/20 hover:bg-primary/20 text-primary rounded-lg text-xs font-body transition-all disabled:opacity-50 shrink-0"
+          >
+            {uploading ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : <Upload className="w-3.5 h-3.5" />}
+            {uploading ? "Enviando..." : "Upload"}
+          </button>
+          <input ref={fileInputRef} type="file" accept="image/*" className="hidden" onChange={handleImageUpload} />
+        </div>
+        {form.image_url && (
+          <img
+            src={form.image_url}
+            alt="Preview"
+            className="mt-2 h-20 w-full object-cover rounded-lg border border-white/10"
+          />
+        )}
+      </div>
+      <div>
+        <label className={labelClass}>Lado da Imagem</label>
+        <select
+          className={inputClass}
+          value={form.image_side}
+          onChange={(e) => setForm({ ...form, image_side: e.target.value })}
+        >
+          <option value="left">Esquerda</option>
+          <option value="right">Direita</option>
+        </select>
+      </div>
+      <div>
+        <label className={labelClass}>Texto do Botão</label>
+        <input
+          className={inputClass}
+          value={form.cta_text || ""}
+          onChange={(e) => setForm({ ...form, cta_text: e.target.value })}
+        />
+      </div>
+      <div>
+        <label className={labelClass}>Link do Botão</label>
+        <input
+          className={inputClass}
+          placeholder="/quartos"
+          value={form.cta_link || ""}
+          onChange={(e) => setForm({ ...form, cta_link: e.target.value })}
+        />
+      </div>
+      <div>
+        <label className={labelClass}>Ordem de Exibição</label>
+        <input
+          className={inputClass}
+          type="number"
+          value={form.display_order}
+          onChange={(e) => setForm({ ...form, display_order: parseInt(e.target.value) || 0 })}
+        />
+      </div>
+      <div className="flex items-end">
+        <button
+          onClick={onSave}
+          disabled={saving}
+          className="flex items-center gap-2 px-5 py-2 rounded-lg bg-primary text-primary-foreground text-sm font-body font-semibold hover:bg-primary/90 transition-colors disabled:opacity-50"
+        >
+          {saving ? <Loader2 className="w-4 h-4 animate-spin" /> : <Save className="w-4 h-4" />}
+          Salvar
+        </button>
+      </div>
+    </div>
+  );
+};
+
+const AdminHomeDestaque = () => {
+  const [sections, setSections] = useState<HomeSection[]>([]);
+  const [loading, setLoading] = useState(true);
+  const [saving, setSaving] = useState<string | null>(null);
+  const [editingId, setEditingId] = useState<string | null>(null);
+  const [form, setForm] = useState<Omit<HomeSection, "id">>(emptySection);
+  const [isNew, setIsNew] = useState(false);
+
   const fetchSections = async () => {
     setLoading(true);
     const { data, error } = await fromHomeSections().select("*").order("display_order", { ascending: true });
-
     if (error) {
       toast.error("Erro ao carregar seções: " + error.message);
     } else {
@@ -116,9 +248,7 @@ const AdminHomeDestaque = () => {
       toast.error("Preencha section_key, título e descrição.");
       return;
     }
-
     setSaving(editingId);
-
     const payload = {
       section_key: form.section_key.trim(),
       title: form.title.trim(),
@@ -132,14 +262,12 @@ const AdminHomeDestaque = () => {
       display_order: form.display_order,
       updated_at: new Date().toISOString(),
     };
-
     let error;
     if (isNew) {
       ({ error } = await fromHomeSections().insert([payload]));
     } else {
       ({ error } = await fromHomeSections().update(payload).eq("id", editingId));
     }
-
     if (error) {
       toast.error("Erro ao salvar: " + error.message);
     } else {
@@ -154,7 +282,6 @@ const AdminHomeDestaque = () => {
     const { error } = await fromHomeSections()
       .update({ active: !section.active, updated_at: new Date().toISOString() })
       .eq("id", section.id);
-
     if (error) {
       toast.error("Erro: " + error.message);
     } else {
@@ -204,11 +331,7 @@ const AdminHomeDestaque = () => {
           {sections.map((s) => (
             <div
               key={s.id}
-              className={`rounded-xl border transition-colors ${
-                editingId === s.id
-                  ? "border-primary/40 bg-charcoal-light"
-                  : "border-white/5 bg-charcoal-light/50 hover:border-white/10"
-              }`}
+              className={`rounded-xl border transition-colors ${editingId === s.id ? "border-primary/40 bg-charcoal-light" : "border-white/5 bg-charcoal-light/50 hover:border-white/10"}`}
             >
               <div className="flex items-center gap-4 p-4">
                 <div className="flex-1 min-w-0">
@@ -247,7 +370,6 @@ const AdminHomeDestaque = () => {
                   </button>
                 </div>
               </div>
-
               {editingId === s.id && (
                 <div className="border-t border-white/5 p-4">
                   <SectionForm
@@ -289,132 +411,5 @@ const AdminHomeDestaque = () => {
     </div>
   );
 };
-
-const SectionForm = ({
-  form,
-  setForm,
-  onSave,
-  saving,
-  inputClass,
-  labelClass,
-  isNew,
-}: {
-  form: Omit<HomeSection, "id">;
-  setForm: (f: Omit<HomeSection, "id">) => void;
-  onSave: () => void;
-  saving: boolean;
-  inputClass: string;
-  labelClass: string;
-  isNew: boolean;
-}) => (
-  <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-    {isNew && (
-      <div>
-        <label className={labelClass}>Section Key</label>
-        <input
-          className={inputClass}
-          placeholder="ex: destaque_quarto"
-          value={form.section_key}
-          onChange={(e) => setForm({ ...form, section_key: e.target.value })}
-        />
-      </div>
-    )}
-    <div>
-      <label className={labelClass}>Título</label>
-      <input className={inputClass} value={form.title} onChange={(e) => setForm({ ...form, title: e.target.value })} />
-    </div>
-    <div>
-      <label className={labelClass}>Subtítulo</label>
-      <input
-        className={inputClass}
-        value={form.subtitle || ""}
-        onChange={(e) => setForm({ ...form, subtitle: e.target.value })}
-      />
-    </div>
-    <div className="md:col-span-2">
-      <label className={labelClass}>Descrição</label>
-      <textarea
-        className={inputClass + " min-h-[80px] resize-y"}
-        value={form.description}
-        onChange={(e) => setForm({ ...form, description: e.target.value })}
-      />
-    </div>
-    <div>
-      <label className={labelClass}>URL da Imagem</label>
-      <div className="flex gap-2">
-        <input
-          className={inputClass + " flex-1"}
-          placeholder="https://..."
-          value={form.image_url || ""}
-          onChange={(e) => setForm({ ...form, image_url: e.target.value })}
-        />
-        <button
-          type="button"
-          onClick={() => fileInputRef.current?.click()}
-          disabled={uploading}
-          className="flex items-center gap-1.5 px-3 py-2 bg-primary/10 border border-primary/20 hover:bg-primary/20 text-primary rounded-lg text-xs font-body transition-all disabled:opacity-50 shrink-0"
-        >
-          {uploading ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : <Upload className="w-3.5 h-3.5" />}
-          {uploading ? "Enviando..." : "Upload"}
-        </button>
-        <input ref={fileInputRef} type="file" accept="image/*" className="hidden" onChange={handleImageUpload} />
-      </div>
-      {form.image_url && (
-        <img
-          src={form.image_url}
-          alt="Preview"
-          className="mt-2 h-20 w-full object-cover rounded-lg border border-white/10"
-        />
-      )}
-    </div>
-    <div>
-      <label className={labelClass}>Lado da Imagem</label>
-      <select
-        className={inputClass}
-        value={form.image_side}
-        onChange={(e) => setForm({ ...form, image_side: e.target.value })}
-      >
-        <option value="left">Esquerda</option>
-        <option value="right">Direita</option>
-      </select>
-    </div>
-    <div>
-      <label className={labelClass}>Texto do Botão</label>
-      <input
-        className={inputClass}
-        value={form.cta_text || ""}
-        onChange={(e) => setForm({ ...form, cta_text: e.target.value })}
-      />
-    </div>
-    <div>
-      <label className={labelClass}>Link do Botão</label>
-      <input
-        className={inputClass}
-        placeholder="/quartos"
-        value={form.cta_link || ""}
-        onChange={(e) => setForm({ ...form, cta_link: e.target.value })}
-      />
-    </div>
-    <div>
-      <label className={labelClass}>Ordem de Exibição</label>
-      <input
-        className={inputClass}
-        type="number"
-        value={form.display_order}
-        onChange={(e) => setForm({ ...form, display_order: parseInt(e.target.value) || 0 })}
-      />
-    </div>
-    <div className="flex items-end">
-      <button
-        onClick={onSave}
-        disabled={saving}
-        className="flex items-center gap-2 px-5 py-2 rounded-lg bg-primary text-primary-foreground text-sm font-body font-semibold hover:bg-primary/90 transition-colors disabled:opacity-50"
-      >
-        {saving ? <Loader2 className="w-4 h-4 animate-spin" /> : <Save className="w-4 h-4" />}
-        Salvar
-      </button>
-    </div>
-  </div>
-);
 
 export default AdminHomeDestaque;
