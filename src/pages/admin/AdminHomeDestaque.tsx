@@ -298,6 +298,9 @@ const SectionForm = ({
   inputClass,
   labelClass,
   isNew,
+  uploading,
+  fileInputRef,
+  handleImageUpload,
 }: {
   form: Omit<HomeSection, "id">;
   setForm: (f: Omit<HomeSection, "id">) => void;
@@ -306,6 +309,9 @@ const SectionForm = ({
   inputClass: string;
   labelClass: string;
   isNew: boolean;
+  uploading: boolean;
+  fileInputRef: React.RefObject<HTMLInputElement>;
+  handleImageUpload: (e: React.ChangeEvent<HTMLInputElement>) => void;
 }) => (
   <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
     {isNew && (
