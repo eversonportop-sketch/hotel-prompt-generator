@@ -114,7 +114,7 @@ const WelcomePopup = () => {
 
               <button
                 onClick={close}
-                className="absolute top-4 right-4 z-10 w-8 h-8 rounded-full bg-white/5 hover:bg-white/10 flex items-center justify-center text-white/40 hover:text-white transition-all"
+                className="absolute top-4 right-4 z-50 w-8 h-8 rounded-full bg-white/5 hover:bg-white/10 flex items-center justify-center text-white/40 hover:text-white transition-all"
               >
                 <X className="w-4 h-4" />
               </button>
