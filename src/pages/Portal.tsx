@@ -70,7 +70,7 @@ const Portal = () => {
         .from("reservations")
         .select("id, room_id, check_in, check_out, rooms(name)")
         .or(`profile_id.eq.${user!.id},client_id.eq.${user!.id}`)
-        .in("status", ["pending", "confirmed"])
+        .in("status", ["pending", "confirmed", "checked_in"])
         .lte("check_in", today)
         .gte("check_out", today)
         .limit(1)
@@ -82,7 +82,7 @@ const Portal = () => {
         .from("reservations")
         .select("id, room_id, check_in, check_out, rooms(name)")
         .or(`profile_id.eq.${user!.id},client_id.eq.${user!.id}`)
-        .in("status", ["pending", "confirmed"])
+        .in("status", ["pending", "confirmed", "checked_in"])
         .order("check_in", { ascending: false })
         .limit(1)
         .maybeSingle();
