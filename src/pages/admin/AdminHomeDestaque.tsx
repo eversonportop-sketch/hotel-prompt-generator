@@ -258,6 +258,9 @@ const AdminHomeDestaque = () => {
                     inputClass={inputClass}
                     labelClass={labelClass}
                     isNew={false}
+                    uploading={uploading}
+                    fileInputRef={fileInputRef}
+                    handleImageUpload={handleImageUpload}
                   />
                 </div>
               )}
@@ -277,6 +280,9 @@ const AdminHomeDestaque = () => {
             inputClass={inputClass}
             labelClass={labelClass}
             isNew={true}
+            uploading={uploading}
+            fileInputRef={fileInputRef}
+            handleImageUpload={handleImageUpload}
           />
           <button
             onClick={() => setEditingId(null)}
