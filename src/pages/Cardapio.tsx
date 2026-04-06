@@ -95,8 +95,8 @@ const Cardapio = () => {
     },
   });
 
-  const categories = useMemo(() => {
-    const cats = [...new Set(items.map((i) => i.category))];
+  const categories: string[] = useMemo(() => {
+    const cats = [...new Set(items.map((i) => String(i.category)))];
     return ["Todos", ...cats];
   }, [items]);
 
