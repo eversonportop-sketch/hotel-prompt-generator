@@ -104,7 +104,7 @@ const AdminConsumo = () => {
       const { data } = await supabase
         .from("reservations")
         .select("id, room_id, rooms(name), profiles!reservations_profile_id_fkey(full_name)")
-        .in("status", ["confirmed", "pending"])
+        .in("status", ["confirmed", "pending", "checked_in"])
         .lte("check_in", today)
         .gte("check_out", today);
       return (data || []).map((r: any) => ({
@@ -696,7 +696,9 @@ const AdminConsumo = () => {
                 className="p-6 space-y-4"
               >
                 <div>
-                  <label className="block text-xs uppercase tracking-widest text-primary/70 mb-1.5">Quarto Ocupado *</label>
+                  <label className="block text-xs uppercase tracking-widest text-primary/70 mb-1.5">
+                    Quarto Ocupado *
+                  </label>
                   <select
                     className="w-full bg-black/50 border border-gold/20 rounded-lg px-4 py-3 text-cream text-sm focus:border-primary focus:outline-none transition"
                     value={orderForm.reservation_id}
