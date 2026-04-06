@@ -35,13 +35,23 @@ const HeroSection = () => {
       {/* Fundo: banner do admin ou gradiente padrão */}
       {currentBanner?.image_url ? (
         <>
+          {/* Desktop */}
           <motion.div
-            key={currentBanner.image_url}
+            key={currentBanner.image_url + "-desktop"}
             initial={{ opacity: 0 }}
             animate={{ opacity: 1 }}
             transition={{ duration: 0.8 }}
-            className="absolute inset-0 bg-cover bg-center"
+            className="absolute inset-0 bg-cover bg-center hidden md:block"
             style={{ backgroundImage: `url(${currentBanner.image_url})` }}
+          />
+          {/* Mobile/Tablet — usa mobile_image_url se existir, senão cai no desktop */}
+          <motion.div
+            key={currentBanner.image_url + "-mobile"}
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            transition={{ duration: 0.8 }}
+            className="absolute inset-0 bg-cover bg-top md:hidden"
+            style={{ backgroundImage: `url(${(currentBanner as any).mobile_image_url || currentBanner.image_url})` }}
           />
           <div className="absolute inset-0 bg-black/60" />
           {/* Navegação do carrossel */}
