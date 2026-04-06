@@ -335,7 +335,7 @@ const AdminBanners = () => {
               initial={{ opacity: 0, y: 30 }}
               animate={{ opacity: 1, y: 0 }}
               exit={{ opacity: 0, y: 20 }}
-              className="bg-charcoal border border-gold/20 rounded-2xl w-full max-w-md shadow-2xl"
+              className="bg-charcoal border border-gold/20 rounded-2xl w-full max-w-md shadow-2xl max-h-[90vh] flex flex-col"
             >
               <div className="flex items-center justify-between p-6 border-b border-gold/10">
                 <h2 className="font-display text-xl font-bold text-cream">Novo Banner</h2>
@@ -349,7 +349,7 @@ const AdminBanners = () => {
                   e.preventDefault();
                   addMutation.mutate();
                 }}
-                className="p-6 space-y-4"
+                className="p-6 space-y-4 overflow-y-auto flex-1"
               >
                 {/* Título */}
                 <div>
