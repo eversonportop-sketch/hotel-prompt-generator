@@ -1,10 +1,10 @@
-import { useState, useEffect } from "react";
+import { useState, useEffect, useRef } from "react";
 import { supabase } from "@/integrations/supabase/client";
 
 // Table not yet in generated types — use explicit typing
 const fromHomeSections = () => supabase.from("home_sections" as any);
 import { toast } from "sonner";
-import { Save, Plus, Trash2, Eye, EyeOff, ArrowUp, ArrowDown, Loader2 } from "lucide-react";
+import { Save, Plus, Trash2, Eye, EyeOff, ArrowUp, ArrowDown, Loader2, Upload } from "lucide-react";
 
 interface HomeSection {
   id: string;
@@ -40,6 +40,37 @@ const AdminHomeDestaque = () => {
   const [editingId, setEditingId] = useState<string | null>(null);
   const [form, setForm] = useState<Omit<HomeSection, "id">>(emptySection);
   const [isNew, setIsNew] = useState(false);
+  const [uploading, setUploading] = useState(false);
+  const fileInputRef = useRef<HTMLInputElement>(null);
+
+  const handleImageUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+    if (!file.type.startsWith("image/")) {
+      toast.error("Selecione uma imagem.");
+      return;
+    }
+    if (file.size > 10 * 1024 * 1024) {
+      toast.error("Máximo 10 MB.");
+      return;
+    }
+    setUploading(true);
+    try {
+      const ext = file.name.split(".").pop();
+      const path = `home-sections/${Date.now()}-${Math.random().toString(36).slice(2)}.${ext}`;
+      const { error } = await supabase.storage
+        .from("hotel-images")
+        .upload(path, file, { upsert: false, contentType: file.type });
+      if (error) throw error;
+      const { data } = supabase.storage.from("hotel-images").getPublicUrl(path);
+      setForm((f) => ({ ...f, image_url: data.publicUrl }));
+      toast.success("Imagem enviada!");
+    } catch {
+      toast.error("Erro ao enviar imagem.");
+    } finally {
+      setUploading(false);
+    }
+  };
 
   const fetchSections = async () => {
     setLoading(true);
@@ -310,12 +341,31 @@ const SectionForm = ({
     </div>
     <div>
       <label className={labelClass}>URL da Imagem</label>
-      <input
-        className={inputClass}
-        placeholder="https://..."
-        value={form.image_url || ""}
-        onChange={(e) => setForm({ ...form, image_url: e.target.value })}
-      />
+      <div className="flex gap-2">
+        <input
+          className={inputClass + " flex-1"}
+          placeholder="https://..."
+          value={form.image_url || ""}
+          onChange={(e) => setForm({ ...form, image_url: e.target.value })}
+        />
+        <button
+          type="button"
+          onClick={() => fileInputRef.current?.click()}
+          disabled={uploading}
+          className="flex items-center gap-1.5 px-3 py-2 bg-primary/10 border border-primary/20 hover:bg-primary/20 text-primary rounded-lg text-xs font-body transition-all disabled:opacity-50 shrink-0"
+        >
+          {uploading ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : <Upload className="w-3.5 h-3.5" />}
+          {uploading ? "Enviando..." : "Upload"}
+        </button>
+        <input ref={fileInputRef} type="file" accept="image/*" className="hidden" onChange={handleImageUpload} />
+      </div>
+      {form.image_url && (
+        <img
+          src={form.image_url}
+          alt="Preview"
+          className="mt-2 h-20 w-full object-cover rounded-lg border border-white/10"
+        />
+      )}
     </div>
     <div>
       <label className={labelClass}>Lado da Imagem</label>
