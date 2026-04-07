@@ -25,7 +25,7 @@ const Galeria = () => {
         .select("id, url, category, alt_text")
         .order("created_at", { ascending: false });
       if (error) throw error;
-      return (data || []) as { id: string; url: string; category: string; alt_text: string | null }[];
+      return (data || []) as unknown as { id: string; url: string; category: string; alt_text: string | null }[];
     },
   });
 
