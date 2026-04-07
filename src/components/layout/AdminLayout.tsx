@@ -57,6 +57,7 @@ const sidebarGroups = [
       { icon: Tag, label: "Promoções", href: "/admin/promocoes" },
       { icon: Image, label: "Banners", href: "/admin/banners" },
       { icon: Image, label: "Mídia", href: "/admin/midia" },
+      { icon: Image, label: "Galeria", href: "/admin/galeria" },
       { icon: Info, label: "Informações", href: "/admin/informacoes" },
       { icon: Settings, label: "Configurações", href: "/admin/configuracoes" },
       { icon: Sparkles, label: "Popup", href: "/admin/popup" },
