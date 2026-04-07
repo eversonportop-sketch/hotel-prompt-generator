@@ -52,11 +52,14 @@ async function uploadSingle(file: File, category: string): Promise<string> {
   const { data } = supabase.storage.from("hotel-images").getPublicUrl(path);
   const publicUrl = data.publicUrl;
 
+  const mediaType = isVideo(file.name) ? "video" : "image";
+
   const { error: dbError } = await supabase.from("hotel_media").insert({
     file_name: file.name,
     file_path: path,
     public_url: publicUrl,
     category,
+    media_type: mediaType,
   } as any);
 
   if (dbError) {
@@ -104,9 +107,7 @@ const AdminGaleria = () => {
 
   const handleFiles = useCallback(
     async (files: FileList | File[]) => {
-      const arr = Array.from(files).filter((f) =>
-        /\.(jpg|jpeg|png|webp|gif|mp4|webm|mov)$/i.test(f.name)
-      );
+      const arr = Array.from(files).filter((f) => /\.(jpg|jpeg|png|webp|gif|mp4|webm|mov)$/i.test(f.name));
       if (!arr.length) return toast.error("Nenhum arquivo válido (imagem ou vídeo).");
 
       setUploading(true);
@@ -116,7 +117,7 @@ const AdminGaleria = () => {
           await uploadSingle(file, activeTab);
           ok++;
         } catch (e: any) {
-          toast.error(`Erro: ${file.name}`);
+          toast.error(`Erro: ${file.name} — ${e.message}`);
         }
       }
       setUploading(false);
@@ -125,7 +126,7 @@ const AdminGaleria = () => {
         qc.invalidateQueries({ queryKey: ["admin-gallery", activeTab] });
       }
     },
-    [activeTab, qc]
+    [activeTab, qc],
   );
 
   const onDrop = useCallback(
@@ -134,7 +135,7 @@ const AdminGaleria = () => {
       setDragOver(false);
       handleFiles(e.dataTransfer.files);
     },
-    [handleFiles]
+    [handleFiles],
   );
 
   const catLabel = CATEGORIES.find((c) => c.key === activeTab)?.label || "";
@@ -183,9 +184,7 @@ const AdminGaleria = () => {
         onDrop={onDrop}
         onClick={() => inputRef.current?.click()}
         className={`relative border-2 border-dashed rounded-2xl p-10 text-center cursor-pointer transition-all ${
-          dragOver
-            ? "border-primary/60 bg-primary/5"
-            : "border-white/10 hover:border-white/20 bg-white/[0.02]"
+          dragOver ? "border-primary/60 bg-primary/5" : "border-white/10 hover:border-white/20 bg-white/[0.02]"
         }`}
       >
         <input
@@ -237,12 +236,7 @@ const AdminGaleria = () => {
                   className="group relative aspect-square overflow-hidden rounded-xl border border-white/5 hover:border-primary/25 transition-all"
                 >
                   {video ? (
-                    <video
-                      src={item.public_url}
-                      className="w-full h-full object-cover"
-                      muted
-                      preload="metadata"
-                    />
+                    <video src={item.public_url} className="w-full h-full object-cover" muted preload="metadata" />
                   ) : (
                     <img
                       src={item.public_url}
@@ -252,7 +246,6 @@ const AdminGaleria = () => {
                     />
                   )}
 
-                  {/* Play icon for videos */}
                   {video && (
                     <div className="absolute inset-0 flex items-center justify-center pointer-events-none">
                       <div className="w-10 h-10 rounded-full bg-black/60 border border-white/20 flex items-center justify-center">
@@ -261,7 +254,6 @@ const AdminGaleria = () => {
                     </div>
                   )}
 
-                  {/* Overlay */}
                   <div className="absolute inset-0 bg-black/0 group-hover:bg-black/40 transition-all flex items-center justify-center gap-2 opacity-0 group-hover:opacity-100">
                     <button
                       onClick={() => setLightbox(item)}
