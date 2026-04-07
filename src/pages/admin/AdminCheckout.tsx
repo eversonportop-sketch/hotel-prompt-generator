@@ -209,7 +209,7 @@ const AdminCheckout = () => {
       }
       const { error } = await supabase
         .from("reservations")
-        .update({ status: "checked_out", checked_out_at: new Date().toISOString() })
+        .update({ status: "checked_out", checked_out_at: new Date().toISOString() } as any)
         .eq("id", selectedRes.id);
       if (error) throw error;
     },

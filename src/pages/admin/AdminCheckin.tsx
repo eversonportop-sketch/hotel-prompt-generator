@@ -82,7 +82,7 @@ const AdminCheckin = () => {
         .update({
           status: "checked_in",
           checked_in_at: new Date().toISOString(),
-        })
+        } as any)
         .eq("id", id);
       if (error) throw error;
     },

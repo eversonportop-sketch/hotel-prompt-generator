@@ -157,7 +157,7 @@ const AdminClientes = () => {
             address: editData.address || null,
             city: editData.city || null,
             state: editData.state || null,
-          })
+          } as any)
           .eq("id", editCliente.id);
         if (error) throw error;
       } else {
