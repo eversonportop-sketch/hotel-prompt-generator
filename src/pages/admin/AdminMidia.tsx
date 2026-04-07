@@ -23,8 +23,6 @@ const CATEGORIES = [
   { key: "quartos", label: "Quartos", icon: BedDouble },
   { key: "salao", label: "Salão de Festas", icon: PartyPopper },
   { key: "piscina", label: "Piscina", icon: Waves },
-  { key: "eventos", label: "Eventos", icon: PartyPopper },
-  { key: "promocoes", label: "Promoções", icon: Tag },
 ] as const;
 
 type Category = (typeof CATEGORIES)[number]["key"];
@@ -46,16 +44,35 @@ interface UploadProgress {
 async function uploadSingle(file: File, category: string): Promise<string> {
   const ext = file.name.split(".").pop() || "jpg";
   const path = `${category}/${Date.now()}-${Math.random().toString(36).slice(2)}.${ext}`;
-  const { error } = await supabase.storage.from("hotel-images").upload(path, file, { contentType: file.type });
-  if (error) throw error;
+
+  // 1. Upload para o Storage
+  const { error: storageError } = await supabase.storage
+    .from("hotel-images")
+    .upload(path, file, { contentType: file.type, upsert: false });
+
+  if (storageError) {
+    console.error("Erro no upload do storage:", storageError);
+    throw new Error(`Storage: ${storageError.message}`);
+  }
+
+  // 2. Pegar URL pública
   const { data } = supabase.storage.from("hotel-images").getPublicUrl(path);
-  // salvar no banco
-  await (supabase as any).from("hotel_media").insert({
+
+  // 3. Salvar no banco
+  const { error: dbError } = await supabase.from("hotel_media").insert({
     file_name: file.name,
     file_path: path,
     public_url: data.publicUrl,
     category,
   });
+
+  if (dbError) {
+    console.error("Erro ao salvar no banco:", dbError);
+    // Remove o arquivo do storage se falhou no banco
+    await supabase.storage.from("hotel-images").remove([path]);
+    throw new Error(`Banco: ${dbError.message}`);
+  }
+
   return data.publicUrl;
 }
 
@@ -71,19 +88,19 @@ const AdminMidia = () => {
   const { data: media = [], isLoading } = useQuery<MediaItem[]>({
     queryKey: ["admin-media"],
     queryFn: async () => {
-      const { data, error } = await (supabase as any)
-        .from("hotel_media")
-        .select("*")
-        .order("created_at", { ascending: false });
-      if (error) throw error;
-      return data as MediaItem[];
+      const { data, error } = await supabase.from("hotel_media").select("*").order("created_at", { ascending: false });
+      if (error) {
+        console.error("Erro ao buscar mídia:", error);
+        throw error;
+      }
+      return (data ?? []) as MediaItem[];
     },
   });
 
   const deleteMutation = useMutation({
     mutationFn: async (item: MediaItem) => {
       await supabase.storage.from("hotel-images").remove([item.file_path]);
-      const { error } = await (supabase as any).from("hotel_media").delete().eq("id", item.id);
+      const { error } = await supabase.from("hotel_media").delete().eq("id", item.id);
       if (error) throw error;
     },
     onSuccess: () => {
@@ -118,8 +135,10 @@ const AdminMidia = () => {
           await uploadSingle(file, category);
           successCount++;
           setProgresses((prev) => prev.map((p, idx) => (idx === i ? { ...p, status: "done" } : p)));
-        } catch {
+        } catch (err) {
+          console.error("Falha no upload:", err);
           setProgresses((prev) => prev.map((p, idx) => (idx === i ? { ...p, status: "error" } : p)));
+          toast.error(`Erro ao enviar "${file.name}": ${err instanceof Error ? err.message : "Erro desconhecido"}`);
         }
       }
 
