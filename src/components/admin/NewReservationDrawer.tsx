@@ -276,7 +276,7 @@ const NewReservationDrawer = ({ open, onClose }: Props) => {
             city: guestData.city || null,
             state: guestData.state || null,
             zip_code: guestData.zip_code || null,
-          })
+          } as any)
           .select("id")
           .single();
         if (ge) throw ge;
@@ -296,7 +296,7 @@ const NewReservationDrawer = ({ open, onClose }: Props) => {
         status,
         notes: notesText,
         ...(doCheckin ? { checked_in_at: new Date().toISOString() } : {}),
-      });
+      } as any);
       if (error) throw error;
       toast.success(doCheckin ? "Reserva criada e check-in realizado!" : "Reserva criada com sucesso!");
       [
