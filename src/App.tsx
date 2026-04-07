@@ -38,6 +38,7 @@ import AdminInformacoes from "./pages/admin/AdminInformacoes";
 import AdminPopup from "./pages/admin/AdminPopup";
 import AdminEstoque from "./pages/admin/AdminEstoque";
 import AdminHomeDestaque from "./pages/admin/AdminHomeDestaque";
+import AdminGaleria from "./pages/admin/AdminGaleria";
 import NotFound from "./pages/NotFound";
 
 const queryClient = new QueryClient();
@@ -94,6 +95,7 @@ const App = () => (
                 <Route path="popup" element={<AdminPopup />} />
                 <Route path="estoque" element={<AdminEstoque />} />
                 <Route path="home-destaques" element={<AdminHomeDestaque />} />
+                <Route path="galeria" element={<AdminGaleria />} />
               </Route>
 
               <Route path="*" element={<NotFound />} />
