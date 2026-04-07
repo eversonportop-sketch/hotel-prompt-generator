@@ -23,6 +23,7 @@ const CATEGORIES = [
   { key: "quartos", label: "Quartos", icon: BedDouble },
   { key: "salao", label: "Salão de Festas", icon: PartyPopper },
   { key: "piscina", label: "Piscina", icon: Waves },
+  { key: "eventos", label: "Eventos", icon: PartyPopper },
   { key: "promocoes", label: "Promoções", icon: Tag },
 ] as const;
 
