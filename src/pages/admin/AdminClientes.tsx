@@ -79,6 +79,7 @@ const AdminClientes = () => {
   const [editSaving, setEditSaving] = useState(false);
   const [deleteId, setDeleteId] = useState<{ id: string; source: "guest" | "profile"; name: string } | null>(null);
   const [expandedId, setExpandedId] = useState<string | null>(null);
+  const [sortBy, setSortBy] = useState<"date" | "name">("date");
 
   const { data: clientes = [], isLoading } = useQuery({
     queryKey: ["clientes-lista"],
@@ -157,7 +158,7 @@ const AdminClientes = () => {
             address: editData.address || null,
             city: editData.city || null,
             state: editData.state || null,
-          } as any)
+          })
           .eq("id", editCliente.id);
         if (error) throw error;
       } else {
@@ -195,16 +196,22 @@ const AdminClientes = () => {
     onError: () => toast.error("Erro ao excluir. Verifique se não há reservas vinculadas."),
   });
 
-  const filtered = clientes.filter((c) => {
-    if (!search.trim()) return true;
-    const q = search.toLowerCase();
-    return (
-      c.full_name?.toLowerCase().includes(q) ||
-      c.cpf?.includes(q) ||
-      c.phone?.includes(q) ||
-      c.email?.toLowerCase().includes(q)
+  const filtered = clientes
+    .filter((c) => {
+      if (!search.trim()) return true;
+      const q = search.toLowerCase();
+      return (
+        c.full_name?.toLowerCase().includes(q) ||
+        c.cpf?.includes(q) ||
+        c.phone?.includes(q) ||
+        c.email?.toLowerCase().includes(q)
+      );
+    })
+    .sort((a, b) =>
+      sortBy === "name"
+        ? a.full_name.localeCompare(b.full_name, "pt-BR", { sensitivity: "base" })
+        : new Date(b.created_at).getTime() - new Date(a.created_at).getTime(),
     );
-  });
 
   const initials = (name: string) =>
     name
@@ -246,15 +253,28 @@ const AdminClientes = () => {
         </p>
       </div>
 
-      {/* Busca */}
-      <div className="relative">
-        <Search className="absolute left-3.5 top-1/2 -translate-y-1/2 w-4 h-4 text-white/25" />
-        <input
-          className="w-full pl-10 pr-4 py-2.5 bg-charcoal-light border border-white/5 rounded-xl text-cream text-sm focus:border-primary/40 focus:outline-none transition placeholder:text-white/20 font-body"
-          placeholder="Buscar por nome, CPF, telefone ou e-mail..."
-          value={search}
-          onChange={(e) => setSearch(e.target.value)}
-        />
+      {/* Busca + Ordenação */}
+      <div className="flex gap-2">
+        <div className="relative flex-1">
+          <Search className="absolute left-3.5 top-1/2 -translate-y-1/2 w-4 h-4 text-white/25" />
+          <input
+            className="w-full pl-10 pr-4 py-2.5 bg-charcoal-light border border-white/5 rounded-xl text-cream text-sm focus:border-primary/40 focus:outline-none transition placeholder:text-white/20 font-body"
+            placeholder="Buscar por nome, CPF, telefone ou e-mail..."
+            value={search}
+            onChange={(e) => setSearch(e.target.value)}
+          />
+        </div>
+        <button
+          onClick={() => setSortBy((s) => (s === "name" ? "date" : "name"))}
+          title={sortBy === "name" ? "Ordenado A→Z" : "Ordenado por data"}
+          className={`flex items-center gap-1.5 px-3.5 py-2.5 rounded-xl border text-xs font-body font-medium transition-all ${
+            sortBy === "name"
+              ? "bg-purple-500/15 border-purple-500/30 text-purple-300"
+              : "bg-white/5 border-white/8 text-white/40 hover:text-cream hover:bg-white/8"
+          }`}
+        >
+          <span>{sortBy === "name" ? "A→Z" : "Data"}</span>
+        </button>
       </div>
 
       {/* Lista */}
