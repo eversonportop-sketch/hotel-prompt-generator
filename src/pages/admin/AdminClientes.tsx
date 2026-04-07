@@ -146,30 +146,26 @@ const AdminClientes = () => {
     setEditSaving(true);
     try {
       if (editCliente.source === "guest") {
-        const { error } = await supabase
-          .from("guests")
-          .update({
-            full_name: editData.full_name.trim(),
-            phone: editData.phone || null,
-            cpf: editData.cpf || null,
-            rg: editData.rg || null,
-            email: editData.email || null,
-            nationality: editData.nationality || null,
-            address: editData.address || null,
-            city: editData.city || null,
-            state: editData.state || null,
-          })
-          .eq("id", editCliente.id);
+        const guestPayload = {
+          full_name: editData.full_name.trim(),
+          phone: editData.phone || null,
+          cpf: editData.cpf || null,
+          rg: editData.rg || null,
+          email: editData.email || null,
+          nationality: editData.nationality || null,
+          address: editData.address || null,
+          city: editData.city || null,
+          state: editData.state || null,
+        } as any;
+        const { error } = await supabase.from("guests").update(guestPayload).eq("id", editCliente.id);
         if (error) throw error;
       } else {
-        const { error } = await supabase
-          .from("profiles")
-          .update({
-            full_name: editData.full_name.trim(),
-            phone: editData.phone || null,
-            cpf: editData.cpf || null,
-          })
-          .eq("id", editCliente.id);
+        const profilePayload = {
+          full_name: editData.full_name.trim(),
+          phone: editData.phone || null,
+          cpf: editData.cpf || null,
+        } as any;
+        const { error } = await supabase.from("profiles").update(profilePayload).eq("id", editCliente.id);
         if (error) throw error;
       }
       toast.success("Cliente atualizado!");
