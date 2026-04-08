@@ -24,7 +24,11 @@ const Login = () => {
     const { error } = await signIn(email, password);
     if (error) {
       setLoading(false);
-      toast.error("E-mail ou senha incorretos.");
+      if (error.message?.toLowerCase().includes("email not confirmed")) {
+        toast.error("Confirme seu e-mail antes de fazer login. Verifique sua caixa de entrada.");
+      } else {
+        toast.error("E-mail ou senha incorretos.");
+      }
       return;
     }
     const {

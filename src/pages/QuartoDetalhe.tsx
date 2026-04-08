@@ -231,6 +231,8 @@ const QuartoDetalhe = () => {
           if (intent.checkOut) setCheckOut(new Date(intent.checkOut + "T12:00:00"));
           if (intent.guestsCount) setGuestsCount(intent.guestsCount);
           sessionStorage.removeItem("reserva_intent");
+          // Verificar disponibilidade automaticamente após restaurar intent
+          setTimeout(() => checkAvailability(), 300);
         } catch {
           sessionStorage.removeItem("reserva_intent");
         }
