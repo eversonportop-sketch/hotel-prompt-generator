@@ -55,7 +55,7 @@ const EMPTY_FORM = {
   display_order: 0,
 };
 
-const CATEGORIES = ["Standard", "Luxo", "Super Luxo", "Suite", "Suite Master"];
+const CATEGORIES = ["Standard", "Conforto", "Premium", "Suite"];
 
 async function uploadRoomImage(file: File): Promise<string> {
   const ext = file.name.split(".").pop() || "jpg";
