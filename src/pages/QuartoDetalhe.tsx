@@ -299,6 +299,14 @@ const QuartoDetalhe = () => {
     }
   }, [pendingAvailCheck, room, checkIn, checkOut]);
 
+  // Auto-reservar após login: cliente já clicou "Reservar" antes, agora tá logado e disponível
+  useEffect(() => {
+    if (autoReserve && user && categoryAvail?.freeRoomId && available && !reservationMutation.isPending) {
+      setAutoReserve(false);
+      reservationMutation.mutate();
+    }
+  }, [autoReserve, user, categoryAvail, available]);
+
   // Cria reserva usando profile_id (correto)
   const reservationMutation = useMutation({
     mutationFn: async () => {
