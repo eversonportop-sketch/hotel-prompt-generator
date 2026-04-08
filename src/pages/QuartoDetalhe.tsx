@@ -330,14 +330,19 @@ const QuartoDetalhe = () => {
     },
     onSuccess: () => {
       toast.success("Reserva criada! Aguarde confirmação.");
+      queryClient.invalidateQueries({ queryKey: ["checkin-confirmed"] });
+      queryClient.invalidateQueries({ queryKey: ["reservas-lista"] });
       queryClient.invalidateQueries({ queryKey: ["reservations"] });
+      queryClient.invalidateQueries({ queryKey: ["dash-reservations-all"] });
       setCheckIn(undefined);
       setCheckOut(undefined);
       setAvailable(null);
       setCategoryAvail(null);
       setGuestsCount(1);
+      setAutoReserve(false);
     },
     onError: (err: any) => {
+      setAutoReserve(false);
       toast.error(
         err?.message?.includes("not available")
           ? "Categoria indisponível para as datas selecionadas."
