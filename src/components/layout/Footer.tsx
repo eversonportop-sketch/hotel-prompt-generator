@@ -41,99 +41,170 @@ const Footer = () => {
   const mailHref = `mailto:${email}`;
 
   return (
-    <footer className="bg-charcoal text-cream/70 border-t border-gold/10">
-      <div className="container-hotel py-16">
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-10">
-          {/* 1 — Logo + Estrelas + Redes */}
-          <div>
-            <h3 className="font-display text-2xl font-bold text-gradient-gold mb-2">SB Hotel</h3>
-            <div className="flex gap-1 mb-3">
+    <footer className="relative bg-charcoal text-cream/70 overflow-hidden">
+      {/* Gradient glow at top */}
+      <div
+        className="absolute top-0 left-0 right-0 h-px"
+        style={{
+          background: "linear-gradient(90deg, transparent 5%, hsl(38 45% 55% / 0.6) 30%, hsl(38 40% 72% / 0.8) 50%, hsl(38 45% 55% / 0.6) 70%, transparent 95%)",
+        }}
+      />
+      <div
+        className="absolute top-0 left-0 right-0 h-24 pointer-events-none"
+        style={{
+          background: "linear-gradient(180deg, hsl(38 45% 55% / 0.04) 0%, transparent 100%)",
+        }}
+      />
+
+      {/* Subtle radial glow behind content */}
+      <div
+        className="absolute inset-0 pointer-events-none"
+        style={{
+          background: "radial-gradient(ellipse 60% 40% at 50% 100%, hsl(38 45% 55% / 0.03) 0%, transparent 70%)",
+        }}
+      />
+
+      <div className="container-hotel relative py-20">
+        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-12">
+          {/* 1 — Brand */}
+          <div className="lg:pr-6">
+            <h3 className="font-display text-3xl font-bold text-gradient-gold mb-1 tracking-wide">
+              SB Hotel
+            </h3>
+            <div className="flex gap-0.5 mb-4">
               {[...Array(5)].map((_, i) => (
-                <span key={i} className="text-primary text-sm">★</span>
+                <span key={i} className="text-primary text-xs">★</span>
               ))}
             </div>
-            <p className="text-sm leading-relaxed mb-5">{tagline}</p>
+            <p className="text-sm leading-relaxed text-cream/50 mb-6 font-body italic">
+              {tagline}
+            </p>
             <div className="flex gap-3">
-              <a
-                href={igHref}
-                target="_blank"
-                rel="noopener noreferrer"
-                className="w-9 h-9 rounded-full border border-gold/30 flex items-center justify-center hover:bg-primary hover:text-charcoal hover:border-primary transition-all duration-300"
-              >
-                <Instagram className="w-4 h-4" />
-              </a>
-              <a
-                href={fbHref}
-                target="_blank"
-                rel="noopener noreferrer"
-                className="w-9 h-9 rounded-full border border-gold/30 flex items-center justify-center hover:bg-primary hover:text-charcoal hover:border-primary transition-all duration-300"
-              >
-                <Facebook className="w-4 h-4" />
-              </a>
-              {whatsapp && (
+              {[
+                { href: igHref, icon: Instagram, label: "Instagram" },
+                { href: fbHref, icon: Facebook, label: "Facebook" },
+                ...(whatsapp
+                  ? [{ href: `https://wa.me/${whatsapp.replace(/\D/g, "")}`, icon: Phone, label: "WhatsApp" }]
+                  : []),
+              ].map(({ href, icon: Icon, label }) => (
                 <a
-                  href={`https://wa.me/${whatsapp.replace(/\D/g, "")}`}
+                  key={label}
+                  href={href}
                   target="_blank"
                   rel="noopener noreferrer"
-                  className="w-9 h-9 rounded-full border border-gold/30 flex items-center justify-center hover:bg-primary hover:text-charcoal hover:border-primary transition-all duration-300"
+                  aria-label={label}
+                  className="group w-10 h-10 rounded-full border border-gold/20 flex items-center justify-center transition-all duration-500 hover:border-primary hover:bg-primary/10 hover:shadow-[0_0_12px_hsl(38_45%_55%/0.2)]"
                 >
-                  <Phone className="w-4 h-4" />
+                  <Icon className="w-4 h-4 text-cream/40 group-hover:text-primary transition-colors duration-500" />
                 </a>
-              )}
+              ))}
             </div>
           </div>
 
           {/* 2 — Navegação */}
           <div>
-            <h4 className="font-display text-lg text-cream mb-4">Navegação</h4>
-            <div className="flex flex-col gap-2 text-sm">
-              <Link to="/" className="hover:text-primary transition-colors">Home</Link>
-              <Link to="/quartos" className="hover:text-primary transition-colors">Quartos</Link>
-              <Link to="/promocoes" className="hover:text-primary transition-colors">Promoções</Link>
-              <Link to="/salao" className="hover:text-primary transition-colors">Salão de Festas</Link>
-              <Link to="/piscina" className="hover:text-primary transition-colors">Piscina</Link>
-              <Link to="/galeria" className="hover:text-primary transition-colors">Galeria</Link>
+            <h4 className="font-display text-sm uppercase tracking-[0.2em] text-primary/80 mb-5 font-medium">
+              Navegação
+            </h4>
+            <div
+              className="w-8 h-px mb-5"
+              style={{ background: "linear-gradient(90deg, hsl(38 45% 55% / 0.5), transparent)" }}
+            />
+            <div className="flex flex-col gap-3 text-sm font-body">
+              {[
+                { to: "/", label: "Home" },
+                { to: "/quartos", label: "Quartos" },
+                { to: "/promocoes", label: "Promoções" },
+                { to: "/salao", label: "Salão de Festas" },
+                { to: "/piscina", label: "Piscina" },
+                { to: "/galeria", label: "Galeria" },
+              ].map(({ to, label }) => (
+                <Link
+                  key={to}
+                  to={to}
+                  className="text-cream/50 hover:text-primary transition-colors duration-300 hover:translate-x-1 transform inline-block"
+                >
+                  {label}
+                </Link>
+              ))}
             </div>
           </div>
 
           {/* 3 — Área do Cliente */}
           <div>
-            <h4 className="font-display text-lg text-cream mb-4">Área do Cliente</h4>
-            <div className="flex flex-col gap-2 text-sm">
-              <Link to="/login" className="hover:text-primary transition-colors">Login</Link>
-              <Link to="/cadastro" className="hover:text-primary transition-colors">Cadastro</Link>
-              <Link to="/portal" className="hover:text-primary transition-colors">Portal do Hóspede</Link>
+            <h4 className="font-display text-sm uppercase tracking-[0.2em] text-primary/80 mb-5 font-medium">
+              Área do Cliente
+            </h4>
+            <div
+              className="w-8 h-px mb-5"
+              style={{ background: "linear-gradient(90deg, hsl(38 45% 55% / 0.5), transparent)" }}
+            />
+            <div className="flex flex-col gap-3 text-sm font-body">
+              {[
+                { to: "/login", label: "Login" },
+                { to: "/cadastro", label: "Cadastro" },
+                { to: "/portal", label: "Portal do Hóspede" },
+              ].map(({ to, label }) => (
+                <Link
+                  key={to}
+                  to={to}
+                  className="text-cream/50 hover:text-primary transition-colors duration-300 hover:translate-x-1 transform inline-block"
+                >
+                  {label}
+                </Link>
+              ))}
             </div>
           </div>
 
           {/* 4 — Contato */}
           <div>
-            <h4 className="font-display text-lg text-cream mb-4">Contato</h4>
-            <div className="flex flex-col gap-3 text-sm">
-              <a href={telHref} className="flex items-center gap-2 hover:text-primary transition-colors">
-                <Phone className="w-4 h-4 text-primary flex-shrink-0" />
+            <h4 className="font-display text-sm uppercase tracking-[0.2em] text-primary/80 mb-5 font-medium">
+              Contato
+            </h4>
+            <div
+              className="w-8 h-px mb-5"
+              style={{ background: "linear-gradient(90deg, hsl(38 45% 55% / 0.5), transparent)" }}
+            />
+            <div className="flex flex-col gap-4 text-sm font-body">
+              <a href={telHref} className="group flex items-center gap-3 text-cream/50 hover:text-cream/80 transition-colors duration-300">
+                <span className="w-8 h-8 rounded-full border border-gold/15 flex items-center justify-center group-hover:border-primary/40 transition-colors duration-300">
+                  <Phone className="w-3.5 h-3.5 text-primary/70" />
+                </span>
                 {phone}
               </a>
-              <a href={mailHref} className="flex items-center gap-2 hover:text-primary transition-colors">
-                <Mail className="w-4 h-4 text-primary flex-shrink-0" />
+              <a href={mailHref} className="group flex items-center gap-3 text-cream/50 hover:text-cream/80 transition-colors duration-300">
+                <span className="w-8 h-8 rounded-full border border-gold/15 flex items-center justify-center group-hover:border-primary/40 transition-colors duration-300">
+                  <Mail className="w-3.5 h-3.5 text-primary/70" />
+                </span>
                 {email}
               </a>
               <a
                 href={googleMaps}
                 target="_blank"
                 rel="noopener noreferrer"
-                className="flex items-start gap-2 hover:text-primary transition-colors"
+                className="group flex items-start gap-3 text-cream/50 hover:text-cream/80 transition-colors duration-300"
               >
-                <MapPin className="w-4 h-4 text-primary mt-0.5 flex-shrink-0" />
-                <span>{address}{city ? `, ${city}` : ""}</span>
+                <span className="w-8 h-8 rounded-full border border-gold/15 flex items-center justify-center flex-shrink-0 group-hover:border-primary/40 transition-colors duration-300">
+                  <MapPin className="w-3.5 h-3.5 text-primary/70" />
+                </span>
+                <span className="pt-1.5">{address}{city ? `, ${city}` : ""}</span>
               </a>
             </div>
           </div>
         </div>
 
-        <div className="mt-12 pt-6 border-t border-gold/10 flex flex-col md:flex-row items-center justify-between gap-2 text-xs text-cream/40">
-          <span>© {new Date().getFullYear()} SB Hotel · Butiá, Rio Grande do Sul. Todos os direitos reservados.</span>
-          <span>Feito com ♥ para sua melhor estadia</span>
+        {/* Bottom bar */}
+        <div className="mt-16 pt-6 relative">
+          <div
+            className="absolute top-0 left-0 right-0 h-px"
+            style={{
+              background: "linear-gradient(90deg, transparent 10%, hsl(38 45% 55% / 0.15) 50%, transparent 90%)",
+            }}
+          />
+          <div className="flex flex-col md:flex-row items-center justify-between gap-2 text-xs text-cream/30 font-body tracking-wide">
+            <span>© {new Date().getFullYear()} SB Hotel · Butiá, Rio Grande do Sul</span>
+            <span className="text-cream/20">✦ Feito com elegância para sua melhor estadia ✦</span>
+          </div>
         </div>
       </div>
     </footer>
