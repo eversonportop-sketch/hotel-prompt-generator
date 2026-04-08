@@ -292,11 +292,8 @@ const QuartoDetalhe = () => {
       const nights = differenceInDays(checkOut, checkIn);
       const price = Number(room.promotional_price || room.price);
 
-      const { data: profile } = await supabase.from("profiles").select("id").eq("id", user.id).single();
-
       const { error } = await supabase.from("reservations").insert({
         client_id: user.id,
-        profile_id: profile?.id ?? user.id,
         room_id: categoryAvail.freeRoomId,
         check_in: format(checkIn, "yyyy-MM-dd"),
         check_out: format(checkOut, "yyyy-MM-dd"),
