@@ -86,23 +86,25 @@ const HeroSection = () => {
           {/* Ken Burns: zoom + pan suave na imagem */}
           <style>{`
             @keyframes kenburns {
-              0%   { transform: scale(1.08) translate(0%, 0%); }
-              25%  { transform: scale(1.12) translate(-1.5%, 0.5%); }
-              50%  { transform: scale(1.1)  translate(-1%, -1%); }
-              75%  { transform: scale(1.13) translate(1%, -0.5%); }
-              100% { transform: scale(1.08) translate(0%, 0%); }
+              0%   { transform: scale(1) translate(0px, 0px); }
+              33%  { transform: scale(1.08) translate(-20px, -10px); }
+              66%  { transform: scale(1.05) translate(15px, -5px); }
+              100% { transform: scale(1) translate(0px, 0px); }
             }
           `}</style>
-          <div
-            className="absolute inset-0"
-            style={{
-              backgroundImage: "url(https://images.unsplash.com/photo-1631049307264-da0ec9d70304?w=1920&q=85)",
-              backgroundSize: "cover",
-              backgroundPosition: "center",
-              animation: "kenburns 20s ease-in-out infinite",
-              willChange: "transform",
-            }}
-          />
+          <div className="absolute inset-0 overflow-hidden">
+            <div
+              style={{
+                position: "absolute",
+                inset: "-5%",
+                backgroundImage: "url(https://images.unsplash.com/photo-1631049307264-da0ec9d70304?w=1920&q=85)",
+                backgroundSize: "cover",
+                backgroundPosition: "center",
+                animation: "kenburns 18s ease-in-out infinite",
+                willChange: "transform",
+              }}
+            />
+          </div>
           {/* Overlay escuro */}
           <div className="absolute inset-0 bg-black/55" />
           {/* Gradiente dourado sutil */}
