@@ -292,9 +292,12 @@ const QuartoDetalhe = () => {
       const nights = differenceInDays(checkOut, checkIn);
       const price = Number(room.promotional_price || room.price);
 
+      const { data: profile } = await supabase.from("profiles").select("id").eq("id", user.id).single();
+
       const { error } = await supabase.from("reservations").insert({
         client_id: user.id,
-        room_id: categoryAvail.freeRoomId,
+        profile_id: profile?.id ?? user.id,
+        room_id: categoryAvail.freeRoomId, // quarto livre da categoria
         check_in: format(checkIn, "yyyy-MM-dd"),
         check_out: format(checkOut, "yyyy-MM-dd"),
         guests_count: guestsCount,
@@ -491,30 +494,18 @@ const QuartoDetalhe = () => {
                     </div>
                   </div>
 
-                  {/* HÓSPEDES com botões +/- para mobile */}
                   <div className="space-y-2">
                     <label className="font-body text-sm text-cream/60">Hóspedes</label>
-                    <div className="flex items-center gap-3">
-                      <button
-                        type="button"
-                        onClick={() => setGuestsCount((v) => Math.max(1, v - 1))}
-                        disabled={guestsCount <= 1}
-                        className="w-10 h-10 rounded-lg bg-charcoal border border-gold/20 text-cream text-lg font-bold flex items-center justify-center hover:bg-charcoal-light hover:border-primary/50 disabled:opacity-30 disabled:cursor-not-allowed transition"
-                      >
-                        −
-                      </button>
-                      <span className="flex-1 text-center text-cream font-body text-sm bg-charcoal border border-gold/20 rounded-lg py-2">
-                        {guestsCount} hóspede{guestsCount > 1 ? "s" : ""}
-                      </span>
-                      <button
-                        type="button"
-                        onClick={() => setGuestsCount((v) => Math.min(room.capacity, v + 1))}
-                        disabled={guestsCount >= room.capacity}
-                        className="w-10 h-10 rounded-lg bg-charcoal border border-gold/20 text-cream text-lg font-bold flex items-center justify-center hover:bg-charcoal-light hover:border-primary/50 disabled:opacity-30 disabled:cursor-not-allowed transition"
-                      >
-                        +
-                      </button>
-                    </div>
+                    <input
+                      type="number"
+                      min={1}
+                      max={room.capacity}
+                      value={guestsCount}
+                      onChange={(e) =>
+                        setGuestsCount(Math.max(1, Math.min(room.capacity, parseInt(e.target.value) || 1)))
+                      }
+                      className="w-full bg-charcoal border border-gold/20 rounded-lg px-3 py-2 text-cream text-sm font-body focus:outline-none focus:border-primary/50 transition"
+                    />
                   </div>
 
                   {nights > 0 && (
@@ -551,6 +542,7 @@ const QuartoDetalhe = () => {
                   )}
 
                   <div className="flex gap-3">
+                    {/* Ver disponibilidade — funciona SEM login */}
                     <Button
                       variant="gold-outline"
                       className="flex-1"
@@ -560,6 +552,7 @@ const QuartoDetalhe = () => {
                       {checking ? "Verificando..." : "Ver Disponibilidade"}
                     </Button>
 
+                    {/* Reservar — exige login */}
                     <Button
                       variant="gold"
                       className="flex-1"
@@ -572,6 +565,7 @@ const QuartoDetalhe = () => {
                       }
                       onClick={() => {
                         if (!user) {
+                          // Salva intenção e redireciona para cadastro/login
                           sessionStorage.setItem(
                             "reserva_intent",
                             JSON.stringify({
