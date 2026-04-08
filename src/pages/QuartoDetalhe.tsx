@@ -220,6 +220,9 @@ const QuartoDetalhe = () => {
   );
   const [checking, setChecking] = useState(false);
 
+  // Flag para saber se restauramos intent e precisamos checar disponibilidade
+  const [pendingAvailCheck, setPendingAvailCheck] = useState(false);
+
   // Restaura intenção de reserva após login
   useEffect(() => {
     if (user) {
@@ -231,8 +234,7 @@ const QuartoDetalhe = () => {
           if (intent.checkOut) setCheckOut(new Date(intent.checkOut + "T12:00:00"));
           if (intent.guestsCount) setGuestsCount(intent.guestsCount);
           sessionStorage.removeItem("reserva_intent");
-          // Verificar disponibilidade automaticamente após restaurar intent
-          setTimeout(() => checkAvailability(), 300);
+          setPendingAvailCheck(true);
         } catch {
           sessionStorage.removeItem("reserva_intent");
         }
@@ -249,6 +251,7 @@ const QuartoDetalhe = () => {
     },
     enabled: !!id,
   });
+
 
   const checkAvailability = async () => {
     if (!checkIn || !checkOut || !room) return;
@@ -270,7 +273,7 @@ const QuartoDetalhe = () => {
         .from("reservations")
         .select("room_id")
         .in("room_id", allIds)
-        .in("status", ["confirmed", "pending"])
+        .in("status", ["confirmed", "pending", "checked_in"])
         .lt("check_in", co)
         .gt("check_out", ci);
 
@@ -286,6 +289,13 @@ const QuartoDetalhe = () => {
       setChecking(false);
     }
   };
+  // Dispara checkAvailability quando room carrega e temos check pendente
+  useEffect(() => {
+    if (pendingAvailCheck && room && checkIn && checkOut) {
+      setPendingAvailCheck(false);
+      checkAvailability();
+    }
+  }, [pendingAvailCheck, room, checkIn, checkOut]);
 
   // Cria reserva usando profile_id (correto)
   const reservationMutation = useMutation({
