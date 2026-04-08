@@ -220,8 +220,9 @@ const QuartoDetalhe = () => {
   );
   const [checking, setChecking] = useState(false);
 
-  // Flag para saber se restauramos intent e precisamos checar disponibilidade
+  // Flags para o fluxo automático após login (cliente já clicou "Reservar" antes)
   const [pendingAvailCheck, setPendingAvailCheck] = useState(false);
+  const [autoReserve, setAutoReserve] = useState(false);
 
   // Restaura intenção de reserva após login
   useEffect(() => {
@@ -235,6 +236,7 @@ const QuartoDetalhe = () => {
           if (intent.guestsCount) setGuestsCount(intent.guestsCount);
           sessionStorage.removeItem("reserva_intent");
           setPendingAvailCheck(true);
+          setAutoReserve(true); // Cliente já clicou "Reservar" → criar automaticamente
         } catch {
           sessionStorage.removeItem("reserva_intent");
         }
@@ -297,6 +299,14 @@ const QuartoDetalhe = () => {
     }
   }, [pendingAvailCheck, room, checkIn, checkOut]);
 
+  // Auto-reservar após login: cliente já clicou "Reservar" antes, agora tá logado e disponível
+  useEffect(() => {
+    if (autoReserve && user && categoryAvail?.freeRoomId && available && !reservationMutation.isPending) {
+      setAutoReserve(false);
+      reservationMutation.mutate();
+    }
+  }, [autoReserve, user, categoryAvail, available]);
+
   // Cria reserva usando profile_id (correto)
   const reservationMutation = useMutation({
     mutationFn: async () => {
@@ -320,14 +330,19 @@ const QuartoDetalhe = () => {
     },
     onSuccess: () => {
       toast.success("Reserva criada! Aguarde confirmação.");
+      queryClient.invalidateQueries({ queryKey: ["checkin-confirmed"] });
+      queryClient.invalidateQueries({ queryKey: ["reservas-lista"] });
       queryClient.invalidateQueries({ queryKey: ["reservations"] });
+      queryClient.invalidateQueries({ queryKey: ["dash-reservations-all"] });
       setCheckIn(undefined);
       setCheckOut(undefined);
       setAvailable(null);
       setCategoryAvail(null);
       setGuestsCount(1);
+      setAutoReserve(false);
     },
     onError: (err: any) => {
+      setAutoReserve(false);
       toast.error(
         err?.message?.includes("not available")
           ? "Categoria indisponível para as datas selecionadas."

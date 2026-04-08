@@ -73,7 +73,6 @@ const Cadastro = () => {
     }
 
     // 2. Salva dados extras no profile
-    //    Usa o userId retornado pelo signUp (funciona mesmo com confirmação de e-mail pendente)
     if (userId) {
       await supabase.from("profiles").upsert({
         id: userId,
@@ -88,8 +87,18 @@ const Cadastro = () => {
     }
 
     setLoading(false);
-    toast.success("Conta criada! Verifique seu e-mail para confirmar.");
-    navigate(redirectTo ? `/login?redirect=${encodeURIComponent(redirectTo)}` : "/login");
+
+    // 3. Verifica se o signup já logou automaticamente (confirmação de email desativada)
+    const { data: sessionData } = await supabase.auth.getSession();
+    if (sessionData?.session) {
+      // Já está logado → redireciona direto para a página de destino
+      toast.success("Conta criada com sucesso!");
+      navigate(redirectTo || "/portal");
+    } else {
+      // Email confirmation ativada → precisa confirmar antes de logar
+      toast.success("Conta criada! Verifique seu e-mail para confirmar.");
+      navigate(redirectTo ? `/login?redirect=${encodeURIComponent(redirectTo)}` : "/login");
+    }
   };
 
   return (
