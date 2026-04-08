@@ -64,7 +64,7 @@ const Cadastro = () => {
     setLoading(true);
 
     // 1. Cria o usuário no Auth
-    const { error } = await signUp(email, password, name);
+    const { error, userId } = await signUp(email, password, name);
 
     if (error) {
       toast.error(error.message || "Erro ao cadastrar.");
@@ -72,10 +72,8 @@ const Cadastro = () => {
       return;
     }
 
-    // 2. Salva dados extras no profile via Auth listener
-    //    O trigger do Supabase cria o profile — salvamos os extras em seguida
-    const { data: authData } = await supabase.auth.getUser();
-    const userId = authData?.user?.id;
+    // 2. Salva dados extras no profile
+    //    Usa o userId retornado pelo signUp (funciona mesmo com confirmação de e-mail pendente)
     if (userId) {
       await supabase.from("profiles").upsert({
         id: userId,
@@ -295,7 +293,10 @@ const Cadastro = () => {
 
             <p className="text-center text-sm text-cream/40 font-body mt-6">
               Já tem uma conta?{" "}
-              <Link to="/login" className="text-primary hover:text-primary/80 transition-colors font-semibold">
+            <Link
+              to={redirectTo ? `/login?redirect=${encodeURIComponent(redirectTo)}` : "/login"}
+              className="text-primary hover:text-primary/80 transition-colors font-semibold"
+            >
                 Entrar
               </Link>
             </p>

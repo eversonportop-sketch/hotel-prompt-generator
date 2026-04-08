@@ -220,6 +220,9 @@ const QuartoDetalhe = () => {
   );
   const [checking, setChecking] = useState(false);
 
+  // Flag para saber se restauramos intent e precisamos checar disponibilidade
+  const [pendingAvailCheck, setPendingAvailCheck] = useState(false);
+
   // Restaura intenção de reserva após login
   useEffect(() => {
     if (user) {
@@ -231,14 +234,21 @@ const QuartoDetalhe = () => {
           if (intent.checkOut) setCheckOut(new Date(intent.checkOut + "T12:00:00"));
           if (intent.guestsCount) setGuestsCount(intent.guestsCount);
           sessionStorage.removeItem("reserva_intent");
-          // Verificar disponibilidade automaticamente após restaurar intent
-          setTimeout(() => checkAvailability(), 300);
+          setPendingAvailCheck(true);
         } catch {
           sessionStorage.removeItem("reserva_intent");
         }
       }
     }
   }, [user]);
+
+  // Dispara checkAvailability quando room carrega e temos check pendente
+  useEffect(() => {
+    if (pendingAvailCheck && room && checkIn && checkOut) {
+      setPendingAvailCheck(false);
+      checkAvailability();
+    }
+  }, [pendingAvailCheck, room, checkIn, checkOut]);
 
   const { data: room, isLoading } = useQuery({
     queryKey: ["room", id],
