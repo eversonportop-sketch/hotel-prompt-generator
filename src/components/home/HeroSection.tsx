@@ -83,25 +83,26 @@ const HeroSection = () => {
         </>
       ) : (
         <>
+          {/* Vídeo de fundo */}
+          <video
+            className="absolute inset-0 w-full h-full object-cover"
+            autoPlay
+            muted
+            loop
+            playsInline
+            poster="https://images.unsplash.com/photo-1566073771259-6a8506099945?w=1920&q=80"
+          >
+            <source
+              src="https://videos.pexels.com/video-files/3209828/3209828-uhd_2560_1440_25fps.mp4"
+              type="video/mp4"
+            />
+          </video>
+          {/* Overlay escuro sobre o vídeo */}
+          <div className="absolute inset-0 bg-black/60" />
+          {/* Gradiente dourado sutil por cima */}
           <div
-            className="absolute inset-0"
-            style={{ background: "radial-gradient(ellipse at 20% 50%, #1a1200 0%, #0A0A0A 50%, #0d0800 100%)" }}
-          />
-          <div
-            className="absolute inset-0 opacity-[0.04]"
-            style={{
-              backgroundImage:
-                "linear-gradient(#C9A84C 1px, transparent 1px), linear-gradient(90deg, #C9A84C 1px, transparent 1px)",
-              backgroundSize: "80px 80px",
-            }}
-          />
-          <div
-            className="absolute top-1/3 left-1/2 -translate-x-1/2 -translate-y-1/2 w-[600px] h-[600px] rounded-full opacity-10 blur-3xl pointer-events-none"
-            style={{ background: "radial-gradient(circle, #C9A84C 0%, transparent 70%)" }}
-          />
-          <div
-            className="absolute top-1/2 left-0 w-[300px] h-[400px] rounded-full opacity-5 blur-3xl pointer-events-none"
-            style={{ background: "radial-gradient(circle, #C0272D 0%, transparent 70%)" }}
+            className="absolute inset-0 opacity-30"
+            style={{ background: "radial-gradient(ellipse at 20% 50%, rgba(201,168,76,0.15) 0%, transparent 60%)" }}
           />
         </>
       )}
