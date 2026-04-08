@@ -297,7 +297,7 @@ const QuartoDetalhe = () => {
       const { error } = await supabase.from("reservations").insert({
         client_id: user.id,
         profile_id: profile?.id ?? user.id,
-        room_id: categoryAvail.freeRoomId, // quarto livre da categoria
+        room_id: categoryAvail.freeRoomId,
         check_in: format(checkIn, "yyyy-MM-dd"),
         check_out: format(checkOut, "yyyy-MM-dd"),
         guests_count: guestsCount,
@@ -494,6 +494,7 @@ const QuartoDetalhe = () => {
                     </div>
                   </div>
 
+                  {/* ✅ INPUT DE HÓSPEDES CORRIGIDO */}
                   <div className="space-y-2">
                     <label className="font-body text-sm text-cream/60">Hóspedes</label>
                     <input
@@ -501,9 +502,12 @@ const QuartoDetalhe = () => {
                       min={1}
                       max={room.capacity}
                       value={guestsCount}
-                      onChange={(e) =>
-                        setGuestsCount(Math.max(1, Math.min(room.capacity, parseInt(e.target.value) || 1)))
-                      }
+                      onChange={(e) => {
+                        const val = parseInt(e.target.value);
+                        if (!isNaN(val)) {
+                          setGuestsCount(Math.max(1, Math.min(room.capacity, val)));
+                        }
+                      }}
                       className="w-full bg-charcoal border border-gold/20 rounded-lg px-3 py-2 text-cream text-sm font-body focus:outline-none focus:border-primary/50 transition"
                     />
                   </div>
@@ -542,7 +546,6 @@ const QuartoDetalhe = () => {
                   )}
 
                   <div className="flex gap-3">
-                    {/* Ver disponibilidade — funciona SEM login */}
                     <Button
                       variant="gold-outline"
                       className="flex-1"
@@ -552,7 +555,6 @@ const QuartoDetalhe = () => {
                       {checking ? "Verificando..." : "Ver Disponibilidade"}
                     </Button>
 
-                    {/* Reservar — exige login */}
                     <Button
                       variant="gold"
                       className="flex-1"
@@ -565,7 +567,6 @@ const QuartoDetalhe = () => {
                       }
                       onClick={() => {
                         if (!user) {
-                          // Salva intenção e redireciona para cadastro/login
                           sessionStorage.setItem(
                             "reserva_intent",
                             JSON.stringify({
