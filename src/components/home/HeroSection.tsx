@@ -83,26 +83,32 @@ const HeroSection = () => {
         </>
       ) : (
         <>
-          {/* Vídeo de fundo */}
-          <video
-            className="absolute inset-0 w-full h-full object-cover"
-            autoPlay
-            muted
-            loop
-            playsInline
-            poster="https://images.unsplash.com/photo-1566073771259-6a8506099945?w=1920&q=80"
-          >
-            <source
-              src="https://videos.pexels.com/video-files/3209828/3209828-uhd_2560_1440_25fps.mp4"
-              type="video/mp4"
-            />
-          </video>
-          {/* Overlay escuro sobre o vídeo */}
-          <div className="absolute inset-0 bg-black/60" />
-          {/* Gradiente dourado sutil por cima */}
+          {/* Ken Burns: zoom + pan suave na imagem */}
+          <style>{`
+            @keyframes kenburns {
+              0%   { transform: scale(1.08) translate(0%, 0%); }
+              25%  { transform: scale(1.12) translate(-1.5%, 0.5%); }
+              50%  { transform: scale(1.1)  translate(-1%, -1%); }
+              75%  { transform: scale(1.13) translate(1%, -0.5%); }
+              100% { transform: scale(1.08) translate(0%, 0%); }
+            }
+          `}</style>
           <div
-            className="absolute inset-0 opacity-30"
-            style={{ background: "radial-gradient(ellipse at 20% 50%, rgba(201,168,76,0.15) 0%, transparent 60%)" }}
+            className="absolute inset-0"
+            style={{
+              backgroundImage: "url(https://images.unsplash.com/photo-1631049307264-da0ec9d70304?w=1920&q=85)",
+              backgroundSize: "cover",
+              backgroundPosition: "center",
+              animation: "kenburns 20s ease-in-out infinite",
+              willChange: "transform",
+            }}
+          />
+          {/* Overlay escuro */}
+          <div className="absolute inset-0 bg-black/55" />
+          {/* Gradiente dourado sutil */}
+          <div
+            className="absolute inset-0 opacity-25"
+            style={{ background: "radial-gradient(ellipse at 20% 50%, rgba(201,168,76,0.2) 0%, transparent 60%)" }}
           />
         </>
       )}
