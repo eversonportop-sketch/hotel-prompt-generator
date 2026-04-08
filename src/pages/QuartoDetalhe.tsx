@@ -273,7 +273,7 @@ const QuartoDetalhe = () => {
         .from("reservations")
         .select("room_id")
         .in("room_id", allIds)
-        .in("status", ["confirmed", "pending"])
+        .in("status", ["confirmed", "pending", "checked_in"])
         .lt("check_in", co)
         .gt("check_out", ci);
 
