@@ -83,25 +83,26 @@ const HeroSection = () => {
         </>
       ) : (
         <>
-          {/* Ken Burns: zoom + pan suave na imagem */}
-          <style>{`
-            @keyframes kenburns {
-              0%   { transform: scale(1) translate(0px, 0px); }
-              33%  { transform: scale(1.08) translate(-20px, -10px); }
-              66%  { transform: scale(1.05) translate(15px, -5px); }
-              100% { transform: scale(1) translate(0px, 0px); }
-            }
-          `}</style>
+          {/* Ken Burns via Framer Motion */}
           <div className="absolute inset-0 overflow-hidden">
-            <div
+            <motion.div
               style={{
                 position: "absolute",
-                inset: "-5%",
+                inset: "-8%",
                 backgroundImage: "url(https://images.unsplash.com/photo-1631049307264-da0ec9d70304?w=1920&q=85)",
                 backgroundSize: "cover",
                 backgroundPosition: "center",
-                animation: "kenburns 18s ease-in-out infinite",
-                willChange: "transform",
+              }}
+              animate={{
+                scale: [1, 1.1, 1.06, 1],
+                x: [0, -30, 20, 0],
+                y: [0, -15, 10, 0],
+              }}
+              transition={{
+                duration: 20,
+                ease: "easeInOut",
+                repeat: Infinity,
+                repeatType: "loop",
               }}
             />
           </div>
