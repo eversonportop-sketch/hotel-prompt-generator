@@ -494,22 +494,30 @@ const QuartoDetalhe = () => {
                     </div>
                   </div>
 
-                  {/* ✅ INPUT DE HÓSPEDES CORRIGIDO */}
+                  {/* HÓSPEDES com botões +/- para mobile */}
                   <div className="space-y-2">
                     <label className="font-body text-sm text-cream/60">Hóspedes</label>
-                    <input
-                      type="number"
-                      min={1}
-                      max={room.capacity}
-                      value={guestsCount}
-                      onChange={(e) => {
-                        const val = parseInt(e.target.value);
-                        if (!isNaN(val)) {
-                          setGuestsCount(Math.max(1, Math.min(room.capacity, val)));
-                        }
-                      }}
-                      className="w-full bg-charcoal border border-gold/20 rounded-lg px-3 py-2 text-cream text-sm font-body focus:outline-none focus:border-primary/50 transition"
-                    />
+                    <div className="flex items-center gap-3">
+                      <button
+                        type="button"
+                        onClick={() => setGuestsCount((v) => Math.max(1, v - 1))}
+                        disabled={guestsCount <= 1}
+                        className="w-10 h-10 rounded-lg bg-charcoal border border-gold/20 text-cream text-lg font-bold flex items-center justify-center hover:bg-charcoal-light hover:border-primary/50 disabled:opacity-30 disabled:cursor-not-allowed transition"
+                      >
+                        −
+                      </button>
+                      <span className="flex-1 text-center text-cream font-body text-sm bg-charcoal border border-gold/20 rounded-lg py-2">
+                        {guestsCount} hóspede{guestsCount > 1 ? "s" : ""}
+                      </span>
+                      <button
+                        type="button"
+                        onClick={() => setGuestsCount((v) => Math.min(room.capacity, v + 1))}
+                        disabled={guestsCount >= room.capacity}
+                        className="w-10 h-10 rounded-lg bg-charcoal border border-gold/20 text-cream text-lg font-bold flex items-center justify-center hover:bg-charcoal-light hover:border-primary/50 disabled:opacity-30 disabled:cursor-not-allowed transition"
+                      >
+                        +
+                      </button>
+                    </div>
                   </div>
 
                   {nights > 0 && (
