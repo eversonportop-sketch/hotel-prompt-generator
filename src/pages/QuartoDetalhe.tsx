@@ -289,6 +289,13 @@ const QuartoDetalhe = () => {
       setChecking(false);
     }
   };
+  // Dispara checkAvailability quando room carrega e temos check pendente
+  useEffect(() => {
+    if (pendingAvailCheck && room && checkIn && checkOut) {
+      setPendingAvailCheck(false);
+      checkAvailability();
+    }
+  }, [pendingAvailCheck, room, checkIn, checkOut]);
 
   // Cria reserva usando profile_id (correto)
   const reservationMutation = useMutation({
