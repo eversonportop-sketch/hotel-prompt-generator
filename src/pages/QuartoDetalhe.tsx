@@ -220,8 +220,9 @@ const QuartoDetalhe = () => {
   );
   const [checking, setChecking] = useState(false);
 
-  // Flag para saber se restauramos intent e precisamos checar disponibilidade
+  // Flags para o fluxo automático após login (cliente já clicou "Reservar" antes)
   const [pendingAvailCheck, setPendingAvailCheck] = useState(false);
+  const [autoReserve, setAutoReserve] = useState(false);
 
   // Restaura intenção de reserva após login
   useEffect(() => {
@@ -235,6 +236,7 @@ const QuartoDetalhe = () => {
           if (intent.guestsCount) setGuestsCount(intent.guestsCount);
           sessionStorage.removeItem("reserva_intent");
           setPendingAvailCheck(true);
+          setAutoReserve(true); // Cliente já clicou "Reservar" → criar automaticamente
         } catch {
           sessionStorage.removeItem("reserva_intent");
         }

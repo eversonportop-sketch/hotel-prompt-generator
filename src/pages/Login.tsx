@@ -41,10 +41,14 @@ const Login = () => {
     }
     setLoading(false);
     toast.success("Login realizado com sucesso!");
-    // Se veio de uma página específica (ex: tentou reservar), volta pra lá
-    if (redirectTo) navigate(redirectTo);
-    else if (role === "admin") navigate("/admin");
-    else navigate("/portal");
+    // Admin sempre vai pro painel, nunca para página pública via redirect
+    if (role === "admin") {
+      navigate("/admin");
+    } else if (redirectTo) {
+      navigate(redirectTo);
+    } else {
+      navigate("/portal");
+    }
   };
 
   return (
