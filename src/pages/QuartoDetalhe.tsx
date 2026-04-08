@@ -242,13 +242,15 @@ const QuartoDetalhe = () => {
     }
   }, [user]);
 
-  // Dispara checkAvailability quando room carrega e temos check pendente
-  useEffect(() => {
-    if (pendingAvailCheck && room && checkIn && checkOut) {
-      setPendingAvailCheck(false);
-      checkAvailability();
-    }
-  }, [pendingAvailCheck, room, checkIn, checkOut]);
+  const { data: room, isLoading } = useQuery({
+    queryKey: ["room", id],
+    queryFn: async () => {
+      const { data, error } = await supabase.from("rooms").select("*").eq("id", id!).single();
+      if (error) throw error;
+      return data;
+    },
+    enabled: !!id,
+  });
 
   const { data: room, isLoading } = useQuery({
     queryKey: ["room", id],
