@@ -252,15 +252,6 @@ const QuartoDetalhe = () => {
     enabled: !!id,
   });
 
-  const { data: room, isLoading } = useQuery({
-    queryKey: ["room", id],
-    queryFn: async () => {
-      const { data, error } = await supabase.from("rooms").select("*").eq("id", id!).single();
-      if (error) throw error;
-      return data;
-    },
-    enabled: !!id,
-  });
 
   const checkAvailability = async () => {
     if (!checkIn || !checkOut || !room) return;
