@@ -224,6 +224,24 @@ const QuartoDetalhe = () => {
   const [pendingAvailCheck, setPendingAvailCheck] = useState(false);
   const [autoReserve, setAutoReserve] = useState(false);
 
+  // Preenche datas ao chegar da busca (sem precisar estar logado)
+  useEffect(() => {
+    if (!user) {
+      const raw = sessionStorage.getItem("reserva_intent");
+      if (raw) {
+        try {
+          const intent = JSON.parse(raw);
+          if (intent.checkIn) setCheckIn(new Date(intent.checkIn + "T12:00:00"));
+          if (intent.checkOut) setCheckOut(new Date(intent.checkOut + "T12:00:00"));
+          if (intent.guestsCount) setGuestsCount(intent.guestsCount);
+          // NÃO remove do sessionStorage aqui — o fluxo de login ainda precisa dele
+        } catch {
+          /* ignora */
+        }
+      }
+    }
+  }, []);
+
   // Restaura intenção de reserva após login
   useEffect(() => {
     if (user) {
@@ -253,7 +271,6 @@ const QuartoDetalhe = () => {
     },
     enabled: !!id,
   });
-
 
   const checkAvailability = async () => {
     if (!checkIn || !checkOut || !room) return;
