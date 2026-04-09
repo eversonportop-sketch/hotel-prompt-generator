@@ -64,7 +64,14 @@ const ORDER_STATUS: Record<string, { label: string; color: string }> = {
   billed: { label: "Faturado", color: "bg-blue-500/20 text-blue-400 border-blue-500/30" },
 };
 
-const EMPTY_ITEM = { name: "", category: "Bebidas", price: 0, available: true, description: "", display_order: 0 };
+const EMPTY_ITEM = {
+  name: "",
+  category: "Bebidas",
+  price: "" as unknown as number,
+  available: true,
+  description: "",
+  display_order: 0,
+};
 const EMPTY_ORDER = { room_number: "", item_id: "", quantity: 1, notes: "", reservation_id: "" };
 
 const AdminConsumo = () => {
@@ -305,7 +312,7 @@ const AdminConsumo = () => {
     setItemForm({
       name: item.name,
       category: item.category,
-      price: item.price,
+      price: String(item.price),
       available: item.available,
       description: item.description ?? "",
       display_order: item.display_order,
@@ -880,7 +887,7 @@ const AdminConsumo = () => {
                       step="0.01"
                       className="w-full bg-black/50 border border-gold/20 rounded-lg px-4 py-3 text-cream text-sm focus:border-primary focus:outline-none transition"
                       value={itemForm.price}
-                      onChange={(e) => setItemForm({ ...itemForm, price: Number(e.target.value) })}
+                      onChange={(e) => setItemForm({ ...itemForm, price: e.target.value as unknown as number })}
                       required
                     />
                   </div>
