@@ -1,10 +1,10 @@
 import Layout from "@/components/layout/Layout";
 import { motion } from "framer-motion";
-import { Users, ArrowRight, Star, DoorOpen } from "lucide-react";
-import { Link } from "react-router-dom";
+import { Users, ArrowRight, Star, DoorOpen, Calendar } from "lucide-react";
+import { Link, useSearchParams } from "react-router-dom";
 import { useQuery } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
-import { useMemo } from "react";
+import { useMemo, useEffect } from "react";
 
 interface CategoryGroup {
   category: string;
@@ -17,6 +17,21 @@ interface CategoryGroup {
 }
 
 const Quartos = () => {
+  const [searchParams] = useSearchParams();
+  const checkin = searchParams.get("checkin") || "";
+  const checkout = searchParams.get("checkout") || "";
+  const guests = Number(searchParams.get("guests") || 2);
+
+  // Salva as datas no sessionStorage para o QuartoDetalhe ler automaticamente
+  useEffect(() => {
+    if (checkin && checkout) {
+      sessionStorage.setItem(
+        "reserva_intent",
+        JSON.stringify({ checkIn: checkin, checkOut: checkout, guestsCount: guests }),
+      );
+    }
+  }, [checkin, checkout, guests]);
+
   const { data: rooms = [], isLoading } = useQuery({
     queryKey: ["rooms"],
     queryFn: async () => {
@@ -80,6 +95,42 @@ const Quartos = () => {
         </div>
       </section>
 
+      {/* Banner de datas selecionadas */}
+      {checkin && checkout && (
+        <section className="bg-charcoal-light border-b border-gold/10">
+          <div className="container-hotel py-4 flex flex-wrap items-center justify-center gap-6 text-sm font-body">
+            <div className="flex items-center gap-2 text-cream/60">
+              <Calendar className="w-4 h-4 text-primary" />
+              <span>Check-in:</span>
+              <span className="text-cream font-semibold">
+                {new Date(checkin + "T12:00:00").toLocaleDateString("pt-BR")}
+              </span>
+            </div>
+            <div className="w-px h-4 bg-gold/20 hidden sm:block" />
+            <div className="flex items-center gap-2 text-cream/60">
+              <Calendar className="w-4 h-4 text-primary" />
+              <span>Check-out:</span>
+              <span className="text-cream font-semibold">
+                {new Date(checkout + "T12:00:00").toLocaleDateString("pt-BR")}
+              </span>
+            </div>
+            <div className="w-px h-4 bg-gold/20 hidden sm:block" />
+            <div className="flex items-center gap-2 text-cream/60">
+              <Users className="w-4 h-4 text-primary" />
+              <span className="text-cream font-semibold">
+                {guests} {guests === 1 ? "hóspede" : "hóspedes"}
+              </span>
+            </div>
+            <Link
+              to="/"
+              className="text-xs text-primary/60 hover:text-primary underline underline-offset-2 transition-colors"
+            >
+              Alterar datas
+            </Link>
+          </div>
+        </section>
+      )}
+
       {/* Grid por categoria */}
       <section className="py-20 bg-charcoal">
         <div className="container-hotel">
@@ -129,7 +180,8 @@ const Quartos = () => {
                         <Users className="w-4 h-4 text-primary/60" /> Até {cat.capacity} pessoas
                       </span>
                       <span className="flex items-center gap-1.5">
-                        <DoorOpen className="w-4 h-4 text-primary/60" /> {cat.totalRooms} quarto{cat.totalRooms > 1 ? "s" : ""}
+                        <DoorOpen className="w-4 h-4 text-primary/60" /> {cat.totalRooms} quarto
+                        {cat.totalRooms > 1 ? "s" : ""}
                       </span>
                     </div>
                     <div className="flex items-center justify-between pt-4 border-t border-white/5">
@@ -144,7 +196,9 @@ const Quartos = () => {
                         </span>
                         <span className="text-sm text-cream/30 font-body"> /noite</span>
                       </div>
-                      <Link to={`/quartos/${cat.firstRoomId}`}>
+                      <Link
+                        to={`/quartos/${cat.firstRoomId}${checkin ? `?checkin=${checkin}&checkout=${checkout}&guests=${guests}` : ""}`}
+                      >
                         <button
                           className="group/btn flex items-center gap-2 px-5 py-2.5 rounded-xl text-sm font-body font-semibold transition-all duration-300 hover:scale-[1.02]"
                           style={{ background: "linear-gradient(135deg,#C9A84C,#E5C97A)", color: "#000" }}
