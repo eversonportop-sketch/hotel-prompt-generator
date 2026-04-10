@@ -173,10 +173,15 @@ const AdminCheckin = () => {
                 }`}
               >
                 <div className="flex-1 space-y-2.5">
-                  {/* Badge chegando hoje */}
+                  {/* Badge chegando hoje / entrada atrasada */}
                   {isToday && (
                     <span className="inline-flex items-center gap-1 text-[10px] px-2 py-0.5 rounded-full bg-amber-500/15 text-amber-400 border border-amber-500/25 font-body">
                       <span className="w-1.5 h-1.5 rounded-full bg-amber-400" /> Chegando hoje
+                    </span>
+                  )}
+                  {r.check_in < todayStr && (
+                    <span className="inline-flex items-center gap-1 text-[10px] px-2 py-0.5 rounded-full bg-yellow-500/15 text-yellow-400 border border-yellow-500/25 font-body">
+                      <span className="w-1.5 h-1.5 rounded-full bg-yellow-400 animate-pulse" /> Entrada atrasada
                     </span>
                   )}
 
@@ -263,6 +268,12 @@ const AdminCheckin = () => {
                   R$ {Number(confirmRes.total_price).toFixed(2).replace(".", ",")}
                 </p>
               </div>
+
+              {confirmRes.check_in < todayStr && (
+                <div className="bg-yellow-500/10 border border-yellow-500/25 rounded-xl p-3 text-yellow-400 text-xs font-body text-center">
+                  ⚠️ Atenção: a data de entrada prevista já passou. Confirme apenas se o hóspede está chegando hoje.
+                </div>
+              )}
 
               <p className="text-white/30 text-xs font-body text-center">
                 Isso vai marcar o status como <span className="text-blue-400 font-semibold">Hospedado</span> e registrar
