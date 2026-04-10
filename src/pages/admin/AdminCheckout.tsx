@@ -609,18 +609,30 @@ const AdminCheckout = () => {
                         <p className="font-display font-bold text-primary text-lg">R$ {rt.toFixed(2)}</p>
                         <button
                           onClick={async () => {
-                            const roomName = (res.rooms as any)?.name;
-                            if (roomName) {
-                              const { data } = await supabase
-                                .from("consumption_orders")
-                                .select("*")
-                                .eq("room_number", roomName)
-                                .eq("status", "billed")
-                                .gte("created_at", res.check_in)
-                                .lte("created_at", res.check_out + "T23:59:59");
-                              setReceiptOrders(data ?? []);
+                            // 1. Buscar por reservation_id (preferencial)
+                            const { data: byResId } = await supabase
+                              .from("consumption_orders")
+                              .select("*")
+                              .eq("reservation_id", res.id)
+                              .eq("status", "billed");
+
+                            if (byResId && byResId.length > 0) {
+                              setReceiptOrders(byResId);
                             } else {
-                              setReceiptOrders([]);
+                              // 2. Fallback por room_number + datas
+                              const roomName = (res.rooms as any)?.name;
+                              if (roomName) {
+                                const { data } = await supabase
+                                  .from("consumption_orders")
+                                  .select("*")
+                                  .eq("room_number", roomName)
+                                  .eq("status", "billed")
+                                  .gte("created_at", res.check_in)
+                                  .lte("created_at", res.check_out + "T23:59:59");
+                                setReceiptOrders(data ?? []);
+                              } else {
+                                setReceiptOrders([]);
+                              }
                             }
                             setReceiptRes(res);
                           }}
