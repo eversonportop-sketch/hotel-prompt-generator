@@ -189,7 +189,7 @@ const Galeria = () => {
                  exit={{ scale: 0.9, opacity: 0 }}
                  src={filtered[lightbox].public_url}
                  alt={filtered[lightbox].file_name}
-                 className="max-w-[90vw] max-h-[90vh] object-contain rounded-xl"
+                 className="w-auto h-auto max-w-[90vw] max-h-[90vh] rounded-xl shadow-2xl"
                 onClick={(e) => e.stopPropagation()}
               />
             )}
