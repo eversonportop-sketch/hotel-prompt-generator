@@ -179,17 +179,17 @@ const Galeria = () => {
                 src={filtered[lightbox].public_url}
                 controls
                 autoPlay
-                className="max-w-full max-h-[85vh] rounded-xl"
-                onClick={(e) => e.stopPropagation()}
-              />
-            ) : (
-              <motion.img
-                initial={{ scale: 0.9, opacity: 0 }}
-                animate={{ scale: 1, opacity: 1 }}
-                exit={{ scale: 0.9, opacity: 0 }}
-                src={filtered[lightbox].public_url}
-                alt={filtered[lightbox].file_name}
-                className="max-w-full max-h-[85vh] object-contain rounded-xl"
+                className="max-w-[90vw] max-h-[90vh] rounded-xl"
+                 onClick={(e) => e.stopPropagation()}
+               />
+             ) : (
+               <motion.img
+                 initial={{ scale: 0.9, opacity: 0 }}
+                 animate={{ scale: 1, opacity: 1 }}
+                 exit={{ scale: 0.9, opacity: 0 }}
+                 src={filtered[lightbox].public_url}
+                 alt={filtered[lightbox].file_name}
+                 className="max-w-[90vw] max-h-[90vh] object-contain rounded-xl"
                 onClick={(e) => e.stopPropagation()}
               />
             )}
