@@ -84,6 +84,32 @@ const Cadastro = () => {
         city,
         state,
       });
+
+      // 3. Vincula reservas presenciais: busca guest com mesmo CPF ou email
+      try {
+        const cleanCpf = cpf.replace(/\D/g, "");
+        const filters: string[] = [];
+        if (cleanCpf.length === 11) filters.push(`cpf.eq.${cleanCpf}`);
+        if (email) filters.push(`email.eq.${email}`);
+
+        if (filters.length) {
+          const { data: matchedGuests } = await supabase
+            .from("guests")
+            .select("id")
+            .or(filters.join(","));
+
+          if (matchedGuests && matchedGuests.length > 0) {
+            const guestIds = matchedGuests.map((g: any) => g.id);
+            await supabase
+              .from("reservations")
+              .update({ profile_id: userId } as any)
+              .in("guest_id", guestIds)
+              .is("profile_id", null);
+          }
+        }
+      } catch {
+        // Não impede o cadastro se o vínculo falhar
+      }
     }
 
     setLoading(false);
