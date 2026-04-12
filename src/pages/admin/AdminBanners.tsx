@@ -26,6 +26,12 @@ import {
 import { toast } from "sonner";
 import hotelLogo from "@/assets/hotel-sb-logo.png";
 
+const PAGE_OPTIONS = [
+  { value: "home", label: "Home" },
+  { value: "salao", label: "Salão de Festas" },
+  { value: "piscina", label: "Piscina" },
+] as const;
+
 interface Banner {
   id: string;
   title: string | null;
@@ -34,6 +40,7 @@ interface Banner {
   active: boolean;
   display_order: number;
   created_at: string;
+  page: string;
 }
 
 const EMPTY_FORM = {
@@ -42,6 +49,7 @@ const EMPTY_FORM = {
   file: null as File | null,
   mobile_image_url: "",
   mobileFile: null as File | null,
+  page: "home" as string,
 };
 
 // ── Utilitário: faz upload para o bucket e retorna URL pública ─────────────────
@@ -104,6 +112,7 @@ const AdminBanners = () => {
         mobile_image_url: mobileImageUrl || null,
         active: true,
         display_order: maxOrder + 1,
+        page: form.page,
       });
       if (error) throw error;
     },
