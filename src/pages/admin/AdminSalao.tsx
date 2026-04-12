@@ -124,7 +124,7 @@ const AdminSalao = () => {
         .select("*")
         .order("event_date", { ascending: true });
       if (error) throw error;
-      return (data as HallBooking[]).map(b => ({
+      return (data as unknown as HallBooking[]).map(b => ({
         ...b,
         payment_status: (b as any).payment_status ?? "none",
       }));
