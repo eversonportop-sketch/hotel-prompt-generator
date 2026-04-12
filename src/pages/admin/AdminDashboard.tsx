@@ -45,7 +45,7 @@ const AdminDashboard = () => {
         .from("rooms")
         .select("id, name, category")
         .eq("status", "active")
-        .order("display_order");
+        .order("name");
       const { data: resData } = await supabase
         .from("reservations")
         .select(

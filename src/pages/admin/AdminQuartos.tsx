@@ -459,7 +459,7 @@ const AdminQuartos = () => {
   const { data: rooms = [], isLoading } = useQuery({
     queryKey: ["admin-rooms"],
     queryFn: async () => {
-      const { data, error } = await supabase.from("rooms").select("*").order("display_order");
+      const { data, error } = await supabase.from("rooms").select("*").order("name");
       if (error) throw error;
       return data as Room[];
     },
