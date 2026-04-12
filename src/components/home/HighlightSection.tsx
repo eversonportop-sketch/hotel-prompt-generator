@@ -38,12 +38,13 @@ function useFirstImage(category: string, fallback: string) {
   return useQuery({
     queryKey: ["highlight-img", category],
     queryFn: async () => {
-      const { data } = await supabase.storage
-        .from("hotel-images")
-        .list(category, { limit: 1, sortBy: { column: "created_at", order: "desc" } });
-      if (!data || data.length === 0 || data[0].name === ".emptyFolderPlaceholder") return fallback;
-      const { data: url } = supabase.storage.from("hotel-images").getPublicUrl(`${category}/${data[0].name}`);
-      return url.publicUrl;
+      const { data, error } = await (supabase.from as any)("hotel_gallery")
+        .select("public_url")
+        .eq("category", category)
+        .order("created_at", { ascending: false })
+        .limit(1);
+      if (error || !data || data.length === 0) return fallback;
+      return data[0].public_url || fallback;
     },
     staleTime: 1000 * 60 * 5,
   });
