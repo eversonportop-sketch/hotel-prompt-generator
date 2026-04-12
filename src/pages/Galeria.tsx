@@ -7,10 +7,9 @@ import { supabase } from "@/integrations/supabase/client";
 
 const CATEGORIES = [
   { key: "todos", label: "Todos" },
-  { key: "gallery_quartos", label: "Quartos" },
-  { key: "gallery_salao", label: "Salão" },
-  { key: "gallery_piscina", label: "Piscina" },
-  { key: "gallery_eventos", label: "Eventos" },
+  { key: "quartos", label: "Quartos" },
+  { key: "salao", label: "Salão" },
+  { key: "piscina", label: "Piscina" },
 ];
 
 interface GalleryItem {
@@ -32,10 +31,8 @@ const Galeria = () => {
   const { data: media = [] } = useQuery({
     queryKey: ["galeria-public"],
     queryFn: async () => {
-      const { data, error } = await supabase
-        .from("hotel_media")
+      const { data, error } = await (supabase.from as any)("hotel_gallery")
         .select("id, public_url, file_name, category, created_at")
-        .like("category", "gallery_%")
         .order("created_at", { ascending: false });
       if (error) throw error;
       return (data || []) as unknown as GalleryItem[];
