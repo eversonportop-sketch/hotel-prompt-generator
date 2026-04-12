@@ -47,7 +47,7 @@ async function uploadSingle(file: File, category: string): Promise<string> {
 
   // 1. Upload para o Storage
   const { error: storageError } = await supabase.storage
-    .from("hotel-images")
+    .from("gallery")
     .upload(path, file, { contentType: file.type, upsert: false });
 
   if (storageError) {
@@ -56,10 +56,10 @@ async function uploadSingle(file: File, category: string): Promise<string> {
   }
 
   // 2. Pegar URL pública
-  const { data } = supabase.storage.from("hotel-images").getPublicUrl(path);
+  const { data } = supabase.storage.from("gallery").getPublicUrl(path);
 
   // 3. Salvar no banco
-  const { error: dbError } = await supabase.from("hotel_media").insert({
+  const { error: dbError } = await supabase.from("hotel_gallery").insert({
     file_name: file.name,
     file_path: path,
     public_url: data.publicUrl,
@@ -69,7 +69,7 @@ async function uploadSingle(file: File, category: string): Promise<string> {
   if (dbError) {
     console.error("Erro ao salvar no banco:", dbError);
     // Remove o arquivo do storage se falhou no banco
-    await supabase.storage.from("hotel-images").remove([path]);
+    await supabase.storage.from("gallery").remove([path]);
     throw new Error(`Banco: ${dbError.message}`);
   }
 
@@ -88,7 +88,7 @@ const AdminMidia = () => {
   const { data: media = [], isLoading } = useQuery<MediaItem[]>({
     queryKey: ["admin-media"],
     queryFn: async () => {
-      const { data, error } = await supabase.from("hotel_media").select("*").order("created_at", { ascending: false });
+      const { data, error } = await supabase.from("hotel_gallery").select("*").order("created_at", { ascending: false });
       if (error) {
         console.error("Erro ao buscar mídia:", error);
         throw error;
@@ -99,8 +99,8 @@ const AdminMidia = () => {
 
   const deleteMutation = useMutation({
     mutationFn: async (item: MediaItem) => {
-      await supabase.storage.from("hotel-images").remove([item.file_path]);
-      const { error } = await supabase.from("hotel_media").delete().eq("id", item.id);
+      await supabase.storage.from("gallery").remove([item.file_path]);
+      const { error } = await supabase.from("hotel_gallery").delete().eq("id", item.id);
       if (error) throw error;
     },
     onSuccess: () => {
