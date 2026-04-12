@@ -31,7 +31,7 @@ const Galeria = () => {
   const { data: media = [] } = useQuery({
     queryKey: ["galeria-public"],
     queryFn: async () => {
-      const { data, error } = await (supabase.from as any)("hotel_gallery")
+      const { data, error } = await supabase.from("hotel_media")
         .select("id, public_url, file_name, category, created_at")
         .order("created_at", { ascending: false });
       if (error) throw error;
