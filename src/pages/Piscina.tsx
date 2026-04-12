@@ -19,6 +19,22 @@ const useSettings = () =>
     staleTime: 1000 * 60 * 5,
   });
 
+const usePageBanner = (page: string) =>
+  useQuery({
+    queryKey: ["page-banner", page],
+    queryFn: async () => {
+      const { data } = await (supabase as any)
+        .from("banners")
+        .select("image_url")
+        .eq("page", page)
+        .eq("active", true)
+        .order("display_order", { ascending: true })
+        .limit(1);
+      return data?.[0]?.image_url || null;
+    },
+    staleTime: 1000 * 60 * 5,
+  });
+
 const RULES = [
   "Uso obrigatório de trajes de banho",
   "Menores de 12 anos acompanhados de responsável",
@@ -37,6 +53,8 @@ const AMENITIES = [
 
 const Piscina = () => {
   const { data: s = {} } = useSettings();
+  const { data: bannerUrl } = usePageBanner("piscina");
+  const heroImage = bannerUrl || poolImage;
   const poolHours = s.pool_hours || "07:00 às 22:00";
   const whatsapp = s.whatsapp || s.phone || "";
   const waNum = whatsapp.replace(/\D/g, "");
@@ -47,7 +65,7 @@ const Piscina = () => {
     <Layout>
       {/* Hero */}
       <section className="relative h-[65vh] min-h-[500px] flex items-end overflow-hidden">
-        <img src={poolImage} alt="Piscina SB Hotel" className="absolute inset-0 w-full h-full object-cover" />
+        <img src={heroImage} alt="Piscina SB Hotel" className="absolute inset-0 w-full h-full object-cover" />
         <div className="absolute inset-0 bg-gradient-to-t from-charcoal via-charcoal/40 to-charcoal/10" />
         <div
           className="absolute inset-0 opacity-20"
