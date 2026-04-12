@@ -305,9 +305,14 @@ const AdminBanners = () => {
                   </span>
                 </div>
                 <div className="p-4 flex items-center justify-between gap-2">
+                <div className="flex items-center gap-2">
+                  <span className="text-[10px] font-body uppercase tracking-wider px-2 py-0.5 rounded-full bg-primary/10 text-primary border border-primary/20">
+                    {PAGE_OPTIONS.find((p) => p.value === (b as any).page)?.label || "Home"}
+                  </span>
                   <h3 className="text-cream font-body text-sm truncate">
                     {b.title || <span className="text-cream/30 italic">Sem título</span>}
                   </h3>
+                </div>
                   <div className="flex items-center gap-2 shrink-0">
                     <button
                       onClick={() => toggleMutation.mutate({ id: b.id, active: b.active })}
@@ -360,6 +365,24 @@ const AdminBanners = () => {
                 }}
                 className="p-6 space-y-4 overflow-y-auto flex-1"
               >
+                {/* Página */}
+                <div>
+                  <label className="block text-xs uppercase tracking-widest text-primary/70 mb-1.5">
+                    Página
+                  </label>
+                  <select
+                    className="w-full bg-black/50 border border-gold/20 rounded-lg px-4 py-3 text-cream text-sm focus:border-primary focus:outline-none transition"
+                    value={form.page}
+                    onChange={(e) => setForm({ ...form, page: e.target.value })}
+                  >
+                    {PAGE_OPTIONS.map((p) => (
+                      <option key={p.value} value={p.value} className="bg-charcoal text-cream">
+                        {p.label}
+                      </option>
+                    ))}
+                  </select>
+                </div>
+
                 {/* Título */}
                 <div>
                   <label className="block text-xs uppercase tracking-widest text-primary/70 mb-1.5">
