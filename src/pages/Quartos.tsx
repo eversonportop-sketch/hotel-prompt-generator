@@ -35,7 +35,7 @@ const Quartos = () => {
   const { data: rooms = [], isLoading } = useQuery({
     queryKey: ["rooms"],
     queryFn: async () => {
-      const { data, error } = await supabase.from("rooms").select("*").eq("status", "active").order("display_order");
+      const { data, error } = await supabase.from("rooms").select("*").eq("status", "active").order("name");
       if (error) throw error;
       return data;
     },

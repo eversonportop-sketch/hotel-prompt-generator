@@ -192,7 +192,7 @@ const NewReservationDrawer = ({ open, onClose }: Props) => {
         .from("rooms")
         .select("id,name,category,price,promotional_price,capacity")
         .eq("status", "active")
-        .order("display_order");
+        .order("name");
       if (error) throw error;
       const { data: active } = await supabase.from("reservations").select("room_id").eq("status", "checked_in");
       const occupied = new Set((active || []).map((r: any) => r.room_id));
