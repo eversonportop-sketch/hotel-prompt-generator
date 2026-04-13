@@ -284,7 +284,7 @@ const AdminClientes = () => {
           <p className="text-white/30 font-body text-sm">Nenhum cliente encontrado.</p>
         </div>
       ) : (
-        <div className="space-y-2">
+        <div className="space-y-2 overflow-y-auto max-h-[calc(100vh-280px)]">
           {filtered.map((c) => {
             const isExpanded = expandedId === c.id;
             return (
