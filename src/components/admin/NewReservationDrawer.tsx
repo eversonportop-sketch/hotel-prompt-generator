@@ -75,10 +75,10 @@ function maskCPF(v: string) {
 function maskRG(v: string) {
   return v
     .replace(/\D/g, "")
-    .slice(0, 9)
+    .slice(0, 10)
     .replace(/(\d{2})(\d)/, "$1.$2")
     .replace(/(\d{3})(\d)/, "$1.$2")
-    .replace(/(\d{3})(\d{1})$/, "$1-$2");
+    .replace(/(\d{3})(\d{1,2})$/, "$1-$2");
 }
 function maskPhone(v: string) {
   const d = v.replace(/\D/g, "").slice(0, 11);
@@ -539,7 +539,7 @@ const NewReservationDrawer = ({ open, onClose }: Props) => {
                           />
                           <Field
                             label="RG"
-                            placeholder="00.000.000-0"
+                            placeholder="00.000.000-00"
                             value={guestData.rg}
                             onChange={(v) => setGuestData((d) => ({ ...d, rg: v }))}
                             mask="rg"
