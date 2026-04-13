@@ -85,7 +85,7 @@ const SidebarContent = ({
         <img src={hotelLogo} alt="Hotel SB" className="h-8 w-8 object-contain flex-shrink-0" />
         {!collapsed && (
           <div className="flex flex-col min-w-0">
-            <span className="text-sm font-display font-semibold text-cream leading-tight truncate">SB Hotel</span>
+            <span className="text-sm font-display font-semibold text-cream leading-tight truncate">Hotel SB</span>
             <span className="text-[10px] text-white/25 uppercase tracking-[0.2em] font-body">Admin</span>
           </div>
         )}
