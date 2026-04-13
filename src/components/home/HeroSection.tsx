@@ -202,7 +202,7 @@ const HeroSection = () => {
           transition={{ duration: 0.9, delay: 0.5, ease: "easeOut" }}
           className="font-display text-6xl md:text-8xl lg:text-9xl font-bold mb-4 leading-none"
         >
-          <span className="text-cream">SB</span> <span className="text-gradient-gold">Hotel</span>
+          <span className="text-cream">Hotel</span> <span className="text-gradient-gold">SB</span>
         </motion.h1>
 
         {/* Tagline com separador dourado */}
