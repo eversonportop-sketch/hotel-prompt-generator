@@ -80,8 +80,8 @@ const SidebarContent = ({
   const location = useLocation();
 
   return (
-    <div className="flex flex-col h-full">
-      <div className="flex items-center gap-3 px-4 py-5 border-b border-white/5">
+    <div className="flex flex-col h-full overflow-hidden">
+      <div className="flex items-center gap-3 px-4 py-5 border-b border-white/5 flex-shrink-0">
         <img src={hotelLogo} alt="Hotel SB" className="h-8 w-8 object-contain flex-shrink-0" />
         {!collapsed && (
           <div className="flex flex-col min-w-0">
@@ -138,7 +138,7 @@ const SidebarContent = ({
         ))}
       </nav>
 
-      <div className="border-t border-white/5 p-3 space-y-1">
+      <div className="border-t border-white/5 p-3 space-y-1 flex-shrink-0">
         {!collapsed && adminName && (
           <div className="px-3 py-2 mb-1">
             <p className="text-[11px] text-white/20 font-body uppercase tracking-wider">Logado como</p>
@@ -215,9 +215,9 @@ const AdminLayout = () => {
   }
 
   return (
-    <div className="flex min-h-screen bg-charcoal text-cream">
+    <div className="flex h-screen overflow-hidden bg-charcoal text-cream">
       <aside
-        className={`hidden lg:flex flex-col border-r border-white/5 bg-charcoal-light transition-all duration-300 ${
+        className={`hidden lg:flex flex-col border-r border-white/5 bg-charcoal-light transition-all duration-300 h-screen flex-shrink-0 ${
           collapsed ? "w-[68px]" : "w-60"
         }`}
       >
@@ -264,8 +264,8 @@ const AdminLayout = () => {
         )}
       </AnimatePresence>
 
-      <div className="flex-1 flex flex-col min-w-0">
-        <header className="flex lg:hidden items-center gap-3 px-4 py-3 border-b border-white/5 bg-charcoal/80 backdrop-blur-md sticky top-0 z-30">
+      <div className="flex-1 flex flex-col min-w-0 overflow-hidden">
+        <header className="flex lg:hidden items-center gap-3 px-4 py-3 border-b border-white/5 bg-charcoal/80 backdrop-blur-md sticky top-0 z-30 flex-shrink-0">
           <button onClick={() => setMobileOpen(true)} className="text-white/40 hover:text-cream transition-colors">
             <Menu className="w-5 h-5" />
           </button>
