@@ -31,7 +31,8 @@ const Galeria = () => {
   const { data: media = [] } = useQuery({
     queryKey: ["galeria-public"],
     queryFn: async () => {
-      const { data, error } = await supabase.from("hotel_media")
+      const { data, error } = await supabase
+        .from("hotel_media")
         .select("id, public_url, file_name, category, created_at")
         .order("created_at", { ascending: false });
       if (error) throw error;
@@ -39,7 +40,8 @@ const Galeria = () => {
     },
   });
 
-  const filtered = active === "todos" ? media : media.filter((m) => m.category === active);
+  const filtered =
+    active === "todos" ? media : media.filter((m) => m.category === active || m.category === `gallery_${active}`);
 
   return (
     <Layout>
@@ -113,12 +115,7 @@ const Galeria = () => {
                       onClick={() => setLightbox(i)}
                     >
                       {video ? (
-                        <video
-                          src={item.public_url}
-                          className="w-full h-full object-cover"
-                          muted
-                          preload="metadata"
-                        />
+                        <video src={item.public_url} className="w-full h-full object-cover" muted preload="metadata" />
                       ) : (
                         <img
                           src={item.public_url}
@@ -177,16 +174,16 @@ const Galeria = () => {
                 controls
                 autoPlay
                 className="max-w-[90vw] max-h-[90vh] rounded-xl"
-                 onClick={(e) => e.stopPropagation()}
-               />
-             ) : (
-               <motion.img
-                 initial={{ scale: 0.9, opacity: 0 }}
-                 animate={{ scale: 1, opacity: 1 }}
-                 exit={{ scale: 0.9, opacity: 0 }}
-                 src={filtered[lightbox].public_url}
-                 alt={filtered[lightbox].file_name}
-                 className="w-auto h-auto max-w-[90vw] max-h-[90vh] rounded-xl shadow-2xl"
+                onClick={(e) => e.stopPropagation()}
+              />
+            ) : (
+              <motion.img
+                initial={{ scale: 0.9, opacity: 0 }}
+                animate={{ scale: 1, opacity: 1 }}
+                exit={{ scale: 0.9, opacity: 0 }}
+                src={filtered[lightbox].public_url}
+                alt={filtered[lightbox].file_name}
+                className="w-auto h-auto max-w-[90vw] max-h-[90vh] rounded-xl shadow-2xl"
                 onClick={(e) => e.stopPropagation()}
               />
             )}
