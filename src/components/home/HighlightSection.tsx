@@ -97,7 +97,7 @@ const HighlightSection = () => (
       >
         <p className="text-primary font-body text-xs tracking-[0.35em] uppercase mb-3">Nossos Espaços</p>
         <h2 className="font-display text-3xl md:text-5xl font-bold text-cream">
-          Conheça o <span className="text-gradient-gold">SB Hotel</span>
+          Conheça o <span className="text-gradient-gold">Hotel SB</span>
         </h2>
       </motion.div>
       <div className="grid grid-cols-1 md:grid-cols-3 gap-6 lg:gap-8">
