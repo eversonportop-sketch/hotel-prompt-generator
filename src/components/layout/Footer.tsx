@@ -67,7 +67,7 @@ const Footer = () => {
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-12">
           {/* 1 — Brand */}
           <div className="lg:pr-6 text-center md:text-left">
-            <h3 className="font-display text-3xl font-bold text-gradient-gold mb-1 tracking-wide">SB Hotel</h3>
+            <h3 className="font-display text-3xl font-bold text-gradient-gold mb-1 tracking-wide">Hotel SB</h3>
             <div className="flex gap-0.5 mb-4 justify-center md:justify-start">
               {[...Array(5)].map((_, i) => (
                 <span key={i} className="text-primary text-xs">
@@ -208,7 +208,7 @@ const Footer = () => {
             }}
           />
           <div className="flex flex-col md:flex-row items-center justify-between gap-2 text-xs text-cream/30 font-body tracking-wide text-center">
-            <span>© {new Date().getFullYear()} SB Hotel · Butiá, Rio Grande do Sul</span>
+            <span>© {new Date().getFullYear()} Hotel SB · Butiá, Rio Grande do Sul</span>
             <span className="text-cream/20">✦ Feito com elegância para sua melhor estadia ✦</span>
           </div>
         </div>
