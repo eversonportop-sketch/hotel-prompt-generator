@@ -1,5 +1,4 @@
 import { motion } from "framer-motion";
-
 const CTASection = () => (
   <section className="relative py-28 bg-charcoal overflow-hidden">
     <div
@@ -23,27 +22,32 @@ const CTASection = () => (
       >
         <p className="font-body text-xs tracking-[0.25em] uppercase text-primary mb-6">Nossa História</p>
         <h2 className="font-display text-3xl md:text-4xl font-bold text-cream mb-8 leading-snug">
-          Nascemos em Butiá, <span className="text-gradient-gold">por amor a ela.</span>
+          Hotel SB onde <span className="text-gradient-gold">história, propósito e acolhimento se encontram.</span>
         </h2>
         <div className="space-y-5 text-cream/50 font-body text-base leading-relaxed">
           <p>
-            O SB Hotel nasce com um propósito inovador, acreditando no grande potencial da nossa cidade e no amor por
-            Butiá — a cidade que tanto nos acolhe.
+            Em meio à essência acolhedora de Butiá nasce o Hotel SB, com propósito inovador. O Hotel SB surge da crença
+            profunda no potencial dessa cidade, um lugar que não apenas recebe, mas abraça, carrega histórias, raízes e
+            um sentimento raro de pertencimento.
           </p>
           <p>
-            <span className="text-cream/70">Scalabrini. Baldinsera.</span> Sobrenomes de origem italiana, com propósito
-            familiar e orgulho dos nossos antepassados. Do brasão Scalabrini, o trilho — símbolo de prosperidade,
-            abundância e fertilidade. Do brasão Baldinsera, a coroa — honra, vitória, nobreza e soberania. Assim nasce
-            nossa identidade.
+            Inspirado nos sobrenomes <span className="text-cream/70">Segabinazzi Baldissera</span>, de origem italiana,
+            nosso espaço carrega mais que um nome, carrega legado, com propósito familiar, orgulho dos nossos
+            antepassados e a força de uma construção familiar que valoriza cada detalhe.
           </p>
           <p>
-            Esperamos poder lhe proporcionar uma estadia com o máximo de conforto e tranquilidade, e passar um pouco do
-            nosso orgulho em receber cada hóspede neste mais novo empreendimento.
+            Nossa identidade é representada por símbolos, cada elemento traduz aquilo que acreditamos, como
+            prosperidade, abundância, vitória, recompensa, nobreza, soberania, força, propósito, tudo foi pensado para
+            transmitir não somente estética, mas significado.
+          </p>
+          <p>
+            O Hotel SB nasce para oferecer mais que hospedagem, mas proporcionar uma experiência. Receber você não é um
+            serviço, é uma honra. E é com esse olhar atento e genuíno que abrimos nossas portas, para que cada estadia
+            seja leve, memorável e, acima de tudo, sentida.
           </p>
         </div>
       </motion.div>
     </div>
   </section>
 );
-
 export default CTASection;
