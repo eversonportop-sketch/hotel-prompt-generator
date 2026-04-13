@@ -46,7 +46,8 @@ const Footer = () => {
       <div
         className="absolute top-0 left-0 right-0 h-px"
         style={{
-          background: "linear-gradient(90deg, transparent 5%, hsl(38 45% 55% / 0.6) 30%, hsl(38 40% 72% / 0.8) 50%, hsl(38 45% 55% / 0.6) 70%, transparent 95%)",
+          background:
+            "linear-gradient(90deg, transparent 5%, hsl(38 45% 55% / 0.6) 30%, hsl(38 40% 72% / 0.8) 50%, hsl(38 45% 55% / 0.6) 70%, transparent 95%)",
         }}
       />
       <div
@@ -55,8 +56,6 @@ const Footer = () => {
           background: "linear-gradient(180deg, hsl(38 45% 55% / 0.04) 0%, transparent 100%)",
         }}
       />
-
-      {/* Subtle radial glow behind content */}
       <div
         className="absolute inset-0 pointer-events-none"
         style={{
@@ -67,19 +66,17 @@ const Footer = () => {
       <div className="container-hotel relative py-20">
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-12">
           {/* 1 — Brand */}
-          <div className="lg:pr-6">
-            <h3 className="font-display text-3xl font-bold text-gradient-gold mb-1 tracking-wide">
-              SB Hotel
-            </h3>
-            <div className="flex gap-0.5 mb-4">
+          <div className="lg:pr-6 text-center md:text-left">
+            <h3 className="font-display text-3xl font-bold text-gradient-gold mb-1 tracking-wide">SB Hotel</h3>
+            <div className="flex gap-0.5 mb-4 justify-center md:justify-start">
               {[...Array(5)].map((_, i) => (
-                <span key={i} className="text-primary text-xs">★</span>
+                <span key={i} className="text-primary text-xs">
+                  ★
+                </span>
               ))}
             </div>
-            <p className="text-sm leading-relaxed text-cream/50 mb-6 font-body italic">
-              {tagline}
-            </p>
-            <div className="flex gap-3">
+            <p className="text-sm leading-relaxed text-cream/50 mb-6 font-body italic">{tagline}</p>
+            <div className="flex gap-3 justify-center md:justify-start">
               {[
                 { href: igHref, icon: Instagram, label: "Instagram" },
                 { href: fbHref, icon: Facebook, label: "Facebook" },
@@ -102,15 +99,15 @@ const Footer = () => {
           </div>
 
           {/* 2 — Navegação */}
-          <div>
+          <div className="text-center md:text-left">
             <h4 className="font-display text-sm uppercase tracking-[0.2em] text-primary/80 mb-5 font-medium">
               Navegação
             </h4>
             <div
-              className="w-8 h-px mb-5"
+              className="w-8 h-px mb-5 mx-auto md:mx-0"
               style={{ background: "linear-gradient(90deg, hsl(38 45% 55% / 0.5), transparent)" }}
             />
-            <div className="flex flex-col gap-3 text-sm font-body">
+            <div className="flex flex-col gap-3 text-sm font-body items-center md:items-start">
               {[
                 { to: "/", label: "Home" },
                 { to: "/quartos", label: "Quartos" },
@@ -131,15 +128,15 @@ const Footer = () => {
           </div>
 
           {/* 3 — Área do Cliente */}
-          <div>
+          <div className="text-center md:text-left">
             <h4 className="font-display text-sm uppercase tracking-[0.2em] text-primary/80 mb-5 font-medium">
               Área do Cliente
             </h4>
             <div
-              className="w-8 h-px mb-5"
+              className="w-8 h-px mb-5 mx-auto md:mx-0"
               style={{ background: "linear-gradient(90deg, hsl(38 45% 55% / 0.5), transparent)" }}
             />
-            <div className="flex flex-col gap-3 text-sm font-body">
+            <div className="flex flex-col gap-3 text-sm font-body items-center md:items-start">
               {[
                 { to: "/login", label: "Login" },
                 { to: "/cadastro", label: "Cadastro" },
@@ -157,22 +154,28 @@ const Footer = () => {
           </div>
 
           {/* 4 — Contato */}
-          <div>
+          <div className="text-center md:text-left">
             <h4 className="font-display text-sm uppercase tracking-[0.2em] text-primary/80 mb-5 font-medium">
               Contato
             </h4>
             <div
-              className="w-8 h-px mb-5"
+              className="w-8 h-px mb-5 mx-auto md:mx-0"
               style={{ background: "linear-gradient(90deg, hsl(38 45% 55% / 0.5), transparent)" }}
             />
-            <div className="flex flex-col gap-4 text-sm font-body">
-              <a href={telHref} className="group flex items-center gap-3 text-cream/50 hover:text-cream/80 transition-colors duration-300">
+            <div className="flex flex-col gap-4 text-sm font-body items-center md:items-start">
+              <a
+                href={telHref}
+                className="group flex items-center gap-3 text-cream/50 hover:text-cream/80 transition-colors duration-300"
+              >
                 <span className="w-8 h-8 rounded-full border border-gold/15 flex items-center justify-center group-hover:border-primary/40 transition-colors duration-300">
                   <Phone className="w-3.5 h-3.5 text-primary/70" />
                 </span>
                 {phone}
               </a>
-              <a href={mailHref} className="group flex items-center gap-3 text-cream/50 hover:text-cream/80 transition-colors duration-300">
+              <a
+                href={mailHref}
+                className="group flex items-center gap-3 text-cream/50 hover:text-cream/80 transition-colors duration-300"
+              >
                 <span className="w-8 h-8 rounded-full border border-gold/15 flex items-center justify-center group-hover:border-primary/40 transition-colors duration-300">
                   <Mail className="w-3.5 h-3.5 text-primary/70" />
                 </span>
@@ -187,7 +190,10 @@ const Footer = () => {
                 <span className="w-8 h-8 rounded-full border border-gold/15 flex items-center justify-center flex-shrink-0 group-hover:border-primary/40 transition-colors duration-300">
                   <MapPin className="w-3.5 h-3.5 text-primary/70" />
                 </span>
-                <span className="pt-1.5">{address}{city ? `, ${city}` : ""}</span>
+                <span className="pt-1.5">
+                  {address}
+                  {city ? `, ${city}` : ""}
+                </span>
               </a>
             </div>
           </div>
@@ -201,7 +207,7 @@ const Footer = () => {
               background: "linear-gradient(90deg, transparent 10%, hsl(38 45% 55% / 0.15) 50%, transparent 90%)",
             }}
           />
-          <div className="flex flex-col md:flex-row items-center justify-between gap-2 text-xs text-cream/30 font-body tracking-wide">
+          <div className="flex flex-col md:flex-row items-center justify-between gap-2 text-xs text-cream/30 font-body tracking-wide text-center">
             <span>© {new Date().getFullYear()} SB Hotel · Butiá, Rio Grande do Sul</span>
             <span className="text-cream/20">✦ Feito com elegância para sua melhor estadia ✦</span>
           </div>
