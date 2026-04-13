@@ -415,7 +415,7 @@ const AdminClientes = () => {
                   {editCliente.source === "guest" && (
                     <Field
                       label="RG"
-                      placeholder="00.000.000-0"
+                      placeholder="00.000.000-00"
                       value={editData.rg}
                       onChange={(v) => setEditData((d) => ({ ...d, rg: v }))}
                     />
