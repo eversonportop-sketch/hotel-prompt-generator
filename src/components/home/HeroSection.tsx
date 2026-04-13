@@ -226,7 +226,7 @@ const HeroSection = () => {
           transition={{ duration: 0.7, delay: 0.9 }}
           className="text-cream/60 font-body text-base md:text-lg max-w-xl mx-auto mb-10 leading-relaxed"
         >
-          Experiência premium em hospedagem. Conforto, elegância e sofisticação em cada detalhe.
+          Experiência premium em cada hospedagem, onde cada detalhe nasce para acolher com excelência.
         </motion.p>
 
         {/* Botões */}
