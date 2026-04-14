@@ -94,7 +94,10 @@ function maskCEP(v: string) {
     .replace(/(\d{5})(\d{1,3})$/, "$1-$2");
 }
 function capitalizeName(v: string) {
-  return v.replace(/\b\w/g, (c) => c.toUpperCase());
+  return v
+    .split(" ")
+    .map((w) => (w.length > 0 ? w[0].toUpperCase() + w.slice(1) : w))
+    .join(" ");
 }
 const Field = ({
   label,
