@@ -32,7 +32,7 @@ function SectionBlock({ section, index }: { section: HomeSection; index: number 
 
   const imageBlock = (
     <motion.div
-      className="relative w-full h-72 md:h-[480px] overflow-hidden"
+      className="relative w-full md:w-1/2 h-72 md:h-[480px] overflow-hidden"
       initial={{ opacity: 0, x: imageOnLeft ? -40 : 40 }}
       whileInView={{ opacity: 1, x: 0 }}
       viewport={{ once: true, margin: "-50px" }}
