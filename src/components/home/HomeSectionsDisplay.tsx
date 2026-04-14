@@ -38,15 +38,13 @@ function SectionBlock({ section, index }: { section: HomeSection; index: number 
       viewport={{ once: true, margin: "-50px" }}
       transition={{ duration: 0.8, ease: "easeOut" }}
     >
-      <div className="w-full h-full flex items-center justify-center p-6">
-        <div className="aspect-square w-full max-w-[420px] overflow-hidden rounded-sm relative">
-          <img
-            src={imgSrc}
-            alt={section.title}
-            className="w-full h-full object-cover transition-transform duration-700 hover:scale-105"
-          />
-          <div className="absolute inset-0 bg-gradient-to-t from-black/40 to-transparent" />
-        </div>
+      <div className="aspect-square h-full overflow-hidden relative">
+        <img
+          src={imgSrc}
+          alt={section.title}
+          className="w-full h-full object-cover transition-transform duration-700 hover:scale-105"
+        />
+        <div className="absolute inset-0 bg-gradient-to-t from-black/40 to-transparent" />
       </div>
     </motion.div>
   );
@@ -67,7 +65,6 @@ function SectionBlock({ section, index }: { section: HomeSection; index: number 
 
       <h2 className="text-3xl md:text-4xl font-serif text-white mb-6 leading-tight">{section.title}</h2>
 
-      {/* Gold divider */}
       <div className="w-16 h-px bg-[hsl(var(--gold))] mb-6" />
 
       <p className="text-white/70 leading-relaxed text-base mb-8">{section.description}</p>
@@ -133,7 +130,7 @@ const HomeSectionsDisplay = () => {
 
   return (
     <section className="bg-[#1a1a1a]">
-      <div>
+      <div className="max-w-7xl mx-auto">
         {sections.map((section, index) => (
           <SectionBlock key={section.id} section={section} index={index} />
         ))}
