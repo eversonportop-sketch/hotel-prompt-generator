@@ -93,7 +93,9 @@ function maskCEP(v: string) {
     .slice(0, 8)
     .replace(/(\d{5})(\d{1,3})$/, "$1-$2");
 }
-
+function capitalizeName(v: string) {
+  return v.replace(/\b\w/g, (c) => c.toUpperCase());
+}
 const Field = ({
   label,
   placeholder,
@@ -527,7 +529,7 @@ const NewReservationDrawer = ({ open, onClose }: Props) => {
                           label="Nome completo *"
                           placeholder="Nome do hóspede"
                           value={guestData.full_name}
-                          onChange={(v) => setGuestData((d) => ({ ...d, full_name: v }))}
+                          onChange={(v) => setGuestData((d) => ({ ...d, full_name: capitalizeName(v) }))}
                         />
                         <div className="grid grid-cols-2 gap-3">
                           <Field
