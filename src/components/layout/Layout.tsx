@@ -17,7 +17,7 @@ const Layout = ({ children }: LayoutProps) => {
       .eq("key", "whatsapp")
       .single()
       .then(({ data }) => {
-        if (data?.value) setWhatsapp(data.value);
+        if ((data as any)?.value) setWhatsapp((data as any).value);
       });
   }, []);
 
