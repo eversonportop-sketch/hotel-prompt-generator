@@ -32,13 +32,13 @@ function SectionBlock({ section, index }: { section: HomeSection; index: number 
 
   const imageBlock = (
     <motion.div
-      className="relative w-full md:w-1/2 h-72 md:h-[480px] overflow-hidden flex items-center justify-center"
+      className="relative w-full md:w-1/2 h-72 md:h-[480px] overflow-hidden"
       initial={{ opacity: 0, x: imageOnLeft ? -40 : 40 }}
       whileInView={{ opacity: 1, x: 0 }}
       viewport={{ once: true, margin: "-50px" }}
       transition={{ duration: 0.8, ease: "easeOut" }}
     >
-      <div className="aspect-square h-full overflow-hidden relative">
+      <div className="w-full h-full">
         <img
           src={imgSrc}
           alt={section.title}
