@@ -32,20 +32,21 @@ function SectionBlock({ section, index }: { section: HomeSection; index: number 
 
   const imageBlock = (
     <motion.div
-      className="relative w-full md:w-1/2 h-[420px] md:h-[600px] overflow-hidden"
+      className="relative w-full md:w-1/2 h-72 md:h-[480px] overflow-hidden flex items-center justify-center"
       initial={{ opacity: 0, x: imageOnLeft ? -40 : 40 }}
       whileInView={{ opacity: 1, x: 0 }}
       viewport={{ once: true, margin: "-50px" }}
       transition={{ duration: 0.8, ease: "easeOut" }}
     >
-      <div className="w-full h-full">
-        <img
-          src={imgSrc}
-          alt={section.title}
-          className="w-full h-full object-cover transition-transform duration-700 hover:scale-105"
-        />
-        {/* Gradient overlay */}
-        <div className="absolute inset-0 bg-gradient-to-t from-black/40 to-transparent" />
+      <div className="w-full h-full flex items-center justify-center p-6">
+        <div className="aspect-square w-full max-w-[420px] overflow-hidden rounded-sm relative">
+          <img
+            src={imgSrc}
+            alt={section.title}
+            className="w-full h-full object-cover transition-transform duration-700 hover:scale-105"
+          />
+          <div className="absolute inset-0 bg-gradient-to-t from-black/40 to-transparent" />
+        </div>
       </div>
     </motion.div>
   );
