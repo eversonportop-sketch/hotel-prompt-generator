@@ -130,7 +130,7 @@ const HomeSectionsDisplay = () => {
 
   return (
     <section className="bg-[#1a1a1a]">
-      <div className="max-w-7xl mx-auto">
+      <div>
         {sections.map((section, index) => (
           <SectionBlock key={section.id} section={section} index={index} />
         ))}
