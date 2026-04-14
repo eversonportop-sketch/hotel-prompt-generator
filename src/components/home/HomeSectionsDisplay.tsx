@@ -104,8 +104,8 @@ function SectionBlock({ section, index }: { section: HomeSection; index: number 
         </>
       ) : (
         <>
-          <div className="order-2 md:order-1 md:w-1/2">{textBlock}</div>
-          <div className="order-1 md:order-2 md:w-1/2">{imageBlock}</div>
+          {textBlock}
+          {imageBlock}
         </>
       )}
     </div>
