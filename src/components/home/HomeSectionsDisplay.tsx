@@ -19,41 +19,25 @@ interface HomeSection {
 }
 
 const FALLBACK_IMAGES: Record<string, string> = {
-  destaque_quarto:
-    "https://images.unsplash.com/photo-1631049307264-da0ec9d70304?w=1200&q=80",
-  experiencia:
-    "https://images.unsplash.com/photo-1571896349842-33c89424de2d?w=1200&q=80",
-  promocoes_visuais:
-    "https://images.unsplash.com/photo-1520250497591-112f2f40a3f4?w=1200&q=80",
+  destaque_quarto: "https://images.unsplash.com/photo-1631049307264-da0ec9d70304?w=1200&q=80",
+  experiencia: "https://images.unsplash.com/photo-1571896349842-33c89424de2d?w=1200&q=80",
+  promocoes_visuais: "https://images.unsplash.com/photo-1520250497591-112f2f40a3f4?w=1200&q=80",
 };
 
-const DEFAULT_FALLBACK =
-  "https://images.unsplash.com/photo-1566073771259-6a8506099945?w=1200&q=80";
+const DEFAULT_FALLBACK = "https://images.unsplash.com/photo-1566073771259-6a8506099945?w=1200&q=80";
 
-function SectionBlock({
-  section,
-  index,
-}: {
-  section: HomeSection;
-  index: number;
-}) {
+function SectionBlock({ section, index }: { section: HomeSection; index: number }) {
   const imageOnLeft = section.image_side !== "right";
-  const imgSrc =
-    section.image_url ||
-    FALLBACK_IMAGES[section.section_key] ||
-    DEFAULT_FALLBACK;
+  const imgSrc = section.image_url || FALLBACK_IMAGES[section.section_key] || DEFAULT_FALLBACK;
 
   const imageBlock = (
     <motion.div
-      className="relative w-full md:w-1/2 h-72 md:h-[480px] overflow-hidden"
+      className="relative w-full md:w-1/2 h-[420px] md:h-[600px] overflow-hidden"
       initial={{ opacity: 0, x: imageOnLeft ? -40 : 40 }}
       whileInView={{ opacity: 1, x: 0 }}
       viewport={{ once: true, margin: "-50px" }}
       transition={{ duration: 0.8, ease: "easeOut" }}
     >
-      {/* Decorative gold border accent */}
-      <div className="absolute top-4 left-4 right-4 bottom-4 border border-[hsl(var(--gold))]/20 z-10 pointer-events-none" />
-
       <div className="w-full h-full">
         <img
           src={imgSrc}
@@ -80,16 +64,12 @@ function SectionBlock({
         </span>
       )}
 
-      <h2 className="text-3xl md:text-4xl font-serif text-white mb-6 leading-tight">
-        {section.title}
-      </h2>
+      <h2 className="text-3xl md:text-4xl font-serif text-white mb-6 leading-tight">{section.title}</h2>
 
       {/* Gold divider */}
       <div className="w-16 h-px bg-[hsl(var(--gold))] mb-6" />
 
-      <p className="text-white/70 leading-relaxed text-base mb-8">
-        {section.description}
-      </p>
+      <p className="text-white/70 leading-relaxed text-base mb-8">{section.description}</p>
 
       {section.cta_text && section.cta_link && (
         <div>
@@ -118,9 +98,7 @@ function SectionBlock({
   );
 
   return (
-    <div
-      className={`flex flex-col md:flex-row items-stretch ${index > 0 ? "border-t border-white/5" : ""}`}
-    >
+    <div className={`flex flex-col md:flex-row items-stretch ${index > 0 ? "border-t border-white/5" : ""}`}>
       {imageOnLeft ? (
         <>
           {imageBlock}
@@ -154,7 +132,7 @@ const HomeSectionsDisplay = () => {
 
   return (
     <section className="bg-[#1a1a1a]">
-      <div className="max-w-7xl mx-auto">
+      <div>
         {sections.map((section, index) => (
           <SectionBlock key={section.id} section={section} index={index} />
         ))}
