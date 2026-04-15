@@ -96,7 +96,7 @@ const translations = {
     // Hero
     hero_location: "Butiá · Río Grande do Sul · Brasil",
     hero_tagline: "Sleep Better",
-    hero_desc: "Experiencia premium en hospedaje. Comodidad, elegancia y sofisticación en cada detalle.",
+    hero_desc: "Experiência premium en hospedaje. Comodidad, elegancia y sofisticación en cada detalle.",
     hero_see_rooms: "Ver Habitaciones",
     hero_contact: "Contáctenos",
     hero_checkin: "Entrada",
@@ -184,14 +184,9 @@ export const LangProvider = ({ children }: { children: ReactNode }) => {
     localStorage.setItem("sb_lang", l);
   };
 
-  const t = (key: keyof Translations): string =>
-    translations[lang][key] || translations.pt[key] || key;
+  const t = (key: keyof Translations): string => translations[lang][key] || translations.pt[key] || key;
 
-  return (
-    <LangContext.Provider value={{ lang, setLang, t }}>
-      {children}
-    </LangContext.Provider>
-  );
+  return <LangContext.Provider value={{ lang, setLang, t }}>{children}</LangContext.Provider>;
 };
 
 export const useLang = () => {
