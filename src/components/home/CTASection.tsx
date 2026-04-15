@@ -11,7 +11,7 @@ const CTASection = () => (
       className="absolute inset-0 w-full h-full object-cover object-center"
     />
 
-    {/* Overlay bem mais escuro — quase apaga a imagem, texto respira */}
+    {/* Overlay escuro */}
     <div className="absolute inset-0" style={{ background: "hsl(220 20% 6% / 0.93)" }} />
 
     {/* Linha dourada superior */}
@@ -38,26 +38,23 @@ const CTASection = () => (
             className="h-px w-8 md:w-12"
             style={{ background: "linear-gradient(90deg, transparent, hsl(38 45% 55%))" }}
           />
-          <p className="font-body text-[10px] md:text-xs tracking-[0.25em] uppercase text-primary">Nossa História</p>
+          <p className="font-body text-xs tracking-[0.25em] uppercase text-primary">Nossa História</p>
           <div
             className="h-px w-8 md:w-12"
             style={{ background: "linear-gradient(90deg, hsl(38 45% 55%), transparent)" }}
           />
         </div>
 
-        {/* Título — creme bem suave, sem branco puro */}
+        {/* Título — text-3xl mobile igual ao padrão do site (HighlightSection, Salao, etc.) */}
         <h2
-          className="font-display text-2xl md:text-4xl font-bold mb-6 md:mb-8 leading-snug"
+          className="font-display text-3xl md:text-4xl font-bold mb-6 md:mb-8 leading-snug"
           style={{ color: "hsl(40 25% 78%)" }}
         >
           Hotel SB onde <span className="text-gradient-gold">história, propósito e acolhimento se encontram.</span>
         </h2>
 
-        {/* Parágrafos — cinza-creme bem apagado, confortável */}
-        <div
-          className="space-y-4 font-body text-sm md:text-base leading-relaxed text-left"
-          style={{ color: "hsl(40 15% 65%)" }}
-        >
+        {/* Parágrafos — text-base no mobile (16px), igual ao padrão cream/40 do site */}
+        <div className="space-y-4 font-body text-base leading-relaxed text-left" style={{ color: "hsl(40 15% 65%)" }}>
           <p>
             Em meio à essência acolhedora de Butiá nasce o Hotel SB, com propósito inovador. O Hotel SB surge da crença
             profunda no potencial dessa cidade, um lugar que não apenas recebe, mas abraça, carrega histórias, raízes e
