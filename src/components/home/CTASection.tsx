@@ -3,13 +3,16 @@ import historiaBg from "@/assets/historia-bg.png";
 
 const CTASection = () => (
   <section className="relative py-16 md:py-24 overflow-hidden">
-    {/* Imagem de fundo */}
-    <div
-      className="absolute inset-0 bg-cover bg-center bg-no-repeat"
-      style={{ backgroundImage: `url(${historiaBg})` }}
+    {/* Imagem de fundo — object-cover via img tag para controle total no mobile */}
+    <img
+      src={historiaBg}
+      alt=""
+      aria-hidden="true"
+      className="absolute inset-0 w-full h-full object-cover object-center"
     />
-    {/* Overlay charcoal 75% */}
-    <div className="absolute inset-0" style={{ background: "hsl(220 20% 8% / 0.75)" }} />
+
+    {/* Overlay charcoal mais denso no mobile para suavizar o texto */}
+    <div className="absolute inset-0" style={{ background: "hsl(220 20% 8% / 0.82)" }} />
 
     {/* Linha dourada superior */}
     <div
@@ -42,13 +45,18 @@ const CTASection = () => (
           />
         </div>
 
-        <h2 className="font-display text-2xl md:text-4xl font-bold text-white mb-6 md:mb-8 leading-snug">
+        {/* Título — substituído text-white por cream/90 para não agredir os olhos */}
+        <h2
+          className="font-display text-2xl md:text-4xl font-bold mb-6 md:mb-8 leading-snug"
+          style={{ color: "hsl(40 30% 92%)" }}
+        >
           Hotel SB onde <span className="text-gradient-gold">história, propósito e acolhimento se encontram.</span>
         </h2>
 
+        {/* Parágrafos — cor já estava boa, mantida */}
         <div
           className="space-y-4 font-body text-sm md:text-base leading-relaxed text-left"
-          style={{ color: "hsl(40 20% 88%)" }}
+          style={{ color: "hsl(40 20% 82%)" }}
         >
           <p>
             Em meio à essência acolhedora de Butiá nasce o Hotel SB, com propósito inovador. O Hotel SB surge da crença
@@ -75,4 +83,5 @@ const CTASection = () => (
     </div>
   </section>
 );
+
 export default CTASection;
