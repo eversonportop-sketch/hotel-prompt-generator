@@ -2,13 +2,13 @@ import { motion } from "framer-motion";
 import historiaBg from "@/assets/historia-bg.png";
 
 const CTASection = () => (
-  <section className="relative py-24 overflow-hidden">
+  <section className="relative py-16 md:py-24 overflow-hidden">
     {/* Imagem de fundo */}
     <div
       className="absolute inset-0 bg-cover bg-center bg-no-repeat"
       style={{ backgroundImage: `url(${historiaBg})` }}
     />
-    {/* Overlay: charcoal 75% — escuro mas respira */}
+    {/* Overlay charcoal 75% */}
     <div className="absolute inset-0" style={{ background: "hsl(220 20% 8% / 0.75)" }} />
 
     {/* Linha dourada superior */}
@@ -22,7 +22,7 @@ const CTASection = () => (
       style={{ background: "linear-gradient(90deg, transparent, hsl(38 45% 55% / 0.5), transparent)" }}
     />
 
-    <div className="relative z-10 container-hotel text-center max-w-2xl mx-auto px-6">
+    <div className="relative z-10 w-full max-w-xl mx-auto px-5 text-center">
       <motion.div
         initial={{ opacity: 0, y: 20 }}
         whileInView={{ opacity: 1, y: 0 }}
@@ -30,17 +30,26 @@ const CTASection = () => (
         transition={{ duration: 0.7 }}
       >
         {/* Label com traços laterais */}
-        <div className="flex items-center justify-center gap-4 mb-4">
-          <div className="h-px w-12" style={{ background: "linear-gradient(90deg, transparent, hsl(38 45% 55%))" }} />
-          <p className="font-body text-xs tracking-[0.3em] uppercase text-primary">Nossa História</p>
-          <div className="h-px w-12" style={{ background: "linear-gradient(90deg, hsl(38 45% 55%), transparent)" }} />
+        <div className="flex items-center justify-center gap-3 mb-4">
+          <div
+            className="h-px w-8 md:w-12"
+            style={{ background: "linear-gradient(90deg, transparent, hsl(38 45% 55%))" }}
+          />
+          <p className="font-body text-[10px] md:text-xs tracking-[0.25em] uppercase text-primary">Nossa História</p>
+          <div
+            className="h-px w-8 md:w-12"
+            style={{ background: "linear-gradient(90deg, hsl(38 45% 55%), transparent)" }}
+          />
         </div>
 
-        <h2 className="font-display text-3xl md:text-4xl font-bold text-white mb-8 leading-snug">
+        <h2 className="font-display text-2xl md:text-4xl font-bold text-white mb-6 md:mb-8 leading-snug">
           Hotel SB onde <span className="text-gradient-gold">história, propósito e acolhimento se encontram.</span>
         </h2>
 
-        <div className="space-y-5 font-body text-base leading-relaxed" style={{ color: "hsl(40 20% 88%)" }}>
+        <div
+          className="space-y-4 font-body text-sm md:text-base leading-relaxed text-left"
+          style={{ color: "hsl(40 20% 88%)" }}
+        >
           <p>
             Em meio à essência acolhedora de Butiá nasce o Hotel SB, com propósito inovador. O Hotel SB surge da crença
             profunda no potencial dessa cidade, um lugar que não apenas recebe, mas abraça, carrega histórias, raízes e
