@@ -1,30 +1,18 @@
 import { motion } from "framer-motion";
-import historiaBg from "@/assets/historia-bg.png";
+
 const CTASection = () => (
-  <section className="relative py-24 overflow-hidden">
-    <div
-      className="absolute inset-0 bg-cover bg-center bg-no-repeat"
-      style={{ backgroundImage: `url(${historiaBg})` }}
-    />
-    {/* Overlay harmonizado com bg-charcoal (hsl(220 20% 10%)) */}
-    <div
-      className="absolute inset-0"
-      style={{ background: "linear-gradient(135deg, hsl(220 20% 8% / 0.92) 0%, hsl(220 20% 12% / 0.88) 100%)" }}
-    />
-    {/* Borda superior de transição */}
+  <section className="relative py-24 overflow-hidden" style={{ background: "hsl(40 20% 95%)" }}>
+    {/* Linha dourada superior */}
     <div
       className="absolute top-0 left-0 right-0 h-px"
-      style={{ background: "linear-gradient(90deg, transparent, hsl(38 45% 55% / 0.3), transparent)" }}
+      style={{ background: "linear-gradient(90deg, transparent, hsl(38 45% 55% / 0.4), transparent)" }}
     />
-    {/* Borda inferior de transição */}
+    {/* Linha dourada inferior */}
     <div
       className="absolute bottom-0 left-0 right-0 h-px"
-      style={{ background: "linear-gradient(90deg, transparent, hsl(38 45% 55% / 0.3), transparent)" }}
+      style={{ background: "linear-gradient(90deg, transparent, hsl(38 45% 55% / 0.4), transparent)" }}
     />
-    <div
-      className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-[700px] h-[700px] rounded-full blur-3xl opacity-15"
-      style={{ background: "radial-gradient(circle,#C9A84C,transparent)" }}
-    />
+
     <div className="relative z-10 container-hotel text-center max-w-2xl mx-auto px-6">
       <motion.div
         initial={{ opacity: 0, y: 20 }}
@@ -32,11 +20,21 @@ const CTASection = () => (
         viewport={{ once: true }}
         transition={{ duration: 0.7 }}
       >
-        <p className="font-body text-xs tracking-[0.25em] uppercase text-primary mb-6">Nossa História</p>
-        <h2 className="font-display text-3xl md:text-4xl font-bold text-white mb-8 leading-snug">
+        {/* Label com traços laterais */}
+        <div className="flex items-center justify-center gap-4 mb-4">
+          <div className="h-px w-12" style={{ background: "linear-gradient(90deg, transparent, hsl(38 45% 55%))" }} />
+          <p className="font-body text-xs tracking-[0.3em] uppercase text-primary">Nossa História</p>
+          <div className="h-px w-12" style={{ background: "linear-gradient(90deg, hsl(38 45% 55%), transparent)" }} />
+        </div>
+
+        <h2
+          className="font-display text-3xl md:text-4xl font-bold mb-8 leading-snug"
+          style={{ color: "hsl(220 20% 12%)" }}
+        >
           Hotel SB onde <span className="text-gradient-gold">história, propósito e acolhimento se encontram.</span>
         </h2>
-        <div className="space-y-5 text-white/90 font-body text-base leading-relaxed">
+
+        <div className="space-y-5 font-body text-base leading-relaxed" style={{ color: "hsl(220 10% 35%)" }}>
           <p>
             Em meio à essência acolhedora de Butiá nasce o Hotel SB, com propósito inovador. O Hotel SB surge da crença
             profunda no potencial dessa cidade, um lugar que não apenas recebe, mas abraça, carrega histórias, raízes e
