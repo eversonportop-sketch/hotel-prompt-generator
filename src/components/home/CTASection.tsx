@@ -1,12 +1,12 @@
 import { motion } from "framer-motion";
 import hotelLogo from "@/assets/hotel-sb-logo.png";
-import historiaBg from "@/assets/historia-bg.png";
+import heroHotel from "@/assets/hero-hotel.jpg";
 const CTASection = () => (
   <section className="relative py-24 overflow-hidden">
     {/* Imagem de fundo */}
     <div
       className="absolute inset-0 bg-cover bg-center bg-no-repeat"
-      style={{ backgroundImage: `url(${historiaBg})` }}
+      style={{ backgroundImage: `url(${heroHotel})` }}
     />
     {/* Overlay escuro para legibilidade */}
     <div className="absolute inset-0 bg-black/75" />
