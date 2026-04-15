@@ -1,16 +1,12 @@
 import { motion } from "framer-motion";
-import hotelLogo from "@/assets/hotel-sb-logo.png";
-import heroHotel from "@/assets/hero-hotel.jpg";
+import historiaBg from "@/assets/historia-bg.png";
 const CTASection = () => (
   <section className="relative py-24 overflow-hidden">
-    {/* Imagem de fundo */}
     <div
       className="absolute inset-0 bg-cover bg-center bg-no-repeat"
-      style={{ backgroundImage: `url(${heroHotel})` }}
+      style={{ backgroundImage: `url(${historiaBg})` }}
     />
-    {/* Overlay escuro para legibilidade */}
     <div className="absolute inset-0 bg-black/75" />
-    {/* Brilho dourado sutil no centro */}
     <div
       className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-[600px] h-[600px] rounded-full blur-3xl opacity-10"
       style={{ background: "radial-gradient(circle,#C9A84C,transparent)" }}
@@ -26,9 +22,6 @@ const CTASection = () => (
         <h2 className="font-display text-3xl md:text-4xl font-bold text-cream mb-8 leading-snug">
           Hotel SB onde <span className="text-gradient-gold">história, propósito e acolhimento se encontram.</span>
         </h2>
-        <div className="flex justify-center mb-8">
-          <img src={hotelLogo} alt="Hotel SB" className="w-24 h-24 object-contain opacity-90" />
-        </div>
         <div className="space-y-5 text-cream/80 font-body text-base leading-relaxed">
           <p>
             Em meio à essência acolhedora de Butiá nasce o Hotel SB, com propósito inovador. O Hotel SB surge da crença
