@@ -1,6 +1,6 @@
 import { motion } from "framer-motion";
 import hotelLogo from "@/assets/hotel-sb-logo.png";
-import historiaBg from "@/assets/historia-bg.png";
+import heroHotel from "@/assets/hero-hotel.jpg";
 const CTASection = () => (
   <section className="relative py-24 overflow-hidden">
     {/* Imagem de fundo */}
