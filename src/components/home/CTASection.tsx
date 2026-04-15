@@ -6,7 +6,7 @@ const CTASection = () => (
       className="absolute inset-0 bg-cover bg-center bg-no-repeat"
       style={{ backgroundImage: `url(${historiaBg})` }}
     />
-    <div className="absolute inset-0 bg-black/75" />
+    <div className="absolute inset-0 bg-black/85" />
     <div
       className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-[600px] h-[600px] rounded-full blur-3xl opacity-10"
       style={{ background: "radial-gradient(circle,#C9A84C,transparent)" }}
@@ -19,10 +19,10 @@ const CTASection = () => (
         transition={{ duration: 0.7 }}
       >
         <p className="font-body text-xs tracking-[0.25em] uppercase text-primary mb-6">Nossa História</p>
-        <h2 className="font-display text-3xl md:text-4xl font-bold text-cream mb-8 leading-snug">
+        <h2 className="font-display text-3xl md:text-4xl font-bold text-white mb-8 leading-snug">
           Hotel SB onde <span className="text-gradient-gold">história, propósito e acolhimento se encontram.</span>
         </h2>
-        <div className="space-y-5 text-cream/80 font-body text-base leading-relaxed">
+        <div className="space-y-5 text-white/90 font-body text-base leading-relaxed">
           <p>
             Em meio à essência acolhedora de Butiá nasce o Hotel SB, com propósito inovador. O Hotel SB surge da crença
             profunda no potencial dessa cidade, um lugar que não apenas recebe, mas abraça, carrega histórias, raízes e
