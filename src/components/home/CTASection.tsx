@@ -29,7 +29,7 @@ const CTASection = () => (
             um sentimento raro de pertencimento.
           </p>
           <p>
-            Inspirado nos sobrenomes <span className="text-cream/70">Segabinazzi Baldissera</span>, de origem italiana,
+            Inspirado nos sobrenomes <span className="text-primary font-semibold">Segabinazzi Baldissera</span>, de origem italiana,
             nosso espaço carrega mais que um nome, carrega legado, com propósito familiar, orgulho dos nossos
             antepassados e a força de uma construção familiar que valoriza cada detalhe.
           </p>
