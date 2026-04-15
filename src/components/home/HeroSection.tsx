@@ -330,9 +330,9 @@ const HeroSection = () => {
                 <button
                   className="w-full py-3 rounded font-body text-sm tracking-[0.2em] uppercase font-medium transition-all duration-300 flex items-center justify-center gap-2"
                   style={{
-                    background: "linear-gradient(135deg, #C0272D 0%, #8B1A1E 100%)",
-                    color: "#F5F0E8",
-                    border: "1px solid rgba(192,39,45,0.3)",
+                    background: "linear-gradient(135deg, #C9A84C 0%, #A07830 100%)",
+                    color: "#0D0D0D",
+                    border: "1px solid rgba(201,168,76,0.4)",
                   }}
                 >
                   <Search className="w-4 h-4" />
