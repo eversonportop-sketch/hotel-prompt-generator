@@ -78,7 +78,6 @@ function HighlightCard({ item, index }: { item: (typeof highlights)[0]; index: n
             loading="lazy"
             className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-700"
           />
-          {/* Gradiente sempre visível, mais suave */}
           <div className="absolute inset-0 bg-gradient-to-t from-charcoal/80 via-transparent to-transparent" />
 
           {/* Tag sobre a imagem */}
@@ -89,16 +88,12 @@ function HighlightCard({ item, index }: { item: (typeof highlights)[0]; index: n
 
         {/* Conteúdo */}
         <div className="p-6 flex flex-col gap-3">
-          {/* Título */}
           <h3 className="font-display text-xl font-semibold text-cream leading-tight">{item.title}</h3>
 
-          {/* Divisor dourado fino */}
           <div className="w-8 h-px bg-gold/40" />
 
-          {/* Descrição — mais legível, cream/55 */}
           <p className="text-cream/55 text-sm leading-relaxed font-body">{item.description}</p>
 
-          {/* CTA */}
           <span className="group/btn inline-flex items-center gap-2 text-primary text-xs font-body font-semibold tracking-[0.15em] uppercase mt-1 group-hover:gap-3 transition-all">
             {item.cta}
             <ArrowRight className="w-3.5 h-3.5 group-hover:translate-x-0.5 transition-transform" />
@@ -123,7 +118,6 @@ const HighlightSection = () => (
         <h2 className="font-display text-3xl md:text-5xl font-bold text-cream">
           Conheça o <span className="text-gradient-gold">Hotel SB</span>
         </h2>
-        {/* Subtítulo novo — dá peso e contexto premium */}
         <p className="text-cream/35 font-body text-sm md:text-base mt-4 max-w-md mx-auto leading-relaxed">
           Cada espaço foi projetado para oferecer conforto, beleza e experiências que ficam na memória.
         </p>
