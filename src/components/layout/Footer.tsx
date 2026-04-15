@@ -63,8 +63,8 @@ const Footer = () => {
         }}
       />
 
-      <div className="container-hotel relative py-20">
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-12">
+      <div className="container-hotel relative py-12 md:py-20">
+        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-8 md:gap-12">
           {/* 1 — Brand */}
           <div className="lg:pr-6 text-center md:text-left">
             <h3 className="font-display text-3xl font-bold text-gradient-gold mb-1 tracking-wide">Hotel SB</h3>
@@ -200,7 +200,7 @@ const Footer = () => {
         </div>
 
         {/* Bottom bar */}
-        <div className="mt-16 pt-6 relative">
+        <div className="mt-10 md:mt-16 pt-6 relative">
           <div
             className="absolute top-0 left-0 right-0 h-px"
             style={{
