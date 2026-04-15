@@ -3,7 +3,7 @@ import historiaBg from "@/assets/historia-bg.png";
 
 const CTASection = () => (
   <section className="relative py-16 md:py-24 overflow-hidden">
-    {/* Imagem de fundo — object-cover via img tag para controle total no mobile */}
+    {/* Imagem de fundo */}
     <img
       src={historiaBg}
       alt=""
@@ -11,18 +11,18 @@ const CTASection = () => (
       className="absolute inset-0 w-full h-full object-cover object-center"
     />
 
-    {/* Overlay charcoal mais denso no mobile para suavizar o texto */}
-    <div className="absolute inset-0" style={{ background: "hsl(220 20% 8% / 0.82)" }} />
+    {/* Overlay bem mais escuro — quase apaga a imagem, texto respira */}
+    <div className="absolute inset-0" style={{ background: "hsl(220 20% 6% / 0.93)" }} />
 
     {/* Linha dourada superior */}
     <div
       className="absolute top-0 left-0 right-0 h-px"
-      style={{ background: "linear-gradient(90deg, transparent, hsl(38 45% 55% / 0.5), transparent)" }}
+      style={{ background: "linear-gradient(90deg, transparent, hsl(38 45% 55% / 0.4), transparent)" }}
     />
     {/* Linha dourada inferior */}
     <div
       className="absolute bottom-0 left-0 right-0 h-px"
-      style={{ background: "linear-gradient(90deg, transparent, hsl(38 45% 55% / 0.5), transparent)" }}
+      style={{ background: "linear-gradient(90deg, transparent, hsl(38 45% 55% / 0.4), transparent)" }}
     />
 
     <div className="relative z-10 w-full max-w-xl mx-auto px-5 text-center">
@@ -32,7 +32,7 @@ const CTASection = () => (
         viewport={{ once: true }}
         transition={{ duration: 0.7 }}
       >
-        {/* Label com traços laterais */}
+        {/* Label */}
         <div className="flex items-center justify-center gap-3 mb-4">
           <div
             className="h-px w-8 md:w-12"
@@ -45,18 +45,18 @@ const CTASection = () => (
           />
         </div>
 
-        {/* Título — substituído text-white por cream/90 para não agredir os olhos */}
+        {/* Título — creme bem suave, sem branco puro */}
         <h2
           className="font-display text-2xl md:text-4xl font-bold mb-6 md:mb-8 leading-snug"
-          style={{ color: "hsl(40 30% 92%)" }}
+          style={{ color: "hsl(40 25% 78%)" }}
         >
           Hotel SB onde <span className="text-gradient-gold">história, propósito e acolhimento se encontram.</span>
         </h2>
 
-        {/* Parágrafos — cor já estava boa, mantida */}
+        {/* Parágrafos — cinza-creme bem apagado, confortável */}
         <div
           className="space-y-4 font-body text-sm md:text-base leading-relaxed text-left"
-          style={{ color: "hsl(40 20% 82%)" }}
+          style={{ color: "hsl(40 15% 65%)" }}
         >
           <p>
             Em meio à essência acolhedora de Butiá nasce o Hotel SB, com propósito inovador. O Hotel SB surge da crença
