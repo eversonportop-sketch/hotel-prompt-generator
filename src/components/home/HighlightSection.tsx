@@ -9,28 +9,34 @@ import poolImage from "@/assets/pool.jpg";
 
 const highlights = [
   {
-    title: "Quartos Premium",
-    description: "Suítes elegantes com todo o conforto que você merece. Design sofisticado e amenidades exclusivas.",
+    tag: "Acomodações",
+    title: "Suítes & Quartos",
+    description:
+      "Ambientes pensados para oferecer repouso e sofisticação. Cada detalhe — da roupa de cama ao acabamento — foi escolhido para transformar sua estadia em uma experiência memorável.",
     storageKey: "quartos",
     fallback: roomImage,
     link: "/quartos",
     cta: "Conhecer Quartos",
   },
   {
+    tag: "Eventos",
     title: "Salão de Festas",
-    description: "Espaço luxuoso para eventos inesquecíveis. Capacidade e infraestrutura completa para sua celebração.",
+    description:
+      "Um espaço elegante e versátil para celebrar momentos que merecem ser lembrados. Estrutura completa, atendimento dedicado e ambiente que eleva qualquer ocasião.",
     storageKey: "salao",
     fallback: hallImage,
     link: "/salao",
-    cta: "Ver Salão",
+    cta: "Ver o Salão",
   },
   {
-    title: "Piscina",
-    description: "Área de lazer premium com piscina e espaço de relaxamento. Momentos únicos de tranquilidade.",
+    tag: "Lazer",
+    title: "Área de Piscina",
+    description:
+      "Relaxe em nossa área de lazer exclusiva. Águas cristalinas, ambiente tranquilo e toda a infraestrutura para momentos de descanso verdadeiro.",
     storageKey: "piscina",
     fallback: poolImage,
     link: "/piscina",
-    cta: "Ver Piscina",
+    cta: "Conhecer a Piscina",
   },
 ];
 
@@ -64,6 +70,7 @@ function HighlightCard({ item, index }: { item: (typeof highlights)[0]; index: n
         to={item.link}
         className="group block relative overflow-hidden rounded-2xl bg-charcoal-light border border-white/5 hover:border-gold/25 transition-all duration-500 hover:shadow-[0_8px_40px_rgba(201,168,76,0.1)]"
       >
+        {/* Imagem */}
         <div className="aspect-[4/3] overflow-hidden relative">
           <img
             src={image || item.fallback}
@@ -71,13 +78,30 @@ function HighlightCard({ item, index }: { item: (typeof highlights)[0]; index: n
             loading="lazy"
             className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-700"
           />
-          <div className="absolute inset-0 bg-gradient-to-t from-charcoal/60 to-transparent opacity-0 group-hover:opacity-100 transition-opacity duration-500" />
+          {/* Gradiente sempre visível, mais suave */}
+          <div className="absolute inset-0 bg-gradient-to-t from-charcoal/80 via-transparent to-transparent" />
+
+          {/* Tag sobre a imagem */}
+          <span className="absolute top-4 left-4 font-body text-[10px] tracking-[0.25em] uppercase text-primary bg-charcoal/60 backdrop-blur-sm px-3 py-1 rounded-full border border-gold/20">
+            {item.tag}
+          </span>
         </div>
-        <div className="p-6">
-          <h3 className="font-display text-xl font-semibold text-cream mb-2">{item.title}</h3>
-          <p className="text-cream/40 text-sm leading-relaxed mb-5 font-body">{item.description}</p>
-          <span className="group/btn flex items-center gap-2 text-primary text-sm font-body font-semibold group-hover:gap-3 transition-all">
-            {item.cta} <ArrowRight className="w-4 h-4 group-hover:translate-x-0.5 transition-transform" />
+
+        {/* Conteúdo */}
+        <div className="p-6 flex flex-col gap-3">
+          {/* Título */}
+          <h3 className="font-display text-xl font-semibold text-cream leading-tight">{item.title}</h3>
+
+          {/* Divisor dourado fino */}
+          <div className="w-8 h-px bg-gold/40" />
+
+          {/* Descrição — mais legível, cream/55 */}
+          <p className="text-cream/55 text-sm leading-relaxed font-body">{item.description}</p>
+
+          {/* CTA */}
+          <span className="group/btn inline-flex items-center gap-2 text-primary text-xs font-body font-semibold tracking-[0.15em] uppercase mt-1 group-hover:gap-3 transition-all">
+            {item.cta}
+            <ArrowRight className="w-3.5 h-3.5 group-hover:translate-x-0.5 transition-transform" />
           </span>
         </div>
       </Link>
@@ -99,7 +123,12 @@ const HighlightSection = () => (
         <h2 className="font-display text-3xl md:text-5xl font-bold text-cream">
           Conheça o <span className="text-gradient-gold">Hotel SB</span>
         </h2>
+        {/* Subtítulo novo — dá peso e contexto premium */}
+        <p className="text-cream/35 font-body text-sm md:text-base mt-4 max-w-md mx-auto leading-relaxed">
+          Cada espaço foi projetado para oferecer conforto, beleza e experiências que ficam na memória.
+        </p>
       </motion.div>
+
       <div className="grid grid-cols-1 md:grid-cols-3 gap-6 lg:gap-8">
         {highlights.map((item, index) => (
           <HighlightCard key={item.title} item={item} index={index} />
