@@ -2,7 +2,7 @@ import { motion } from "framer-motion";
 import historiaBg from "@/assets/historia-bg.png";
 
 const CTASection = () => (
-  <section className="relative py-16 md:py-24 overflow-hidden">
+  <section className="relative pt-14 pb-10 md:pt-20 md:pb-16 overflow-hidden">
     {/* Imagem de fundo */}
     <img
       src={historiaBg}
@@ -45,15 +45,15 @@ const CTASection = () => (
           />
         </div>
 
-        {/* Título — text-3xl mobile igual ao padrão do site (HighlightSection, Salao, etc.) */}
+        {/* Título */}
         <h2
-          className="font-display text-3xl md:text-4xl font-bold mb-6 md:mb-8 leading-snug"
+          className="font-display text-3xl md:text-4xl font-bold mb-5 md:mb-7 leading-snug"
           style={{ color: "hsl(40 25% 78%)" }}
         >
           Hotel SB onde <span className="text-gradient-gold">história, propósito e acolhimento se encontram.</span>
         </h2>
 
-        {/* Parágrafos — text-base no mobile (16px), igual ao padrão cream/40 do site */}
+        {/* Parágrafos */}
         <div className="space-y-4 font-body text-base leading-relaxed text-left" style={{ color: "hsl(40 15% 65%)" }}>
           <p>
             Em meio à essência acolhedora de Butiá nasce o Hotel SB, com propósito inovador. O Hotel SB surge da crença
