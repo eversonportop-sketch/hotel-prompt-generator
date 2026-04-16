@@ -225,7 +225,9 @@ const NewReservationDrawer = ({ open, onClose }: Props) => {
           new Date(format(checkIn, "yyyy-MM-dd") + "T12:00:00"),
         )
       : 0;
-  const pricePerNight = selectedRoom ? Number(selectedRoom.promotional_price || selectedRoom.price) : 0;
+  const basePrice = selectedRoom ? Number(selectedRoom.price) : 0;
+  const extraPerPerson = selectedRoom?.promotional_price ? Number(selectedRoom.promotional_price) : 0;
+  const pricePerNight = basePrice + extraPerPerson * Math.max(0, guestsCount - 1);
   const totalPrice = nights > 0 ? nights * pricePerNight : 0;
   const guestDisplayName = isNewGuest ? guestData.full_name : selectedGuest?.full_name || "";
   const hospedeOk = isNewGuest ? guestData.full_name.trim().length >= 2 : !!selectedGuest;
@@ -718,14 +720,18 @@ const NewReservationDrawer = ({ open, onClose }: Props) => {
                                 )}
                               </div>
                               <p className="text-white/25 text-xs font-body mt-0.5">
-                                {room.category} · até {room.capacity} hóspedes
+                                {room.category ? `${room.category} · ` : ""}até {room.capacity} hóspedes
                               </p>
                             </div>
                             <div className="text-right">
                               <p className="text-primary font-semibold text-sm font-display">
-                                R$ {Number(room.promotional_price || room.price).toFixed(0)}
+                                R$ {Number(room.price).toFixed(0)}
                               </p>
-                              <p className="text-white/20 text-[10px] font-body">/noite</p>
+                              <p className="text-white/20 text-[10px] font-body">
+                                {room.promotional_price
+                                  ? `+R$${Number(room.promotional_price).toFixed(0)}/pessoa`
+                                  : "/noite"}
+                              </p>
                             </div>
                           </div>
                         </button>
@@ -807,7 +813,8 @@ const NewReservationDrawer = ({ open, onClose }: Props) => {
                     <SummaryRow label="Quarto">
                       <p className="text-cream text-sm font-body font-semibold">{selectedRoom?.name || "—"}</p>
                       <p className="text-white/30 text-xs font-body">
-                        {selectedRoom?.category} · {guestsCount} hóspede{guestsCount > 1 ? "s" : ""}
+                        {selectedRoom?.category ? `${selectedRoom.category} · ` : ""}
+                        {guestsCount} hóspede{guestsCount > 1 ? "s" : ""}
                       </p>
                     </SummaryRow>
                     <SummaryRow label="Período">
