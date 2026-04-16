@@ -49,14 +49,16 @@ const Quartos = () => {
       map.get(cat)!.push(r);
     });
     return Array.from(map.entries()).map(([category, list]) => {
-      const prices = list.map((r: any) => Number(r.promotional_price || r.price));
+      const prices = list.map((r: any) => Number(r.price));
       const regularPrices = list.map((r: any) => Number(r.price));
       const hasPromo = list.some((r: any) => r.promotional_price);
       return {
         category,
         image: list[0].image_url || "/placeholder.svg",
         minPrice: Math.min(...regularPrices),
-        minPromoPrice: hasPromo ? Math.min(...prices) : null,
+        minPromoPrice: hasPromo
+          ? Math.min(...list.filter((r: any) => r.promotional_price).map((r: any) => Number(r.promotional_price)))
+          : null,
         totalRooms: list.length,
         capacity: Math.max(...list.map((r: any) => r.capacity || 2)),
         firstRoomId: list[0].id,
@@ -186,15 +188,15 @@ const Quartos = () => {
                     </div>
                     <div className="flex items-center justify-between pt-4 border-t border-white/5">
                       <div>
-                        {cat.minPromoPrice !== null && (
-                          <span className="text-sm text-cream/30 line-through font-body mr-2">
-                            R$ {cat.minPrice.toFixed(0)}
-                          </span>
-                        )}
                         <span className="text-2xl font-display font-bold text-primary">
-                          R$ {(cat.minPromoPrice ?? cat.minPrice).toFixed(0)}
+                          R$ {cat.minPrice.toFixed(0)}
                         </span>
-                        <span className="text-sm text-cream/30 font-body"> /noite</span>
+                        <span className="text-sm text-cream/30 font-body"> /noite (1 pessoa)</span>
+                        {cat.minPromoPrice !== null && (
+                          <div className="text-xs text-primary/70 mt-0.5">
+                            + R$ {cat.minPromoPrice.toFixed(0)} por pessoa adicional
+                          </div>
+                        )}
                       </div>
                       <Link
                         to={`/quartos/${cat.firstRoomId}${checkin ? `?checkin=${checkin}&checkout=${checkout}&guests=${guests}` : ""}`}
