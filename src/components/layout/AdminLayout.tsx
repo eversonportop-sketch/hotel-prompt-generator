@@ -280,6 +280,7 @@ const AdminLayout = () => {
                 onClose={() => setMobileOpen(false)}
                 adminName={adminName}
                 onSignOut={handleSignOut}
+                unreadAvaliacoes={unreadAvaliacoes}
               />
             </motion.aside>
           </>
