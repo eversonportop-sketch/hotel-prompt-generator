@@ -39,6 +39,28 @@ interface Cliente {
 const goldBg = { background: "linear-gradient(135deg,#C9A84C,#E5C97A)" };
 const fmt = (d: string) => format(new Date(d), "dd MMM yyyy", { locale: ptBR });
 
+const maskCPF = (v: string) =>
+  v
+    .replace(/\D/g, "")
+    .slice(0, 11)
+    .replace(/(\d{3})(\d)/, "$1.$2")
+    .replace(/(\d{3})(\d)/, "$1.$2")
+    .replace(/(\d{3})(\d{1,2})$/, "$1-$2");
+
+const maskRG = (v: string) =>
+  v
+    .replace(/\D/g, "")
+    .slice(0, 9)
+    .replace(/(\d{2})(\d)/, "$1.$2")
+    .replace(/(\d{3})(\d)/, "$1.$2")
+    .replace(/(\d{3})(\d{1})$/, "$1-$2");
+
+const maskPhone = (v: string) => {
+  const d = v.replace(/\D/g, "").slice(0, 11);
+  if (d.length <= 10) return d.replace(/(\d{2})(\d{4})(\d{0,4})/, "($1) $2-$3").replace(/-$/, "");
+  return d.replace(/(\d{2})(\d{5})(\d{0,4})/, "($1) $2-$3").replace(/-$/, "");
+};
+
 const Field = ({
   label,
   placeholder,
@@ -410,14 +432,14 @@ const AdminClientes = () => {
                     label="CPF"
                     placeholder="000.000.000-00"
                     value={editData.cpf}
-                    onChange={(v) => setEditData((d) => ({ ...d, cpf: v }))}
+                    onChange={(v) => setEditData((d) => ({ ...d, cpf: maskCPF(v) }))}
                   />
                   {editCliente.source === "guest" && (
                     <Field
                       label="RG"
-                      placeholder="00.000.000-00"
+                      placeholder="00.000.000-0"
                       value={editData.rg}
-                      onChange={(v) => setEditData((d) => ({ ...d, rg: v }))}
+                      onChange={(v) => setEditData((d) => ({ ...d, rg: maskRG(v) }))}
                     />
                   )}
                 </div>
@@ -426,7 +448,7 @@ const AdminClientes = () => {
                     label="Telefone"
                     placeholder="(51) 99999-0000"
                     value={editData.phone}
-                    onChange={(v) => setEditData((d) => ({ ...d, phone: v }))}
+                    onChange={(v) => setEditData((d) => ({ ...d, phone: maskPhone(v) }))}
                   />
                   {editCliente.source === "guest" && (
                     <Field
