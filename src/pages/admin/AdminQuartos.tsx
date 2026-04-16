@@ -42,7 +42,7 @@ interface Room {
 
 const EMPTY_FORM = {
   name: "",
-  category: "Standard",
+
   beds: "1 cama de casal",
   capacity: 2,
   price: 0,
@@ -54,8 +54,6 @@ const EMPTY_FORM = {
   amenities: "",
   display_order: 0,
 };
-
-const CATEGORIES = ["Standard", "Conforto", "Premium", "Suite"];
 
 async function uploadRoomImage(file: File): Promise<string> {
   const ext = file.name.split(".").pop() || "jpg";
@@ -191,18 +189,15 @@ const RoomModal = ({
             />
           </div>
           <div>
-            <label className="block text-xs uppercase tracking-widest text-primary/70 mb-1.5">Categoria</label>
-            <select
+            <label className="block text-xs uppercase tracking-widest text-primary/70 mb-1.5">
+              Categoria / Grupo (opcional)
+            </label>
+            <input
               className="w-full bg-black/50 border border-gold/20 rounded-lg px-4 py-3 text-cream text-sm focus:border-primary focus:outline-none transition"
               value={form.category}
               onChange={(e) => setForm((f) => ({ ...f, category: e.target.value }))}
-            >
-              {CATEGORIES.map((c) => (
-                <option key={c} value={c}>
-                  {c}
-                </option>
-              ))}
-            </select>
+              placeholder="Ex: Geral, Família, Vista Mar…"
+            />
           </div>
           <div>
             <label className="block text-xs uppercase tracking-widest text-primary/70 mb-1.5">Camas</label>
@@ -236,7 +231,7 @@ const RoomModal = ({
           </div>
           <div>
             <label className="block text-xs uppercase tracking-widest text-primary/70 mb-1.5">
-              Preço / noite (R$) *
+              Tarifa mínima — 1 pessoa (R$) *
             </label>
             <input
               type="number"
@@ -252,7 +247,7 @@ const RoomModal = ({
           </div>
           <div>
             <label className="block text-xs uppercase tracking-widest text-primary/70 mb-1.5">
-              Preço promocional (R$)
+              Adicional por pessoa (R$)
             </label>
             <input
               type="number"
@@ -262,7 +257,7 @@ const RoomModal = ({
               value={form.promotional_price}
               onFocus={(e) => e.target.select()}
               onChange={(e) => setForm((f) => ({ ...f, promotional_price: e.target.value }))}
-              placeholder="Vazio = sem promoção"
+              placeholder="Vazio = sem adicional"
             />
           </div>
           <div className="sm:col-span-2">
@@ -680,20 +675,15 @@ const AdminQuartos = () => {
                 <p className="text-cream/50 font-body text-sm leading-relaxed mb-4">{room.description}</p>
               )}
               <div className="mb-4">
-                {room.promotional_price ? (
-                  <div className="flex items-baseline gap-2">
-                    <span className="text-3xl font-display font-bold text-primary">
-                      R$ {Number(room.promotional_price).toFixed(0)}
-                    </span>
-                    <span className="text-lg text-cream/30 line-through">R$ {Number(room.price).toFixed(0)}</span>
-                    <span className="text-sm text-cream/30">/noite</span>
-                  </div>
-                ) : (
-                  <div>
-                    <span className="text-3xl font-display font-bold text-primary">
-                      R$ {Number(room.price).toFixed(0)}
-                    </span>
-                    <span className="text-sm text-cream/30"> /noite</span>
+                <div className="flex items-baseline gap-2">
+                  <span className="text-3xl font-display font-bold text-primary">
+                    R$ {Number(room.price).toFixed(0)}
+                  </span>
+                  <span className="text-sm text-cream/30">/noite (1 pessoa)</span>
+                </div>
+                {room.promotional_price && (
+                  <div className="text-sm text-primary/70 mt-1">
+                    + R$ {Number(room.promotional_price).toFixed(0)} por pessoa adicional
                   </div>
                 )}
               </div>
@@ -891,15 +881,18 @@ const AdminQuartos = () => {
                         {room.beds}
                       </span>
                     </div>
-                    <div className="flex items-baseline gap-2 mb-4">
+                    <div className="flex items-baseline gap-2 mb-1">
                       <span className="text-xl font-display font-bold text-primary">
-                        R$ {Number(room.promotional_price || room.price).toFixed(0)}
+                        R$ {Number(room.price).toFixed(0)}
                       </span>
-                      {room.promotional_price && (
-                        <span className="text-xs text-cream/30 line-through">R$ {Number(room.price).toFixed(0)}</span>
-                      )}
-                      <span className="text-xs text-cream/30">/noite</span>
+                      <span className="text-xs text-cream/30">/noite (1 pessoa)</span>
                     </div>
+                    {room.promotional_price && (
+                      <div className="text-xs text-primary/70 mb-3">
+                        + R$ {Number(room.promotional_price).toFixed(0)} por pessoa adicional
+                      </div>
+                    )}
+                    {!room.promotional_price && <div className="mb-4" />}
                     <div className="flex items-center gap-2 pt-4 border-t border-gold/10">
                       <button
                         onClick={() => openEdit(room)}
