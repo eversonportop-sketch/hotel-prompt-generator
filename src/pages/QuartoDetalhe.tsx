@@ -329,7 +329,9 @@ const QuartoDetalhe = () => {
     mutationFn: async () => {
       if (!user || !room || !checkIn || !checkOut || !categoryAvail?.freeRoomId) throw new Error("Dados incompletos");
       const nights = differenceInDays(checkOut, checkIn);
-      const price = Number(room.promotional_price || room.price);
+      const basePrice = Number(room.price);
+      const extraPerPerson = room.promotional_price ? Number(room.promotional_price) : 0;
+      const price = basePrice + extraPerPerson * Math.max(0, guestsCount - 1);
 
       const { data: profile } = await supabase.from("profiles").select("id").eq("id", user.id).single();
 
@@ -369,7 +371,9 @@ const QuartoDetalhe = () => {
   });
 
   const nights = checkIn && checkOut ? differenceInDays(checkOut, checkIn) : 0;
-  const effectivePrice = room ? Number(room.promotional_price || room.price) : 0;
+  const basePrice = room ? Number(room.price) : 0;
+  const extraPerPerson = room?.promotional_price ? Number(room.promotional_price) : 0;
+  const effectivePrice = basePrice + extraPerPerson * Math.max(0, guestsCount - 1);
   const today = new Date();
 
   if (isLoading)
@@ -450,20 +454,15 @@ const QuartoDetalhe = () => {
 
                 {/* Preço */}
                 <div className="mb-6 pb-6 border-b border-gold/15">
-                  {room.promotional_price ? (
-                    <div className="flex items-baseline gap-2">
-                      <span className="text-4xl font-display font-bold text-primary">
-                        R$ {Number(room.promotional_price).toFixed(0)}
-                      </span>
-                      <span className="text-xl text-cream/50 line-through">R$ {Number(room.price).toFixed(0)}</span>
-                      <span className="text-sm text-cream/50">/noite</span>
-                    </div>
-                  ) : (
-                    <div>
-                      <span className="text-4xl font-display font-bold text-primary">
-                        R$ {Number(room.price).toFixed(0)}
-                      </span>
-                      <span className="text-sm text-cream/50"> /noite</span>
+                  <div className="flex items-baseline gap-2">
+                    <span className="text-4xl font-display font-bold text-primary">
+                      R$ {Number(room.price).toFixed(0)}
+                    </span>
+                    <span className="text-sm text-cream/50">/noite (1 pessoa)</span>
+                  </div>
+                  {room.promotional_price && (
+                    <div className="text-sm text-primary/70 mt-1">
+                      + R$ {Number(room.promotional_price).toFixed(0)} por pessoa adicional
                     </div>
                   )}
                 </div>
