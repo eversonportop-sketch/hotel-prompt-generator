@@ -1,4 +1,4 @@
-import { useState, useMemo } from "react";
+import { useState, useMemo, useEffect } from "react";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import {
@@ -190,8 +190,11 @@ const NewReservationDrawer = ({ open, onClose }: Props) => {
     },
   });
 
+  const checkInStr = checkIn ? format(checkIn, "yyyy-MM-dd") : null;
+  const checkOutStr = checkOut ? format(checkOut, "yyyy-MM-dd") : null;
+
   const { data: rooms = [] } = useQuery({
-    queryKey: ["rooms-active"],
+    queryKey: ["rooms-active", checkInStr, checkOutStr],
     queryFn: async () => {
       const { data, error } = await supabase
         .from("rooms")
@@ -199,9 +202,21 @@ const NewReservationDrawer = ({ open, onClose }: Props) => {
         .eq("status", "active")
         .order("name");
       if (error) throw error;
-      const { data: active } = await supabase.from("reservations").select("room_id").eq("status", "checked_in");
-      const occupied = new Set((active || []).map((r: any) => r.room_id));
-      return (data as Room[]).map((r) => ({ ...r, occupied: occupied.has(r.id) }));
+
+      // Busca reservas que se sobrepõem ao período selecionado
+      // (confirmadas ou em check-in), excluindo canceladas/checkout
+      let conflictingRoomIds = new Set<string>();
+      if (checkInStr && checkOutStr) {
+        const { data: conflicts } = await supabase
+          .from("reservations")
+          .select("room_id")
+          .in("status", ["confirmed", "checked_in"])
+          .lt("check_in", checkOutStr) // reserva começa antes do checkout selecionado
+          .gt("check_out", checkInStr); // reserva termina depois do checkin selecionado
+        conflictingRoomIds = new Set((conflicts || []).map((r: any) => r.room_id));
+      }
+
+      return (data as Room[]).map((r) => ({ ...r, occupied: conflictingRoomIds.has(r.id) }));
     },
   });
 
@@ -231,7 +246,14 @@ const NewReservationDrawer = ({ open, onClose }: Props) => {
   const totalPrice = nights > 0 ? nights * pricePerNight : 0;
   const guestDisplayName = isNewGuest ? guestData.full_name : selectedGuest?.full_name || "";
   const hospedeOk = isNewGuest ? guestData.full_name.trim().length >= 2 : !!selectedGuest;
-  const estadiaOk = !!roomId && !!checkIn && !!checkOut && nights >= 1;
+  const estadiaOk = !!roomId && !!checkIn && !!checkOut && nights >= 1 && !selectedRoom?.occupied;
+
+  // Se o quarto selecionado ficou ocupado após mudança de datas, deseleciona automaticamente
+  useEffect(() => {
+    if (roomId && selectedRoom?.occupied) {
+      setRoomId("");
+    }
+  }, [rooms, roomId, selectedRoom?.occupied]);
 
   const reset = () => {
     setActiveTab("hospede");
