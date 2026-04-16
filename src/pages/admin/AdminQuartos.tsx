@@ -42,7 +42,7 @@ interface Room {
 
 const EMPTY_FORM = {
   name: "",
-
+  category: "",
   beds: "1 cama de casal",
   capacity: 2,
   price: 0,
