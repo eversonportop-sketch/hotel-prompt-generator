@@ -73,11 +73,13 @@ const SidebarContent = ({
   onClose,
   adminName,
   onSignOut,
+  unreadAvaliacoes,
 }: {
   collapsed: boolean;
   onClose?: () => void;
   adminName: string;
   onSignOut: () => void;
+  unreadAvaliacoes: number;
 }) => {
   const location = useLocation();
 
@@ -131,7 +133,14 @@ const SidebarContent = ({
                     }`}
                   >
                     <item.icon className="w-4 h-4 flex-shrink-0" />
-                    {!collapsed && <span className="truncate">{item.label}</span>}
+                    {!collapsed && (
+                      <span className="truncate flex-1">{item.label}</span>
+                    )}
+                    {!collapsed && item.href === "/admin/avaliacoes" && unreadAvaliacoes > 0 && (
+                      <span className="ml-auto bg-primary text-charcoal text-[10px] font-bold min-w-[18px] h-[18px] flex items-center justify-center rounded-full px-1">
+                        {unreadAvaliacoes}
+                      </span>
+                    )}
                   </Link>
                 );
               })}
