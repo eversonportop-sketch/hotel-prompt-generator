@@ -230,8 +230,8 @@ const AdminCheckout = () => {
   const nights = selectedRes
     ? Math.max(1, differenceInDays(new Date(selectedRes.check_out), new Date(selectedRes.check_in)))
     : 0;
-  const roomPrice = (selectedRes?.rooms as any)?.price ?? 0;
-  const roomTotal = (roomPrice * nights || selectedRes?.total_price) ?? 0;
+  const roomTotal = selectedRes?.total_price ?? 0;
+  const roomPrice = nights > 0 ? roomTotal / nights : 0;
   const consumoTotal = orders.reduce((s, o) => s + Number(o.total), 0);
   const grandTotal = roomTotal + consumoTotal;
 
@@ -239,8 +239,8 @@ const AdminCheckout = () => {
   const receiptNights = receiptRes
     ? Math.max(1, differenceInDays(new Date(receiptRes.check_out), new Date(receiptRes.check_in)))
     : 0;
-  const receiptRoomPrice = (receiptRes?.rooms as any)?.price ?? 0;
-  const receiptRoomTotal = (receiptRoomPrice * receiptNights || receiptRes?.total_price) ?? 0;
+  const receiptRoomTotal = receiptRes?.total_price ?? 0;
+  const receiptRoomPrice = receiptNights > 0 ? receiptRoomTotal / receiptNights : 0;
   const receiptConsumoTotal = receiptOrders.reduce((s, o) => s + Number(o.total), 0);
   const receiptGrandTotal = receiptRoomTotal + receiptConsumoTotal;
 
@@ -298,8 +298,7 @@ const AdminCheckout = () => {
     onClick: () => void;
   }) => {
     const n = Math.max(1, differenceInDays(new Date(res.check_out), new Date(res.check_in)));
-    const rp = (res.rooms as any)?.price ?? 0;
-    const diarias = rp * n || res.total_price || 0;
+    const diarias = res.total_price || 0;
     const consumo = (res as any)._consumoTotal || 0;
     const estimado = diarias + consumo;
     return (
@@ -571,8 +570,7 @@ const AdminCheckout = () => {
               <div className="space-y-3">
                 {filteredHistory.map((res, i) => {
                   const n = Math.max(1, differenceInDays(new Date(res.check_out), new Date(res.check_in)));
-                  const rp = (res.rooms as any)?.price ?? 0;
-                  const rt = rp * n || res.total_price;
+                  const rt = res.total_price || 0;
                   return (
                     <motion.div
                       key={res.id}
