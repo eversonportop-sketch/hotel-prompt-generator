@@ -133,6 +133,25 @@ const Quartos = () => {
         </section>
       )}
 
+      {/* Política de preço */}
+      <section className="py-8 bg-charcoal">
+        <div className="container-hotel">
+          <div className="flex items-center gap-4 px-6 py-4 rounded-2xl border border-gold/20 bg-black/30 backdrop-blur-sm">
+            <div className="w-9 h-9 rounded-full bg-primary/10 flex items-center justify-center shrink-0">
+              <Users className="w-4 h-4 text-primary" />
+            </div>
+            <div>
+              <p className="text-xs uppercase tracking-widest text-primary/70 font-body mb-0.5">Política de tarifas</p>
+              <p className="text-sm text-cream/60 font-body leading-relaxed">
+                Todos os quartos possuem <span className="text-cream">tarifa mínima para 1 pessoa</span> — quartos com
+                configuração flexível de camas conforme sua necessidade. Cada hóspede adicional tem um{" "}
+                <span className="text-cream">valor acrescido por pessoa</span>, exibido em cada acomodação.
+              </p>
+            </div>
+          </div>
+        </div>
+      </section>
+
       {/* Grid por categoria */}
       <section className="py-20 bg-charcoal">
         <div className="container-hotel">
