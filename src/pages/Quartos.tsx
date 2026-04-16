@@ -44,7 +44,7 @@ const Quartos = () => {
   const categories = useMemo<CategoryGroup[]>(() => {
     const map = new Map<string, any[]>();
     rooms.forEach((r: any) => {
-      const cat = r.category || "Sem categoria";
+      const cat = r.category || "Geral";
       if (!map.has(cat)) map.set(cat, []);
       map.get(cat)!.push(r);
     });
