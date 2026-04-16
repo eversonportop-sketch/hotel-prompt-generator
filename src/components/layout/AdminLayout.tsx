@@ -180,8 +180,19 @@ const AdminLayout = () => {
   const [mobileOpen, setMobileOpen] = useState(false);
   const [checking, setChecking] = useState(true);
   const [adminName, setAdminName] = useState("");
+  const [unreadAvaliacoes, setUnreadAvaliacoes] = useState(0);
   const { user, loading, signOut } = useAuth();
   const navigate = useNavigate();
+
+  useEffect(() => {
+    supabase
+      .from("avaliacoes" as any)
+      .select("id", { count: "exact", head: true })
+      .eq("lida", false)
+      .then(({ count }) => {
+        setUnreadAvaliacoes(count ?? 0);
+      });
+  }, []);
 
   useEffect(() => {
     if (loading) return;
@@ -232,7 +243,7 @@ const AdminLayout = () => {
           collapsed ? "w-[68px]" : "w-60"
         }`}
       >
-        <SidebarContent collapsed={collapsed} adminName={adminName} onSignOut={handleSignOut} />
+        <SidebarContent collapsed={collapsed} adminName={adminName} onSignOut={handleSignOut} unreadAvaliacoes={unreadAvaliacoes} />
         <button
           onClick={() => setCollapsed(!collapsed)}
           className="flex-shrink-0 border-t border-white/5 p-3 flex items-center justify-end text-white/20 hover:text-cream transition-colors"
