@@ -26,6 +26,7 @@ import {
   LogOut,
   Loader2,
   Home,
+  MessageSquareHeart,
 } from "lucide-react";
 import hotelLogo from "@/assets/hotel-sb-logo.png";
 import { useAuth } from "@/hooks/useAuth";
@@ -49,6 +50,7 @@ const sidebarGroups = [
       { icon: Waves, label: "Piscina", href: "/admin/piscina" },
       { icon: PartyPopper, label: "Salão", href: "/admin/salao" },
       { icon: Package, label: "Estoque", href: "/admin/estoque" },
+      { icon: MessageSquareHeart, label: "Avaliações", href: "/admin/avaliacoes" },
     ],
   },
   {
@@ -71,11 +73,13 @@ const SidebarContent = ({
   onClose,
   adminName,
   onSignOut,
+  unreadAvaliacoes,
 }: {
   collapsed: boolean;
   onClose?: () => void;
   adminName: string;
   onSignOut: () => void;
+  unreadAvaliacoes: number;
 }) => {
   const location = useLocation();
 
@@ -129,7 +133,14 @@ const SidebarContent = ({
                     }`}
                   >
                     <item.icon className="w-4 h-4 flex-shrink-0" />
-                    {!collapsed && <span className="truncate">{item.label}</span>}
+                    {!collapsed && (
+                      <span className="truncate flex-1">{item.label}</span>
+                    )}
+                    {!collapsed && item.href === "/admin/avaliacoes" && unreadAvaliacoes > 0 && (
+                      <span className="ml-auto bg-primary text-charcoal text-[10px] font-bold min-w-[18px] h-[18px] flex items-center justify-center rounded-full px-1">
+                        {unreadAvaliacoes}
+                      </span>
+                    )}
                   </Link>
                 );
               })}
@@ -169,8 +180,19 @@ const AdminLayout = () => {
   const [mobileOpen, setMobileOpen] = useState(false);
   const [checking, setChecking] = useState(true);
   const [adminName, setAdminName] = useState("");
+  const [unreadAvaliacoes, setUnreadAvaliacoes] = useState(0);
   const { user, loading, signOut } = useAuth();
   const navigate = useNavigate();
+
+  useEffect(() => {
+    supabase
+      .from("avaliacoes" as any)
+      .select("id", { count: "exact", head: true })
+      .eq("lida", false)
+      .then(({ count }) => {
+        setUnreadAvaliacoes(count ?? 0);
+      });
+  }, []);
 
   useEffect(() => {
     if (loading) return;
@@ -221,7 +243,7 @@ const AdminLayout = () => {
           collapsed ? "w-[68px]" : "w-60"
         }`}
       >
-        <SidebarContent collapsed={collapsed} adminName={adminName} onSignOut={handleSignOut} />
+        <SidebarContent collapsed={collapsed} adminName={adminName} onSignOut={handleSignOut} unreadAvaliacoes={unreadAvaliacoes} />
         <button
           onClick={() => setCollapsed(!collapsed)}
           className="flex-shrink-0 border-t border-white/5 p-3 flex items-center justify-end text-white/20 hover:text-cream transition-colors"
@@ -258,6 +280,7 @@ const AdminLayout = () => {
                 onClose={() => setMobileOpen(false)}
                 adminName={adminName}
                 onSignOut={handleSignOut}
+                unreadAvaliacoes={unreadAvaliacoes}
               />
             </motion.aside>
           </>

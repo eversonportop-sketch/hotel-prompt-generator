@@ -6,6 +6,7 @@ import DiferenciaisSection from "@/components/home/DiferenciaisSection";
 import HomeSectionsDisplay from "@/components/home/HomeSectionsDisplay";
 import FAQSection from "@/components/home/FAQSection";
 import CTASection from "@/components/home/CTASection";
+import ReviewSection from "@/components/home/ReviewSection";
 import WelcomePopup from "@/components/WelcomePopup";
 
 const Index = () => {
@@ -18,6 +19,7 @@ const Index = () => {
       <HomeSectionsDisplay />
       <FAQSection />
       <CTASection />
+      <ReviewSection />
       <WelcomePopup />
     </Layout>
   );
