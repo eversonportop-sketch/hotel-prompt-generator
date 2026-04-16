@@ -351,7 +351,7 @@ const HeroSection = () => {
           className="flex items-center gap-8 mt-10"
         >
           {[
-            { value: "24", label: "Quartos" },
+            { value: "23", label: "Quartos" },
             { value: "5★", label: "Avaliação" },
             { value: "100%", label: "Premium" },
           ].map((stat, i) => (
