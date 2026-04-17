@@ -98,7 +98,24 @@ const Portal = () => {
     },
   });
 
-  if (authLoading) return null;
+  if (authLoading || (user && !profile))
+    return (
+      <Layout>
+        <div className="min-h-screen bg-charcoal flex items-center justify-center">
+          <div className="flex flex-col items-center gap-6">
+            <div className="relative w-16 h-16">
+              <div className="absolute inset-0 rounded-full border-2 border-gold/10" />
+              <div className="absolute inset-0 rounded-full border-2 border-t-primary border-r-transparent border-b-transparent border-l-transparent animate-spin" />
+              <div className="absolute inset-2 rounded-full border border-gold/20 animate-pulse" />
+            </div>
+            <div className="flex flex-col items-center gap-1">
+              <p className="text-cream/60 font-body text-sm tracking-widest uppercase">Carregando</p>
+              <p className="text-cream/20 font-body text-xs tracking-wider">SB Hotel · Sleep Better</p>
+            </div>
+          </div>
+        </div>
+      </Layout>
+    );
 
   const firstName = profile?.full_name?.split(" ")[0] ?? "Hóspede";
   const roomName = (reservation?.rooms as any)?.name;
