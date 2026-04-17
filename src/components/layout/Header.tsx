@@ -186,6 +186,7 @@ const Header = () => {
             initial={{ opacity: 0, height: 0 }}
             animate={{ opacity: 1, height: "auto" }}
             exit={{ opacity: 0, height: 0 }}
+            transition={{ duration: 0.22, ease: [0.22, 1, 0.36, 1] }}
             className="lg:hidden bg-charcoal border-t border-gold/10 overflow-hidden"
           >
             <nav className="container-hotel py-4 flex flex-col gap-1">
@@ -233,7 +234,10 @@ const Header = () => {
               )}
               {user ? (
                 <button
-                  onClick={() => { setIsOpen(false); handleSignOut(); }}
+                  onClick={() => {
+                    setIsOpen(false);
+                    handleSignOut();
+                  }}
                   className="mt-2"
                 >
                   <Button variant="gold" size="sm" className="w-full gap-2">
