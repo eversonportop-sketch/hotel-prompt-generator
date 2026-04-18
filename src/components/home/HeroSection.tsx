@@ -25,6 +25,21 @@ const HeroSection = () => {
     },
   });
 
+  // Busca vídeo do hero no bucket "hero-video" (pega o mais recente)
+  const { data: heroVideoUrl } = useQuery({
+    queryKey: ["hero-video"],
+    queryFn: async () => {
+      const { data, error } = await supabase.storage
+        .from("hero-video")
+        .list("", { limit: 10, sortBy: { column: "created_at", order: "desc" } });
+      if (error || !data || data.length === 0) return null;
+      const videoFile = data.find((f) => f.name.match(/\.(mp4|webm|mov)$/i));
+      if (!videoFile) return null;
+      const { data: urlData } = supabase.storage.from("hero-video").getPublicUrl(videoFile.name);
+      return urlData.publicUrl;
+    },
+  });
+
   const currentBanner = banners[bannerIdx];
 
   const prevBanner = () => setBannerIdx((i) => (i - 1 + banners.length) % banners.length);
@@ -32,8 +47,22 @@ const HeroSection = () => {
 
   return (
     <section className="relative min-h-screen flex flex-col items-center justify-center overflow-hidden">
-      {/* Fundo: banner do admin ou gradiente padrão */}
-      {currentBanner?.image_url ? (
+      {/* Fundo: vídeo (prioridade) > banner do admin > gradiente padrão */}
+      {heroVideoUrl ? (
+        <>
+          <video
+            key={heroVideoUrl}
+            src={heroVideoUrl}
+            autoPlay
+            loop
+            muted
+            playsInline
+            preload="auto"
+            className="absolute inset-0 w-full h-full object-cover"
+          />
+          <div className="absolute inset-0 bg-black/60" />
+        </>
+      ) : currentBanner?.image_url ? (
         <>
           {/* Desktop */}
           <motion.div
