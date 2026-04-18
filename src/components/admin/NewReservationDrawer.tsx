@@ -72,6 +72,15 @@ function maskCPF(v: string) {
     .replace(/(\d{3})(\d)/, "$1.$2")
     .replace(/(\d{3})(\d{1,2})$/, "$1-$2");
 }
+function maskCNPJ(v: string) {
+  return v
+    .replace(/\D/g, "")
+    .slice(0, 14)
+    .replace(/(\d{2})(\d)/, "$1.$2")
+    .replace(/(\d{3})(\d)/, "$1.$2")
+    .replace(/(\d{3})(\d)/, "$1/$2")
+    .replace(/(\d{4})(\d{1,2})$/, "$1-$2");
+}
 function maskRG(v: string) {
   return v
     .replace(/\D/g, "")
@@ -105,15 +114,20 @@ const Field = ({
   value,
   onChange,
   mask,
+  readOnly,
+  loading,
 }: {
   label: string;
   placeholder: string;
   value: string;
   onChange: (v: string) => void;
-  mask?: "cpf" | "rg" | "phone" | "cep";
+  mask?: "cpf" | "cnpj" | "rg" | "phone" | "cep";
+  readOnly?: boolean;
+  loading?: boolean;
 }) => {
   const applyMask = (raw: string) => {
     if (mask === "cpf") return maskCPF(raw);
+    if (mask === "cnpj") return maskCNPJ(raw);
     if (mask === "rg") return maskRG(raw);
     if (mask === "phone") return maskPhone(raw);
     if (mask === "cep") return maskCEP(raw);
@@ -122,12 +136,18 @@ const Field = ({
   return (
     <div>
       <label className="text-[10px] text-white/30 font-body uppercase tracking-widest block mb-1.5">{label}</label>
-      <input
-        placeholder={placeholder}
-        value={value}
-        onChange={(e) => onChange(applyMask(e.target.value))}
-        className="w-full bg-white/[0.03] border border-white/8 rounded-lg px-3.5 py-2.5 text-cream text-sm font-body focus:outline-none focus:border-primary/40 transition placeholder:text-white/15"
-      />
+      <div className="relative">
+        <input
+          placeholder={placeholder}
+          value={value}
+          readOnly={readOnly}
+          onChange={(e) => onChange(applyMask(e.target.value))}
+          className={`w-full bg-white/[0.03] border border-white/8 rounded-lg px-3.5 py-2.5 text-cream text-sm font-body focus:outline-none focus:border-primary/40 transition placeholder:text-white/15 ${readOnly ? "opacity-60 cursor-default" : ""}`}
+        />
+        {loading && (
+          <Loader2 className="absolute right-3 top-1/2 -translate-y-1/2 w-3.5 h-3.5 text-primary animate-spin" />
+        )}
+      </div>
     </div>
   );
 };
@@ -143,6 +163,8 @@ const NewReservationDrawer = ({ open, onClose }: Props) => {
   const qc = useQueryClient();
   const [activeTab, setActiveTab] = useState<TabId>("hospede");
   const [saving, setSaving] = useState(false);
+  const [cepLoading, setCepLoading] = useState(false);
+
   // Hospede
   const [nameInput, setNameInput] = useState("");
   const [selectedGuest, setSelectedGuest] = useState<Guest | null>(null);
@@ -150,6 +172,7 @@ const NewReservationDrawer = ({ open, onClose }: Props) => {
   const [guestData, setGuestData] = useState({
     full_name: "",
     cpf: "",
+    cnpj: "",
     rg: "",
     phone: "",
     email: "",
@@ -169,6 +192,39 @@ const NewReservationDrawer = ({ open, onClose }: Props) => {
   const [paymentMethod, setPaymentMethod] = useState("dinheiro");
   // Confirmar
   const [doCheckin, setDoCheckin] = useState(false);
+
+  // ─── Busca CEP via ViaCEP ─────────────────────────────────────────────
+  const fetchCEP = async (cep: string) => {
+    const digits = cep.replace(/\D/g, "");
+    if (digits.length !== 8) return;
+    setCepLoading(true);
+    try {
+      const res = await fetch(`https://viacep.com.br/ws/${digits}/json/`);
+      const data = await res.json();
+      if (data.erro) {
+        toast.error("CEP não encontrado.");
+        return;
+      }
+      setGuestData((d) => ({
+        ...d,
+        address: data.logradouro ? `${data.logradouro}${data.bairro ? ", " + data.bairro : ""}` : d.address,
+        city: data.localidade || d.city,
+        state: data.uf || d.state,
+      }));
+    } catch {
+      toast.error("Erro ao buscar CEP.");
+    } finally {
+      setCepLoading(false);
+    }
+  };
+
+  const handleCEPChange = (v: string) => {
+    const masked = maskCEP(v);
+    setGuestData((d) => ({ ...d, zip_code: masked }));
+    if (masked.replace(/\D/g, "").length === 8) {
+      fetchCEP(masked);
+    }
+  };
 
   const { data: guestsList = [] } = useQuery({
     queryKey: ["guests-search-list"],
@@ -203,16 +259,14 @@ const NewReservationDrawer = ({ open, onClose }: Props) => {
         .order("name");
       if (error) throw error;
 
-      // Busca reservas que se sobrepõem ao período selecionado
-      // (confirmadas ou em check-in), excluindo canceladas/checkout
       let conflictingRoomIds = new Set<string>();
       if (checkInStr && checkOutStr) {
         const { data: conflicts } = await supabase
           .from("reservations")
           .select("room_id")
           .in("status", ["confirmed", "checked_in"])
-          .lt("check_in", checkOutStr) // reserva começa antes do checkout selecionado
-          .gt("check_out", checkInStr); // reserva termina depois do checkin selecionado
+          .lt("check_in", checkOutStr)
+          .gt("check_out", checkInStr);
         conflictingRoomIds = new Set((conflicts || []).map((r: any) => r.room_id));
       }
 
@@ -248,7 +302,6 @@ const NewReservationDrawer = ({ open, onClose }: Props) => {
   const hospedeOk = isNewGuest ? guestData.full_name.trim().length >= 2 : !!selectedGuest;
   const estadiaOk = !!roomId && !!checkIn && !!checkOut && nights >= 1 && !selectedRoom?.occupied;
 
-  // Se o quarto selecionado ficou ocupado após mudança de datas, deseleciona automaticamente
   useEffect(() => {
     if (roomId && selectedRoom?.occupied) {
       setRoomId("");
@@ -263,6 +316,7 @@ const NewReservationDrawer = ({ open, onClose }: Props) => {
     setGuestData({
       full_name: "",
       cpf: "",
+      cnpj: "",
       rg: "",
       phone: "",
       email: "",
@@ -547,6 +601,7 @@ const NewReservationDrawer = ({ open, onClose }: Props) => {
                           <X className="w-3 h-3" /> Cancelar
                         </button>
                       </div>
+
                       {/* Dados pessoais */}
                       <div className="bg-white/[0.02] border border-white/8 rounded-xl p-4 space-y-3">
                         <p className="text-[10px] text-white/30 font-body uppercase tracking-widest flex items-center gap-1.5">
@@ -575,12 +630,20 @@ const NewReservationDrawer = ({ open, onClose }: Props) => {
                           />
                         </div>
                         <Field
+                          label="CNPJ (opcional)"
+                          placeholder="00.000.000/0000-00"
+                          value={guestData.cnpj}
+                          onChange={(v) => setGuestData((d) => ({ ...d, cnpj: v }))}
+                          mask="cnpj"
+                        />
+                        <Field
                           label="Nacionalidade"
                           placeholder="Brasileira"
                           value={guestData.nationality}
                           onChange={(v) => setGuestData((d) => ({ ...d, nationality: v }))}
                         />
                       </div>
+
                       {/* Contato */}
                       <div className="bg-white/[0.02] border border-white/8 rounded-xl p-4 space-y-3">
                         <p className="text-[10px] text-white/30 font-body uppercase tracking-widest flex items-center gap-1.5">
@@ -602,11 +665,21 @@ const NewReservationDrawer = ({ open, onClose }: Props) => {
                           />
                         </div>
                       </div>
+
                       {/* Endereço */}
                       <div className="bg-white/[0.02] border border-white/8 rounded-xl p-4 space-y-3">
                         <p className="text-[10px] text-white/30 font-body uppercase tracking-widest flex items-center gap-1.5">
                           <MapPin className="w-3 h-3" /> Endereço
                         </p>
+                        {/* CEP primeiro — dispara o auto-fill */}
+                        <Field
+                          label="CEP"
+                          placeholder="00000-000"
+                          value={guestData.zip_code}
+                          onChange={handleCEPChange}
+                          mask="cep"
+                          loading={cepLoading}
+                        />
                         <Field
                           label="Endereço"
                           placeholder="Rua, número"
@@ -619,21 +692,16 @@ const NewReservationDrawer = ({ open, onClose }: Props) => {
                             placeholder="Cidade"
                             value={guestData.city}
                             onChange={(v) => setGuestData((d) => ({ ...d, city: v }))}
+                            readOnly={cepLoading}
                           />
                           <Field
                             label="Estado"
                             placeholder="RS"
                             value={guestData.state}
                             onChange={(v) => setGuestData((d) => ({ ...d, state: v }))}
+                            readOnly={cepLoading}
                           />
                         </div>
-                        <Field
-                          label="CEP"
-                          placeholder="00000-000"
-                          value={guestData.zip_code}
-                          onChange={(v) => setGuestData((d) => ({ ...d, zip_code: v }))}
-                          mask="cep"
-                        />
                       </div>
                     </div>
                   )}
@@ -643,7 +711,6 @@ const NewReservationDrawer = ({ open, onClose }: Props) => {
               {/* ── ESTADIA ── */}
               {activeTab === "estadia" && (
                 <div className="p-6 space-y-6">
-                  {/* Datas */}
                   <div>
                     <label className="flex items-center gap-1.5 text-[10px] text-white/35 font-body uppercase tracking-[0.15em] mb-3">
                       <CalendarDays className="w-3.5 h-3.5" /> Período da Estadia
@@ -691,7 +758,6 @@ const NewReservationDrawer = ({ open, onClose }: Props) => {
                       </p>
                     )}
                   </div>
-                  {/* Hóspedes */}
                   <div>
                     <label className="flex items-center gap-1.5 text-[10px] text-white/35 font-body uppercase tracking-[0.15em] mb-3">
                       <Users className="w-3.5 h-3.5" /> Número de Hóspedes
@@ -715,7 +781,6 @@ const NewReservationDrawer = ({ open, onClose }: Props) => {
                       )}
                     </div>
                   </div>
-                  {/* Quarto */}
                   <div>
                     <label className="flex items-center gap-1.5 text-[10px] text-white/35 font-body uppercase tracking-[0.15em] mb-3">
                       <BedDouble className="w-3.5 h-3.5" /> Quarto
