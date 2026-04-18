@@ -18,6 +18,7 @@ import {
   ZoomIn,
 } from "lucide-react";
 import { toast } from "sonner";
+import HeroVideoUpload from "@/components/admin/HeroVideoUpload";
 
 const CATEGORIES = [
   { key: "quartos", label: "Quartos", icon: BedDouble },
@@ -234,6 +235,8 @@ const AdminMidia = () => {
       <input ref={fileInputRef} type="file" accept="image/*" multiple className="hidden" onChange={onFileInputChange} />
 
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8 space-y-10">
+        <HeroVideoUpload />
+
         {isLoading ? (
           <div className="flex items-center justify-center py-20">
             <Loader2 className="w-6 h-6 text-primary animate-spin" />
