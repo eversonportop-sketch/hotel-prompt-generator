@@ -25,15 +25,30 @@ const HeroSection = () => {
     },
   });
 
-  // Busca vídeo do hero no bucket "hero-video" (pega o mais recente)
+  // Busca vídeo desktop (arquivos que NÃO começam com "mobile-")
   const { data: heroVideoUrl } = useQuery({
     queryKey: ["hero-video"],
     queryFn: async () => {
       const { data, error } = await supabase.storage
         .from("hero-video")
-        .list("", { limit: 10, sortBy: { column: "created_at", order: "desc" } });
+        .list("", { limit: 20, sortBy: { column: "created_at", order: "desc" } });
       if (error || !data || data.length === 0) return null;
-      const videoFile = data.find((f) => f.name.match(/\.(mp4|webm|mov)$/i));
+      const videoFile = data.find((f) => f.name.match(/\.(mp4|webm|mov)$/i) && !f.name.startsWith("mobile-"));
+      if (!videoFile) return null;
+      const { data: urlData } = supabase.storage.from("hero-video").getPublicUrl(videoFile.name);
+      return urlData.publicUrl;
+    },
+  });
+
+  // Busca vídeo mobile (arquivos que começam com "mobile-")
+  const { data: heroVideoMobileUrl } = useQuery({
+    queryKey: ["hero-video-mobile"],
+    queryFn: async () => {
+      const { data, error } = await supabase.storage
+        .from("hero-video")
+        .list("", { limit: 20, sortBy: { column: "created_at", order: "desc" } });
+      if (error || !data || data.length === 0) return null;
+      const videoFile = data.find((f) => f.name.match(/\.(mp4|webm|mov)$/i) && f.name.startsWith("mobile-"));
       if (!videoFile) return null;
       const { data: urlData } = supabase.storage.from("hero-video").getPublicUrl(videoFile.name);
       return urlData.publicUrl;
@@ -41,6 +56,7 @@ const HeroSection = () => {
   });
 
   const currentBanner = banners[bannerIdx];
+  const hasVideo = !!heroVideoUrl || !!heroVideoMobileUrl;
 
   const prevBanner = () => setBannerIdx((i) => (i - 1 + banners.length) % banners.length);
   const nextBanner = () => setBannerIdx((i) => (i + 1) % banners.length);
@@ -48,18 +64,47 @@ const HeroSection = () => {
   return (
     <section className="relative min-h-screen flex flex-col items-center justify-center overflow-hidden">
       {/* Fundo: vídeo (prioridade) > banner do admin > gradiente padrão */}
-      {heroVideoUrl ? (
+      {hasVideo ? (
         <>
-          <video
-            key={heroVideoUrl}
-            src={heroVideoUrl}
-            autoPlay
-            loop
-            muted
-            playsInline
-            preload="auto"
-            className="absolute inset-0 w-full h-full object-cover"
-          />
+          {/* Vídeo Desktop — oculto em mobile se tiver vídeo mobile */}
+          {heroVideoUrl && (
+            <video
+              key={heroVideoUrl}
+              src={heroVideoUrl}
+              autoPlay
+              loop
+              muted
+              playsInline
+              preload="auto"
+              className={`absolute inset-0 w-full h-full object-cover ${heroVideoMobileUrl ? "hidden md:block" : "block"}`}
+            />
+          )}
+          {/* Vídeo Mobile — só aparece em telas pequenas */}
+          {heroVideoMobileUrl && (
+            <video
+              key={heroVideoMobileUrl}
+              src={heroVideoMobileUrl}
+              autoPlay
+              loop
+              muted
+              playsInline
+              preload="auto"
+              className="absolute inset-0 w-full h-full object-cover md:hidden"
+            />
+          )}
+          {/* Se só tem desktop e não tem mobile, mostra desktop em todos */}
+          {heroVideoUrl && !heroVideoMobileUrl && (
+            <video
+              key={heroVideoUrl + "-fallback"}
+              src={heroVideoUrl}
+              autoPlay
+              loop
+              muted
+              playsInline
+              preload="auto"
+              className="absolute inset-0 w-full h-full object-cover md:hidden"
+            />
+          )}
           <div className="absolute inset-0 bg-black/60" />
         </>
       ) : currentBanner?.image_url ? (
@@ -73,7 +118,7 @@ const HeroSection = () => {
             className="absolute inset-0 bg-cover bg-center hidden md:block"
             style={{ backgroundImage: `url(${currentBanner.image_url})` }}
           />
-          {/* Mobile/Tablet — usa mobile_image_url se existir, senão cai no desktop */}
+          {/* Mobile/Tablet */}
           <motion.div
             key={currentBanner.image_url + "-mobile"}
             initial={{ opacity: 0 }}
@@ -112,7 +157,6 @@ const HeroSection = () => {
         </>
       ) : (
         <>
-          {/* Ken Burns via Framer Motion */}
           <div className="absolute inset-0 overflow-hidden">
             <motion.div
               style={{
@@ -135,9 +179,7 @@ const HeroSection = () => {
               }}
             />
           </div>
-          {/* Overlay escuro */}
           <div className="absolute inset-0 bg-black/55" />
-          {/* Gradiente dourado sutil */}
           <div
             className="absolute inset-0 opacity-25"
             style={{ background: "radial-gradient(ellipse at 20% 50%, rgba(201,168,76,0.2) 0%, transparent 60%)" }}
@@ -156,16 +198,8 @@ const HeroSection = () => {
             top: `${15 + (i % 5) * 15}%`,
             opacity: 0.4 + (i % 3) * 0.2,
           }}
-          animate={{
-            y: [-8, 8, -8],
-            opacity: [0.2, 0.8, 0.2],
-          }}
-          transition={{
-            duration: 3 + (i % 4),
-            repeat: Infinity,
-            delay: i * 0.3,
-            ease: "easeInOut",
-          }}
+          animate={{ y: [-8, 8, -8], opacity: [0.2, 0.8, 0.2] }}
+          transition={{ duration: 3 + (i % 4), repeat: Infinity, delay: i * 0.3, ease: "easeInOut" }}
         />
       ))}
 
@@ -234,7 +268,7 @@ const HeroSection = () => {
           <span className="text-cream">Hotel</span> <span className="text-gradient-gold">SB</span>
         </motion.h1>
 
-        {/* Tagline com separador dourado */}
+        {/* Tagline */}
         <motion.div
           initial={{ opacity: 0, scaleX: 0 }}
           animate={{ opacity: 1, scaleX: 1 }}
@@ -284,7 +318,6 @@ const HeroSection = () => {
           transition={{ duration: 0.8, delay: 1.1 }}
           className="w-full max-w-3xl"
         >
-          {/* Linha decorativa acima */}
           <div className="flex items-center gap-3 mb-4">
             <div className="h-px flex-1 bg-gradient-to-r from-transparent via-gold/30 to-transparent" />
             <p className="text-cream/30 font-body text-xs tracking-[0.2em] uppercase">Verificar Disponibilidade</p>
@@ -300,11 +333,9 @@ const HeroSection = () => {
           >
             <div className="bg-charcoal/95 backdrop-blur rounded-md p-5">
               <div className="grid grid-cols-1 sm:grid-cols-3 gap-4 mb-4">
-                {/* Check-in */}
                 <div>
                   <label className="flex items-center gap-1.5 text-xs text-primary font-body tracking-[0.15em] uppercase mb-2">
-                    <Calendar className="w-3 h-3" />
-                    Check-in
+                    <Calendar className="w-3 h-3" /> Check-in
                   </label>
                   <input
                     type="date"
@@ -313,11 +344,9 @@ const HeroSection = () => {
                     className="w-full bg-charcoal-light border border-gold/15 text-cream rounded px-3 py-2.5 text-sm font-body focus:outline-none focus:border-gold/40 transition-colors"
                   />
                 </div>
-                {/* Check-out */}
                 <div>
                   <label className="flex items-center gap-1.5 text-xs text-primary font-body tracking-[0.15em] uppercase mb-2">
-                    <Calendar className="w-3 h-3" />
-                    Check-out
+                    <Calendar className="w-3 h-3" /> Check-out
                   </label>
                   <input
                     type="date"
@@ -326,11 +355,9 @@ const HeroSection = () => {
                     className="w-full bg-charcoal-light border border-gold/15 text-cream rounded px-3 py-2.5 text-sm font-body focus:outline-none focus:border-gold/40 transition-colors"
                   />
                 </div>
-                {/* Hóspedes */}
                 <div>
                   <label className="flex items-center gap-1.5 text-xs text-primary font-body tracking-[0.15em] uppercase mb-2">
-                    <Users className="w-3 h-3" />
-                    Hóspedes
+                    <Users className="w-3 h-3" /> Hóspedes
                   </label>
                   <div className="flex items-center gap-2 bg-charcoal-light border border-gold/15 rounded px-3 py-2.5">
                     <button
@@ -351,7 +378,6 @@ const HeroSection = () => {
                   </div>
                 </div>
               </div>
-
               <Link
                 to={`/quartos${checkIn ? `?checkin=${checkIn}&checkout=${checkOut}&guests=${guests}` : ""}`}
                 className="block"
