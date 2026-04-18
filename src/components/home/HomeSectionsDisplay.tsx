@@ -44,7 +44,11 @@ function SectionBlock({ section, index }: { section: HomeSection; index: number 
           alt={section.title}
           className="w-full h-full object-cover transition-transform duration-700 hover:scale-105"
         />
-        <div className="absolute inset-0 bg-gradient-to-t from-black/40 to-transparent" />
+        <div className="absolute inset-0 bg-gradient-to-t from-black/50 via-black/10 to-transparent" />
+        <div
+          className="absolute inset-0 opacity-20"
+          style={{ background: "linear-gradient(135deg, rgba(201,168,76,0.08), transparent)" }}
+        />
       </div>
     </motion.div>
   );
