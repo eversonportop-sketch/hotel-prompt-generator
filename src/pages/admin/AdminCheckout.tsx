@@ -861,7 +861,7 @@ const AdminCheckout = () => {
               </div>
 
               {/* Botões */}
-              <div className="flex gap-3 p-5 bg-gray-50 border-t">
+              <div className="flex gap-3 p-5 bg-gray-50 border-t shrink-0">
                 <button
                   onClick={() => setReceiptRes(null)}
                   className="flex-1 border border-gray-200 text-gray-500 rounded-lg py-2.5 text-sm font-body hover:bg-gray-100 transition"
