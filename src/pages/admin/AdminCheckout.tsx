@@ -722,17 +722,17 @@ const AdminCheckout = () => {
             initial={{ opacity: 0 }}
             animate={{ opacity: 1 }}
             exit={{ opacity: 0 }}
-            className="fixed inset-0 z-50 bg-black/80 backdrop-blur-sm flex items-center justify-center px-4"
+            className="fixed inset-0 z-50 bg-black/80 backdrop-blur-sm flex items-start sm:items-center justify-center px-4 py-6 overflow-y-auto"
             onClick={(e) => e.target === e.currentTarget && setReceiptRes(null)}
           >
             <motion.div
               initial={{ scale: 0.95, opacity: 0 }}
               animate={{ scale: 1, opacity: 1 }}
               exit={{ scale: 0.95, opacity: 0 }}
-              className="bg-white rounded-2xl w-full max-w-md shadow-2xl overflow-hidden"
+              className="bg-white rounded-2xl w-full max-w-md shadow-2xl overflow-hidden flex flex-col max-h-[calc(100vh-3rem)] my-auto"
             >
               {/* Conteúdo imprimível */}
-              <div ref={printRef} className="p-8">
+              <div ref={printRef} className="p-8 overflow-y-auto flex-1">
                 <div className="header text-center border-b-2 border-[#C9A84C] pb-5 mb-5">
                   <p style={{ fontSize: 28, fontWeight: "bold", color: "#111", letterSpacing: 3 }}>SB HOTEL</p>
                   <p
