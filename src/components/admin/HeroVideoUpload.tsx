@@ -106,17 +106,28 @@ const HeroVideoUpload = () => {
   const handleDelete = async (name: string, type: "desktop" | "mobile") => {
     if (!confirm(`Remover vídeo ${type === "mobile" ? "mobile" : "desktop"} do hero?`)) return;
 
-    const { error } = await supabase.storage.from("hero-video").remove([name]);
+    const { data, error } = await supabase.storage.from("hero-video").remove([name]);
     if (error) {
       toast.error(`Erro ao remover: ${error.message}`);
       return;
     }
+    if (!data || data.length === 0) {
+      toast.error("Não foi possível remover. Verifique permissões.");
+      return;
+    }
     toast.success("Vídeo removido.");
-    // Força refetch imediato
-    await qc.resetQueries({ queryKey: ["hero-video-admin"] });
-    await qc.resetQueries({ queryKey: ["hero-video-mobile-admin"] });
-    await qc.resetQueries({ queryKey: ["hero-video"] });
-    await qc.resetQueries({ queryKey: ["hero-video-mobile"] });
+
+    // Atualiza cache local imediatamente (UI reage na hora)
+    const adminKey = type === "desktop" ? ["hero-video-admin"] : ["hero-video-mobile-admin"];
+    const publicKey = type === "desktop" ? ["hero-video"] : ["hero-video-mobile"];
+    qc.setQueryData<VideoFile[]>(adminKey, (old) => (old || []).filter((v) => v.name !== name));
+    qc.setQueryData(publicKey, null);
+
+    // Refetch em background para confirmar com o servidor
+    await Promise.all([
+      qc.refetchQueries({ queryKey: adminKey }),
+      qc.refetchQueries({ queryKey: publicKey }),
+    ]);
   };
 
   const activeDesktop = desktopVideos[0];
