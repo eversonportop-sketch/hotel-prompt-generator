@@ -27,6 +27,7 @@ import {
   Loader2,
   Home,
   MessageSquareHeart,
+  BarChart3,
 } from "lucide-react";
 import hotelLogo from "@/assets/hotel-sb-logo.png";
 import { useAuth } from "@/hooks/useAuth";
@@ -51,6 +52,7 @@ const sidebarGroups = [
       { icon: PartyPopper, label: "Salão", href: "/admin/salao" },
       { icon: Package, label: "Estoque", href: "/admin/estoque" },
       { icon: MessageSquareHeart, label: "Avaliações", href: "/admin/avaliacoes" },
+      { icon: BarChart3, label: "Visitantes", href: "/admin/visitantes" },
     ],
   },
   {
