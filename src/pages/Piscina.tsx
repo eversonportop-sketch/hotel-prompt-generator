@@ -1,6 +1,6 @@
 import Layout from "@/components/layout/Layout";
 import { motion } from "framer-motion";
-import { Waves, Clock, Sun, Shield, MessageCircle, ArrowRight } from "lucide-react";
+import { Waves, Clock, Sun, Shield, MessageCircle, ArrowRight, CheckCircle2, Ban, Wrench } from "lucide-react";
 import poolImage from "@/assets/pool.jpg";
 import { useQuery } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
@@ -19,6 +19,21 @@ const useSettings = () =>
     staleTime: 1000 * 60 * 5,
   });
 
+const usePoolConfig = () =>
+  useQuery({
+    queryKey: ["pool-config"],
+    queryFn: async () => {
+      const { data, error } = await (supabase as any)
+        .from("pool_config")
+        .select("open_time, close_time, status, rules")
+        .limit(1)
+        .single();
+      if (error && error.code !== "PGRST116") throw error;
+      return data as { open_time: string; close_time: string; status: string; rules: string[] } | null;
+    },
+    staleTime: 1000 * 60 * 2,
+  });
+
 const usePageBanner = (page: string) =>
   useQuery({
     queryKey: ["page-banner", page],
@@ -35,7 +50,28 @@ const usePageBanner = (page: string) =>
     staleTime: 1000 * 60 * 5,
   });
 
-const RULES = [
+const POOL_STATUS_CONFIG: Record<
+  string,
+  { label: string; bg: string; border: string; text: string; icon: React.ElementType }
+> = {
+  open: {
+    label: "Aberta",
+    bg: "bg-green-500/10",
+    border: "border-green-500/30",
+    text: "text-green-400",
+    icon: CheckCircle2,
+  },
+  closed: { label: "Fechada", bg: "bg-red-500/10", border: "border-red-500/30", text: "text-red-400", icon: Ban },
+  maintenance: {
+    label: "Manutenção",
+    bg: "bg-yellow-500/10",
+    border: "border-yellow-500/30",
+    text: "text-yellow-400",
+    icon: Wrench,
+  },
+};
+
+const DEFAULT_RULES = [
   "Uso obrigatório de trajes de banho",
   "Menores de 12 anos acompanhados de responsável",
   "Não é permitido vidro na área da piscina",
@@ -53,9 +89,23 @@ const AMENITIES = [
 
 const Piscina = () => {
   const { data: s = {} } = useSettings();
+  const { data: poolConfig } = usePoolConfig();
   const { data: bannerUrl } = usePageBanner("piscina");
   const heroImage = bannerUrl || poolImage;
-  const poolHours = s.pool_hours || "07:00 às 22:00";
+
+  // Horário: prioriza pool_config (fonte do admin), fallback para hotel_settings
+  const openTime = poolConfig?.open_time ?? null;
+  const closeTime = poolConfig?.close_time ?? null;
+  const poolHours = openTime && closeTime ? `${openTime} às ${closeTime}` : s.pool_hours || "07:00 às 22:00";
+
+  // Status vindo direto do pool_config
+  const poolStatus = poolConfig?.status ?? "open";
+  const statusCfg = POOL_STATUS_CONFIG[poolStatus] ?? POOL_STATUS_CONFIG.open;
+  const StatusIcon = statusCfg.icon;
+
+  // Regras dinâmicas do BD, fallback para lista padrão
+  const rules = poolConfig?.rules && poolConfig.rules.length > 0 ? poolConfig.rules : DEFAULT_RULES;
+
   const whatsapp = s.whatsapp || s.phone || "";
   const waNum = whatsapp.replace(/\D/g, "");
   const waMsg = encodeURIComponent("Olá! Gostaria de reservar uma espreguiçadeira na piscina do Hotel SB.");
@@ -84,25 +134,34 @@ const Piscina = () => {
       {/* Conteúdo */}
       <section className="py-24 bg-charcoal">
         <div className="container-hotel max-w-5xl">
-          {/* Horário destaque */}
+          {/* Status + Horário */}
           <motion.div
             initial={{ opacity: 0, y: 20 }}
             whileInView={{ opacity: 1, y: 0 }}
             viewport={{ once: true }}
-            className="flex justify-center mb-16"
+            className="flex flex-wrap justify-center gap-4 mb-16"
           >
+            {/* Badge de status */}
             <div
-              className="flex items-center gap-4 rounded-2xl border border-gold/20 px-8 py-5"
+              className={`flex items-center gap-2 px-5 py-3 rounded-full border text-sm font-body font-semibold ${statusCfg.bg} ${statusCfg.border} ${statusCfg.text}`}
+            >
+              <StatusIcon className="w-4 h-4" />
+              Piscina {statusCfg.label}
+            </div>
+
+            {/* Horário */}
+            <div
+              className="flex items-center gap-4 rounded-2xl border border-gold/20 px-8 py-4"
               style={{ background: "linear-gradient(135deg,rgba(201,168,76,0.1),rgba(201,168,76,0.02))" }}
             >
-              <div className="w-11 h-11 rounded-xl bg-primary/20 border border-primary/30 flex items-center justify-center">
+              <div className="w-10 h-10 rounded-xl bg-primary/20 border border-primary/30 flex items-center justify-center">
                 <Clock className="w-5 h-5 text-primary" />
               </div>
               <div>
                 <p className="text-xs text-primary font-body tracking-widest uppercase mb-0.5">
                   Horário de funcionamento
                 </p>
-                <p className="font-display text-2xl font-bold text-cream">{poolHours}</p>
+                <p className="font-display text-xl font-bold text-cream">{poolHours}</p>
               </div>
             </div>
           </motion.div>
@@ -173,7 +232,7 @@ const Piscina = () => {
                   <h3 className="font-display text-xl font-semibold text-cream">Regras de uso</h3>
                 </div>
                 <div className="relative space-y-1">
-                  {RULES.map((rule, i) => (
+                  {rules.map((rule, i) => (
                     <div key={i} className="flex items-start gap-4 py-3.5 border-b border-white/5 last:border-0">
                       <div className="w-6 h-6 rounded-full bg-primary/10 border border-primary/20 flex items-center justify-center shrink-0 mt-0.5">
                         <span className="text-primary text-xs font-bold">{i + 1}</span>
