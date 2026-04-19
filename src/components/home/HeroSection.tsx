@@ -62,7 +62,9 @@ const HeroSection = () => {
   const nextBanner = () => setBannerIdx((i) => (i + 1) % banners.length);
 
   return (
-    <section className="relative min-h-screen flex flex-col items-center justify-center overflow-hidden">
+    <section className="relative min-h-screen flex flex-col items-center justify-center overflow-hidden bg-charcoal">
+      {/* Fundo escuro permanente para evitar flash branco/claro durante carregamento */}
+      <div className="absolute inset-0 bg-charcoal z-0" />
       {/* Fundo: vídeo (prioridade) > banner do admin > gradiente padrão */}
       {hasVideo ? (
         <>
