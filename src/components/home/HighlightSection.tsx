@@ -22,7 +22,7 @@ const highlights = [
     tag: "Eventos",
     title: "Salão de Festas",
     description:
-      "Um espaço elegante e versátil para celebrar momentos que merecem ser lembrados. Estrutura completa, atendimento dedicado e ambiente que eleva qualquer ocasião.",
+      "Um ambiente amplo e acolhedor, ideal para celebrar momentos especiais. Estrutura completa, atendimento personalizado e uma curadoria de detalhes que elevam cada evento a uma experiência única.",
     storageKey: "salao",
     fallback: hallImage,
     link: "/salao",
@@ -32,7 +32,7 @@ const highlights = [
     tag: "Lazer",
     title: "Área de Piscina",
     description:
-      "Relaxe em nossa área de lazer exclusiva. Águas cristalinas, ambiente tranquilo e toda a infraestrutura para momentos de descanso verdadeiro.",
+      "Um refúgio ao relaxamento, em um ambiente pensado para desacelerar e aproveitar o melhor do seu tempo. Cada detalhe foi criado para proporcionar leveza, bem-estar e momentos de descanso. Um ambiente de refúgio e tranquilidade, onde o tempo desacelera e o bem-estar ganha o protagonismo, com uma infraestrutura pensada em cada detalhe para você poder relaxar e renovar suas energias.",
     storageKey: "piscina",
     fallback: poolImage,
     link: "/piscina",
