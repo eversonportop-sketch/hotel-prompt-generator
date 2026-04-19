@@ -263,7 +263,7 @@ const Portal = () => {
                         </div>
                         <div className="min-w-0">
                           <p className="text-sm font-semibold text-cream font-body mb-1">{info.title}</p>
-                          <p className="text-xs text-cream/40 whitespace-pre-line font-body leading-relaxed">
+                          <p className="text-xs text-cream/70 whitespace-pre-line font-body leading-relaxed">
                             {info.content}
                           </p>
                         </div>
