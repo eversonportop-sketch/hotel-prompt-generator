@@ -78,10 +78,7 @@ const AdminInformacoes = () => {
   const { data: items = [], isLoading } = useQuery<HotelInfo[]>({
     queryKey: ["admin-hotel-info"],
     queryFn: async () => {
-      const { data, error } = await supabase
-        .from("hotel_info")
-        .select("*")
-        .order("display_order", { ascending: true });
+      const { data, error } = await supabase.from("hotel_info").select("*").order("display_order", { ascending: true });
       if (error) throw error;
       return data as HotelInfo[];
     },
@@ -135,7 +132,13 @@ const AdminInformacoes = () => {
   };
   const openEdit = (item: HotelInfo) => {
     setEditing(item);
-    setForm({ title: item.title, content: item.content, icon: item.icon, display_order: item.display_order, active: item.active });
+    setForm({
+      title: item.title,
+      content: item.content,
+      icon: item.icon,
+      display_order: item.display_order,
+      active: item.active,
+    });
     setModalOpen(true);
   };
   const closeModal = () => {
@@ -176,25 +179,35 @@ const AdminInformacoes = () => {
             const IconComp = iconComponent(item.icon);
             return (
               <motion.div key={item.id} {...fadeUp(i * 0.04)}>
-                <div className="flex items-start gap-4 p-4 rounded-xl bg-charcoal-light border border-white/5 hover:border-primary/15 transition-all group">
-                  <div className="flex-shrink-0 w-10 h-10 rounded-lg bg-primary/10 flex items-center justify-center">
+                <div className="flex items-start gap-4 p-5 rounded-xl bg-charcoal-light border border-white/5 hover:border-primary/15 transition-all group">
+                  <div className="flex-shrink-0 w-10 h-10 rounded-lg bg-primary/10 flex items-center justify-center mt-0.5">
                     <IconComp className="w-5 h-5 text-primary" />
                   </div>
                   <div className="flex-1 min-w-0">
-                    <p className="text-sm font-semibold text-cream font-body">{item.title}</p>
-                    <p className="text-xs text-white/40 mt-0.5 whitespace-pre-line font-body">{item.content}</p>
-                  </div>
-                  <div className="flex items-center gap-2 flex-shrink-0">
-                    <Switch
-                      checked={item.active ?? true}
-                      onCheckedChange={(v) => toggleMutation.mutate({ id: item.id, active: v })}
-                    />
-                    <button onClick={() => openEdit(item)} className="p-1.5 rounded-lg hover:bg-white/5 text-white/30 hover:text-primary transition-colors">
-                      <Pencil className="w-4 h-4" />
-                    </button>
-                    <button onClick={() => setDeleteConfirm(item.id)} className="p-1.5 rounded-lg hover:bg-red-500/10 text-white/30 hover:text-red-400 transition-colors">
-                      <Trash2 className="w-4 h-4" />
-                    </button>
+                    <div className="flex items-start justify-between gap-2 mb-2">
+                      <p className="text-sm font-semibold text-cream font-body">{item.title}</p>
+                      <div className="flex items-center gap-2 flex-shrink-0">
+                        <Switch
+                          checked={item.active ?? true}
+                          onCheckedChange={(v) => toggleMutation.mutate({ id: item.id, active: v })}
+                        />
+                        <button
+                          onClick={() => openEdit(item)}
+                          className="p-1.5 rounded-lg hover:bg-white/5 text-white/30 hover:text-primary transition-colors"
+                        >
+                          <Pencil className="w-4 h-4" />
+                        </button>
+                        <button
+                          onClick={() => setDeleteConfirm(item.id)}
+                          className="p-1.5 rounded-lg hover:bg-red-500/10 text-white/30 hover:text-red-400 transition-colors"
+                        >
+                          <Trash2 className="w-4 h-4" />
+                        </button>
+                      </div>
+                    </div>
+                    <p className="text-xs text-white/70 whitespace-pre-line font-body leading-relaxed">
+                      {item.content}
+                    </p>
                   </div>
                 </div>
               </motion.div>
@@ -242,13 +255,15 @@ const AdminInformacoes = () => {
 
               {/* conteúdo */}
               <div className="space-y-1">
-                <label className="text-xs text-white/40 font-body">Conteúdo</label>
+                <label className="text-xs text-white/60 font-body">
+                  Conteúdo <span className="text-white/30">(use Enter para quebrar linha)</span>
+                </label>
                 <textarea
                   required
-                  rows={3}
+                  rows={6}
                   value={form.content}
                   onChange={(e) => setForm({ ...form, content: e.target.value })}
-                  className="w-full px-3 py-2 rounded-lg bg-charcoal border border-white/10 text-cream text-sm focus:border-primary/40 outline-none resize-none font-body"
+                  className="w-full px-3 py-2 rounded-lg bg-charcoal border border-white/10 text-cream text-sm focus:border-primary/40 outline-none resize-y font-body leading-relaxed"
                   placeholder="Ex: SBHotel2024"
                 />
               </div>
