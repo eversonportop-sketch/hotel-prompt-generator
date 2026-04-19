@@ -173,16 +173,6 @@ const AdminAvaliacoes = () => {
         </div>
       </div>
 
-      {/* Aviso se URL não configurada */}
-      {googleUrl === GOOGLE_REVIEW_URL && (
-        <div className="mb-6 rounded-xl border border-yellow-500/20 bg-yellow-500/5 p-4">
-          <p className="text-sm text-yellow-400 font-body">
-            ⚠️ Configure o link do Google Meu Negócio clicando em "Config. Google" acima para ativar o botão de
-            aprovação.
-          </p>
-        </div>
-      )}
-
       {isLoading ? (
         <div className="text-center py-20 text-white/30 font-body">Carregando...</div>
       ) : avaliacoes.length === 0 ? (
