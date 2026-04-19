@@ -1,10 +1,14 @@
 import { useState } from "react";
 import { motion, AnimatePresence } from "framer-motion";
-import { Star, Send, CheckCircle2 } from "lucide-react";
+import { Star, Send, CheckCircle2, ExternalLink } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
+
+// ─── Substitua pela URL real do seu Google Meu Negócio ───────────────────────
+const GOOGLE_REVIEW_URL = "https://g.page/r/CY1hLxg7JrA5EBM/review";
+// ─────────────────────────────────────────────────────────────────────────────
 
 const ReviewSection = () => {
   const [nome, setNome] = useState("");
@@ -13,6 +17,7 @@ const ReviewSection = () => {
   const [hoveredStar, setHoveredStar] = useState(0);
   const [mensagem, setMensagem] = useState("");
   const [submitted, setSubmitted] = useState(false);
+  const [submittedNota, setSubmittedNota] = useState(0);
   const [loading, setLoading] = useState(false);
 
   const handleSubmit = async (e: React.FormEvent) => {
@@ -28,7 +33,10 @@ const ReviewSection = () => {
     } as any);
 
     setLoading(false);
-    if (!error) setSubmitted(true);
+    if (!error) {
+      setSubmittedNota(nota);
+      setSubmitted(true);
+    }
   };
 
   return (
@@ -48,9 +56,15 @@ const ReviewSection = () => {
           className="text-center mb-10"
         >
           <div className="flex items-center justify-center gap-3 mb-4">
-            <div className="h-px w-8 md:w-12" style={{ background: "linear-gradient(90deg, transparent, hsl(38 45% 55%))" }} />
+            <div
+              className="h-px w-8 md:w-12"
+              style={{ background: "linear-gradient(90deg, transparent, hsl(38 45% 55%))" }}
+            />
             <p className="font-body text-xs tracking-[0.25em] uppercase text-primary">Feedback</p>
-            <div className="h-px w-8 md:w-12" style={{ background: "linear-gradient(90deg, hsl(38 45% 55%), transparent)" }} />
+            <div
+              className="h-px w-8 md:w-12"
+              style={{ background: "linear-gradient(90deg, hsl(38 45% 55%), transparent)" }}
+            />
           </div>
           <h2 className="font-display text-3xl md:text-4xl font-bold mb-3" style={{ color: "hsl(40 25% 78%)" }}>
             Compartilhe sua <span className="text-gradient-gold">experiência</span>
@@ -67,15 +81,42 @@ const ReviewSection = () => {
               initial={{ opacity: 0, scale: 0.9 }}
               animate={{ opacity: 1, scale: 1 }}
               transition={{ duration: 0.5 }}
-              className="text-center py-12"
+              className="text-center py-12 space-y-5"
             >
-              <CheckCircle2 className="w-14 h-14 text-primary mx-auto mb-4" />
-              <h3 className="font-display text-2xl font-bold mb-2" style={{ color: "hsl(40 25% 78%)" }}>
-                Obrigado pela sua avaliação!
-              </h3>
-              <p className="font-body text-sm" style={{ color: "hsl(40 15% 55%)" }}>
-                Seu feedback nos ajuda a melhorar cada vez mais.
-              </p>
+              <CheckCircle2 className="w-14 h-14 text-primary mx-auto" />
+              <div>
+                <h3 className="font-display text-2xl font-bold mb-2" style={{ color: "hsl(40 25% 78%)" }}>
+                  Obrigado pela sua avaliação!
+                </h3>
+                <p className="font-body text-sm" style={{ color: "hsl(40 15% 55%)" }}>
+                  Seu feedback nos ajuda a melhorar cada vez mais.
+                </p>
+              </div>
+
+              {/* Botão Google — só aparece para notas 4 e 5 */}
+              {submittedNota >= 4 && (
+                <motion.div
+                  initial={{ opacity: 0, y: 10 }}
+                  animate={{ opacity: 1, y: 0 }}
+                  transition={{ delay: 0.4 }}
+                  className="rounded-xl border border-primary/20 bg-primary/5 p-5 space-y-3"
+                >
+                  <p className="font-body text-sm font-semibold" style={{ color: "hsl(40 25% 78%)" }}>
+                    Que tal compartilhar também no Google?
+                  </p>
+                  <p className="font-body text-xs" style={{ color: "hsl(40 15% 50%)" }}>
+                    Avaliações no Google ajudam outros viajantes a nos encontrar. Leva menos de 1 minuto!
+                  </p>
+                  <Button
+                    variant="gold"
+                    className="w-full gap-2"
+                    onClick={() => window.open(GOOGLE_REVIEW_URL, "_blank", "noopener,noreferrer")}
+                  >
+                    <ExternalLink className="w-4 h-4" />
+                    Avaliar no Google Meu Negócio
+                  </Button>
+                </motion.div>
+              )}
             </motion.div>
           ) : (
             <motion.form
@@ -104,9 +145,7 @@ const ReviewSection = () => {
                     >
                       <Star
                         className={`w-8 h-8 transition-colors ${
-                          star <= (hoveredStar || nota)
-                            ? "fill-primary text-primary"
-                            : "text-white/15"
+                          star <= (hoveredStar || nota) ? "fill-primary text-primary" : "text-white/15"
                         }`}
                       />
                     </button>
