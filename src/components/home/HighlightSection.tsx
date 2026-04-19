@@ -71,17 +71,18 @@ function HighlightCard({ item, index }: { item: (typeof highlights)[0]; index: n
         className="group block relative overflow-hidden rounded-2xl bg-charcoal-light border border-white/5 hover:border-gold/25 transition-all duration-500 hover:shadow-[0_8px_40px_rgba(201,168,76,0.1)]"
       >
         {/* Imagem */}
-        <div className="aspect-[4/3] overflow-hidden relative">
+        <div className="aspect-[4/3] overflow-hidden relative bg-charcoal-light">
           <img
             src={image || item.fallback}
             alt={item.title}
-            loading="lazy"
+            loading="eager"
+            decoding="async"
             className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-700"
           />
-          <div className="absolute inset-0 bg-gradient-to-t from-charcoal/80 via-transparent to-transparent" />
+          <div className="absolute inset-0 bg-gradient-to-t from-charcoal/80 via-transparent to-transparent pointer-events-none" />
 
           {/* Tag sobre a imagem */}
-          <span className="absolute top-4 left-4 font-body text-[10px] tracking-[0.25em] uppercase text-primary bg-charcoal/60 backdrop-blur-sm px-3 py-1 rounded-full border border-gold/20">
+          <span className="absolute top-4 left-4 z-10 font-body text-[10px] tracking-[0.25em] uppercase text-primary bg-charcoal/80 backdrop-blur-md px-3 py-1 rounded-full border border-gold/30 shadow-lg">
             {item.tag}
           </span>
         </div>
