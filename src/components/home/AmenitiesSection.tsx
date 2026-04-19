@@ -4,7 +4,7 @@ import { Wifi, Wind, Tv, Coffee, Car, Shield, Clock, Waves } from "lucide-react"
 const amenities = [
   { icon: Wifi, label: "Wi-Fi de Alta Velocidade", desc: "Conexão premium em todo o hotel" },
   { icon: Wind, label: "Ar-Condicionado", desc: "Clima ideal em cada ambiente" },
-  { icon: Tv, label: "TV a Cabo", desc: "Entretenimento completo" },
+  { icon: Tv, label: "TV", desc: "Entretenimento completo" },
   { icon: Coffee, label: "Café da Manhã", desc: "Buffet completo incluso" },
   { icon: Car, label: "Estacionamento", desc: "Privativo e seguro" },
   { icon: Waves, label: "Área de Piscina", desc: "Lazer exclusivo para hóspedes" },
