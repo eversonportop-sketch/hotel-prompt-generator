@@ -1,6 +1,6 @@
-import { useEffect } from "react";
+import { useEffect, useState } from "react";
 import { Link, useNavigate } from "react-router-dom";
-import { motion } from "framer-motion";
+import { motion, AnimatePresence } from "framer-motion";
 import {
   Wifi,
   Tv,
@@ -16,6 +16,7 @@ import {
   Star,
   CalendarDays,
   LogOut,
+  ChevronDown,
 } from "lucide-react";
 import { useQuery } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
@@ -33,11 +34,72 @@ const ICON_MAP: Record<string, React.ElementType> = {
   info: Info,
 };
 
+const LONG_CONTENT_THRESHOLD = 80; // caracteres — acima disso vira accordion
+
 const fadeUp = (delay = 0) => ({
   initial: { opacity: 0, y: 20 },
   animate: { opacity: 1, y: 0 },
   transition: { duration: 0.5, delay, ease: [0.22, 1, 0.36, 1] as [number, number, number, number] },
 });
+
+const InfoCard = ({ info, index }: { info: any; index: number }) => {
+  const [open, setOpen] = useState(false);
+  const IconComp = ICON_MAP[info.icon] || Info;
+  const isLong = info.content?.length > LONG_CONTENT_THRESHOLD;
+
+  return (
+    <motion.div key={info.id} {...fadeUp(0.22 + index * 0.05)}>
+      <div
+        className={`group flex items-start gap-4 p-5 rounded-2xl bg-charcoal-light border border-white/5 hover:border-gold/20 transition-all duration-300 ${isLong ? "cursor-pointer" : ""}`}
+        onClick={() => isLong && setOpen((o) => !o)}
+      >
+        <div className="flex-shrink-0 w-10 h-10 rounded-xl bg-primary/10 border border-primary/15 flex items-center justify-center group-hover:bg-primary/20 transition-colors">
+          <IconComp className="w-5 h-5 text-primary" />
+        </div>
+        <div className="min-w-0 flex-1">
+          <div className="flex items-center justify-between gap-2">
+            <p className="text-sm font-semibold text-cream font-body mb-1">{info.title}</p>
+            {isLong && (
+              <ChevronDown
+                className={`w-4 h-4 text-primary/50 flex-shrink-0 transition-transform duration-300 ${open ? "rotate-180" : ""}`}
+              />
+            )}
+          </div>
+          {!isLong && (
+            <p className="text-xs text-cream/70 whitespace-pre-line font-body leading-relaxed">{info.content}</p>
+          )}
+          <AnimatePresence initial={false}>
+            {isLong && open && (
+              <motion.div
+                key="content"
+                initial={{ opacity: 0, height: 0 }}
+                animate={{ opacity: 1, height: "auto" }}
+                exit={{ opacity: 0, height: 0 }}
+                transition={{ duration: 0.3, ease: [0.22, 1, 0.36, 1] }}
+                className="overflow-hidden"
+              >
+                <p className="text-xs text-cream/70 whitespace-pre-line font-body leading-relaxed pt-1">
+                  {info.content}
+                </p>
+              </motion.div>
+            )}
+            {isLong && !open && (
+              <motion.p
+                key="preview"
+                className="text-xs text-cream/40 font-body"
+                initial={{ opacity: 0 }}
+                animate={{ opacity: 1 }}
+                exit={{ opacity: 0 }}
+              >
+                Toque para ver mais...
+              </motion.p>
+            )}
+          </AnimatePresence>
+        </div>
+      </div>
+    </motion.div>
+  );
+};
 
 const Portal = () => {
   const { user, loading: authLoading, signOut } = useAuth();
@@ -77,7 +139,6 @@ const Portal = () => {
         .maybeSingle();
       if (data) return data;
 
-      // Fallback: qualquer reserva ativa do usuário
       const { data: fallback } = await supabase
         .from("reservations")
         .select("id, room_id, check_in, check_out, rooms(name)")
@@ -143,7 +204,6 @@ const Portal = () => {
             className="absolute top-0 right-0 w-96 h-96 rounded-full blur-3xl opacity-10"
             style={{ background: "radial-gradient(circle,#C9A84C,transparent)" }}
           />
-
           <div className="relative container-hotel pt-28 pb-10">
             <motion.div {...fadeUp(0)} className="flex items-start justify-between flex-wrap gap-4">
               <div>
@@ -253,24 +313,9 @@ const Portal = () => {
                 <div className="h-px flex-1 bg-gradient-to-l from-gold/20 to-transparent" />
               </div>
               <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
-                {infos.map((info: any, i: number) => {
-                  const IconComp = ICON_MAP[info.icon] || Info;
-                  return (
-                    <motion.div key={info.id} {...fadeUp(0.22 + i * 0.05)}>
-                      <div className="group flex items-start gap-4 p-5 rounded-2xl bg-charcoal-light border border-white/5 hover:border-gold/20 transition-all duration-300">
-                        <div className="flex-shrink-0 w-10 h-10 rounded-xl bg-primary/10 border border-primary/15 flex items-center justify-center group-hover:bg-primary/20 transition-colors">
-                          <IconComp className="w-5 h-5 text-primary" />
-                        </div>
-                        <div className="min-w-0">
-                          <p className="text-sm font-semibold text-cream font-body mb-1">{info.title}</p>
-                          <p className="text-xs text-cream/70 whitespace-pre-line font-body leading-relaxed">
-                            {info.content}
-                          </p>
-                        </div>
-                      </div>
-                    </motion.div>
-                  );
-                })}
+                {infos.map((info: any, i: number) => (
+                  <InfoCard key={info.id} info={info} index={i} />
+                ))}
               </div>
             </motion.div>
           )}
