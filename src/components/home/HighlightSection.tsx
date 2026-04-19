@@ -32,7 +32,7 @@ const highlights = [
     tag: "Lazer",
     title: "Área de Piscina",
     description:
-      "Um refúgio ao relaxamento, em um ambiente pensado para desacelerar e aproveitar o melhor do seu tempo. Cada detalhe foi criado para proporcionar leveza, bem-estar e momentos de descanso. Um ambiente de refúgio e tranquilidade, onde o tempo desacelera e o bem-estar ganha o protagonismo, com uma infraestrutura pensada em cada detalhe para você poder relaxar e renovar suas energias.",
+      "Um ambiente de relaxamento e tranquilidade, onde o tempo desacelera e o bem-estar ganha o protagonismo, com uma infraestrutura pensada em cada detalhe para você poder relaxar e renovar suas energias.",
     storageKey: "piscina",
     fallback: poolImage,
     link: "/piscina",
