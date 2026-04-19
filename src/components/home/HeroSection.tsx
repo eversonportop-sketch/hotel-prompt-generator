@@ -107,7 +107,7 @@ const HeroSection = () => {
               className="absolute inset-0 w-full h-full object-cover md:hidden"
             />
           )}
-          <div className="absolute inset-0 bg-black/60" />
+          <div className="absolute inset-0 bg-charcoal/70 z-[1]" />
         </>
       ) : currentBanner?.image_url ? (
         <>
