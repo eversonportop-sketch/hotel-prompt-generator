@@ -1,4 +1,4 @@
-import { useState } from "react";
+import React, { useState } from "react";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import {
@@ -15,6 +15,8 @@ import {
   Clock,
   Ban,
   TrendingUp,
+  Lock,
+  CalendarPlus,
 } from "lucide-react";
 import { format, differenceInDays, addDays, startOfDay, startOfWeek, startOfMonth, startOfYear } from "date-fns";
 import { ptBR } from "date-fns/locale";
@@ -23,6 +25,83 @@ import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover
 import { cn } from "@/lib/utils";
 import { toast } from "sonner";
 import NewReservationDrawer from "@/components/admin/NewReservationDrawer";
+
+// ── PIN de supervisor ────────────────────────────────────────────────────────
+const SUPERVISOR_PIN = "Andre1982ok";
+
+// ── Modal de PIN ──────────────────────────────────────────────────────────────
+const PinModal = ({
+  title,
+  description,
+  onClose,
+  onSuccess,
+}: {
+  title: string;
+  description: string;
+  onClose: () => void;
+  onSuccess: () => void;
+}) => {
+  const [pinValue, setPinValue] = React.useState("");
+  const [pinError, setPinError] = React.useState(false);
+
+  const handleConfirm = () => {
+    if (pinValue === SUPERVISOR_PIN) {
+      onSuccess();
+      onClose();
+    } else {
+      setPinError(true);
+      setPinValue("");
+      setTimeout(() => setPinError(false), 1500);
+    }
+  };
+
+  return (
+    <>
+      <div className="fixed inset-0 z-[60] bg-black/80 backdrop-blur-sm" onClick={onClose} />
+      <div className="fixed inset-0 z-[60] flex items-center justify-center p-4 pointer-events-none">
+        <div
+          className="bg-[#111114] border border-white/10 rounded-2xl p-8 max-w-xs w-full text-center shadow-2xl pointer-events-auto"
+          onClick={(e) => e.stopPropagation()}
+        >
+          <div
+            className={`w-14 h-14 rounded-full flex items-center justify-center mx-auto mb-4 transition-colors ${pinError ? "bg-red-500/20 border border-red-500/40" : "bg-amber-500/10 border border-amber-500/20"}`}
+          >
+            <Lock className={`w-6 h-6 ${pinError ? "text-red-400" : "text-amber-400"}`} />
+          </div>
+          <h3 className="font-display text-lg font-bold text-cream mb-1">{title}</h3>
+          <p className="text-white/40 text-sm font-body mb-6">{description}</p>
+          <input
+            type="password"
+            inputMode="numeric"
+            maxLength={8}
+            autoFocus
+            className={`w-full text-center text-2xl tracking-[0.5em] bg-black/50 border rounded-lg px-4 py-3 text-cream focus:outline-none transition mb-2 ${pinError ? "border-red-500/60" : "border-white/10 focus:border-amber-500/50"}`}
+            value={pinValue}
+            onChange={(e) => setPinValue(e.target.value.replace(/\D/g, ""))}
+            onKeyDown={(e) => e.key === "Enter" && handleConfirm()}
+            placeholder="••••"
+          />
+          {pinError && <p className="text-red-400 text-xs font-body mb-2">PIN incorreto. Tente novamente.</p>}
+          <div className="flex gap-3 mt-4">
+            <button
+              onClick={onClose}
+              className="flex-1 py-2.5 text-sm text-white/40 hover:text-cream font-body border border-white/10 rounded-xl transition-colors"
+            >
+              Cancelar
+            </button>
+            <button
+              onClick={handleConfirm}
+              className="flex-1 py-2.5 text-sm font-semibold rounded-xl text-black transition-all hover:brightness-110"
+              style={{ background: "linear-gradient(135deg,#C9A84C,#E5C97A)" }}
+            >
+              Confirmar
+            </button>
+          </div>
+        </div>
+      </div>
+    </>
+  );
+};
 
 // ─── Tipos ───────────────────────────────────────────────────────────────────
 interface Room {
@@ -90,8 +169,15 @@ const AdminReservas = () => {
   const [search, setSearch] = useState("");
   const [statusFilter, setStatusFilter] = useState("all");
   const [deleteId, setDeleteId] = useState<string | null>(null);
+  const [pinDeleteOpen, setPinDeleteOpen] = useState(false);
+  const pendingDeleteRef = React.useRef<string | null>(null);
   const [drawerOpen, setDrawerOpen] = useState(false);
   const [periodoFat, setPeriodoFat] = useState<"hoje" | "semana" | "mes" | "ano">("hoje");
+
+  // Modal Estender Estadia
+  const [extendRes, setExtendRes] = useState<Reservation | null>(null);
+  const [extendCheckOut, setExtendCheckOut] = useState<Date | undefined>();
+  const [extendSaving, setExtendSaving] = useState(false);
 
   // Modal Editar
   const [editRes, setEditRes] = useState<Reservation | null>(null);
@@ -257,6 +343,32 @@ const AdminReservas = () => {
       toast.error(e.message || "Erro.");
     } finally {
       setEditSaving(false);
+    }
+  };
+
+  const handleExtendSave = async () => {
+    if (!extendRes || !extendCheckOut) return;
+    const newCheckOut = format(extendCheckOut, "yyyy-MM-dd");
+    const n2 = nights(extendRes.check_in, newCheckOut);
+    if (n2 < 1) return toast.error("Nova data deve ser após o check-in.");
+    const currentNights = nights(extendRes.check_in, extendRes.check_out);
+    if (n2 <= currentNights) return toast.error("Nova data deve ser após o checkout atual.");
+    const dailyRate = currentNights > 0 ? Number(extendRes.total_price) / currentNights : Number(extendRes.total_price);
+    const newTotal = parseFloat((dailyRate * n2).toFixed(2));
+    setExtendSaving(true);
+    try {
+      const { error } = await supabase
+        .from("reservations")
+        .update({ check_out: newCheckOut, total_price: newTotal })
+        .eq("id", extendRes.id);
+      if (error) throw error;
+      toast.success(`Estadia estendida até ${format(extendCheckOut, "dd/MM/yyyy")}!`);
+      qc.invalidateQueries({ queryKey: ["reservas-lista"] });
+      setExtendRes(null);
+    } catch (e: any) {
+      toast.error(e.message || "Erro ao estender estadia.");
+    } finally {
+      setExtendSaving(false);
     }
   };
 
@@ -540,13 +652,30 @@ const AdminReservas = () => {
                           <button
                             onClick={() => openEdit(r)}
                             className="p-1.5 rounded-lg text-white/25 hover:text-cream hover:bg-white/8 transition-colors"
+                            title="Editar reserva"
                           >
                             <Pencil className="w-3.5 h-3.5" />
                           </button>
                         )}
+                        {r.status === "checked_in" && (
+                          <button
+                            onClick={() => {
+                              setExtendRes(r);
+                              setExtendCheckOut(new Date(r.check_out + "T12:00:00"));
+                            }}
+                            className="p-1.5 rounded-lg text-white/25 hover:text-blue-400 hover:bg-blue-500/10 transition-colors"
+                            title="Estender estadia"
+                          >
+                            <CalendarPlus className="w-3.5 h-3.5" />
+                          </button>
+                        )}
                         <button
-                          onClick={() => setDeleteId(r.id)}
+                          onClick={() => {
+                            pendingDeleteRef.current = r.id;
+                            setPinDeleteOpen(true);
+                          }}
                           className="p-1.5 rounded-lg text-white/25 hover:text-red-400 hover:bg-red-500/10 transition-colors"
+                          title="Excluir reserva"
                         >
                           <Trash2 className="w-3.5 h-3.5" />
                         </button>
@@ -700,6 +829,106 @@ const AdminReservas = () => {
             </div>
           </div>
         </>
+      )}
+
+      {/* ═══ MODAL ESTENDER ESTADIA ═══ */}
+      {extendRes && (
+        <>
+          <div className="fixed inset-0 z-50 bg-black/70 backdrop-blur-sm" onClick={() => setExtendRes(null)} />
+          <div className="fixed inset-0 z-50 flex items-center justify-center p-4 pointer-events-none">
+            <div
+              className="bg-[#111114] border border-white/10 rounded-2xl w-full max-w-sm shadow-2xl pointer-events-auto p-6 space-y-5"
+              onClick={(e) => e.stopPropagation()}
+            >
+              <div className="flex items-center justify-between">
+                <div className="flex items-center gap-2">
+                  <div className="p-2 rounded-xl bg-blue-500/10 border border-blue-500/20">
+                    <CalendarPlus className="w-4 h-4 text-blue-400" />
+                  </div>
+                  <div>
+                    <h3 className="font-display text-base font-semibold text-cream">Estender Estadia</h3>
+                    <p className="text-white/30 text-xs font-body mt-0.5">{extendRes.guestName}</p>
+                  </div>
+                </div>
+                <button onClick={() => setExtendRes(null)} className="text-white/25 hover:text-cream transition-colors">
+                  <X className="w-5 h-5" />
+                </button>
+              </div>
+
+              <div className="bg-white/[0.03] border border-white/5 rounded-xl px-4 py-3 text-sm font-body">
+                <p className="text-white/40">
+                  Checkout atual: <span className="text-cream">{fmt(extendRes.check_out)}</span>
+                </p>
+                <p className="text-white/40 mt-1">
+                  Quarto: <span className="text-cream">{(extendRes.rooms as any)?.name ?? "—"}</span>
+                </p>
+              </div>
+
+              <div>
+                <label className="text-[10px] text-white/40 font-body uppercase tracking-widest block mb-2">
+                  Nova data de checkout
+                </label>
+                <Popover>
+                  <PopoverTrigger asChild>
+                    <button className="w-full flex items-center gap-2 px-3 py-2.5 bg-[#1a1a1f] border border-white/8 rounded-xl text-sm font-body hover:border-white/20 transition text-cream">
+                      <CalendarDays className="w-4 h-4 text-white/30" />
+                      {extendCheckOut ? format(extendCheckOut, "dd/MM/yyyy") : "Selecionar data"}
+                    </button>
+                  </PopoverTrigger>
+                  <PopoverContent className="w-auto p-0" align="start">
+                    <Calendar
+                      mode="single"
+                      selected={extendCheckOut}
+                      initialFocus
+                      onSelect={(d) => d && setExtendCheckOut(d)}
+                      disabled={(date) => date <= new Date(extendRes.check_out + "T12:00:00")}
+                      className="p-3 pointer-events-auto"
+                    />
+                  </PopoverContent>
+                </Popover>
+                {extendCheckOut && (
+                  <p className="text-xs text-blue-400/70 font-body mt-2">
+                    {nights(extendRes.check_in, format(extendCheckOut, "yyyy-MM-dd"))} noites no total
+                  </p>
+                )}
+              </div>
+
+              <div className="flex gap-3 pt-1">
+                <button
+                  onClick={() => setExtendRes(null)}
+                  className="flex-1 py-2.5 text-sm text-white/40 hover:text-cream font-body border border-white/10 rounded-xl transition-colors"
+                >
+                  Cancelar
+                </button>
+                <button
+                  onClick={handleExtendSave}
+                  disabled={extendSaving || !extendCheckOut}
+                  className="flex-1 py-2.5 text-sm font-semibold rounded-xl text-black transition-all hover:brightness-110 disabled:opacity-50 flex items-center justify-center gap-2"
+                  style={{ background: "linear-gradient(135deg,#C9A84C,#E5C97A)" }}
+                >
+                  {extendSaving ? <Loader2 className="w-4 h-4 animate-spin" /> : <CalendarPlus className="w-4 h-4" />}
+                  {extendSaving ? "Salvando..." : "Confirmar"}
+                </button>
+              </div>
+            </div>
+          </div>
+        </>
+      )}
+
+      {/* ═══ MODAL PIN EXCLUSÃO ═══ */}
+      {pinDeleteOpen && (
+        <PinModal
+          title="Confirmar exclusão"
+          description="Digite o PIN de supervisor para excluir esta reserva."
+          onClose={() => {
+            setPinDeleteOpen(false);
+            pendingDeleteRef.current = null;
+          }}
+          onSuccess={() => {
+            if (pendingDeleteRef.current) setDeleteId(pendingDeleteRef.current);
+            pendingDeleteRef.current = null;
+          }}
+        />
       )}
 
       {/* ═══ MODAL EXCLUIR ═══ */}
