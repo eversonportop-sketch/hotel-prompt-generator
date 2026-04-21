@@ -20,9 +20,14 @@ import {
   Images,
   Upload,
   Loader2,
+  Lock,
+  Unlock,
 } from "lucide-react";
 import { toast } from "sonner";
 import hotelLogo from "@/assets/hotel-sb-logo.png";
+
+// ── PIN de supervisor (altere aqui para mudar a senha) ────────────────────────
+const SUPERVISOR_PIN = "Andre1982ok";
 
 interface Room {
   id: string;
@@ -66,7 +71,7 @@ async function uploadRoomImage(file: File): Promise<string> {
   return data.publicUrl;
 }
 
-// ── Componentes externos (fora do AdminQuartos) ────────────────────────────────
+// ─────────────────────────────────────────────────────────────────────────────
 
 const GalleryViewer = ({ images, name }: { images: string[]; name: string }) => {
   const [idx, setIdx] = useState(0);
@@ -124,6 +129,89 @@ const AdminHeader = () => (
   </header>
 );
 
+// ── Modal de PIN ───────────────────────────────────────────────────────────────
+const PinModal = ({
+  title,
+  description,
+  onClose,
+  onSuccess,
+}: {
+  title: string;
+  description: string;
+  onClose: () => void;
+  onSuccess: () => void;
+}) => {
+  const [pin, setPin] = useState("");
+  const [error, setError] = useState(false);
+
+  const handleConfirm = () => {
+    if (pin === SUPERVISOR_PIN) {
+      onSuccess();
+      onClose();
+    } else {
+      setError(true);
+      setPin("");
+      setTimeout(() => setError(false), 1500);
+    }
+  };
+
+  return (
+    <motion.div
+      initial={{ opacity: 0 }}
+      animate={{ opacity: 1 }}
+      exit={{ opacity: 0 }}
+      className="fixed inset-0 z-[70] bg-black/80 backdrop-blur-sm flex items-center justify-center px-4"
+      onClick={(e) => e.target === e.currentTarget && onClose()}
+    >
+      <motion.div
+        initial={{ scale: 0.92, opacity: 0 }}
+        animate={{ scale: 1, opacity: 1 }}
+        exit={{ scale: 0.92, opacity: 0 }}
+        className="bg-charcoal border border-gold/20 rounded-2xl p-8 max-w-xs w-full text-center shadow-2xl"
+      >
+        <div
+          className={`w-14 h-14 rounded-full flex items-center justify-center mx-auto mb-4 transition-colors ${
+            error ? "bg-red-500/20 border border-red-500/40" : "bg-primary/10 border border-primary/20"
+          }`}
+        >
+          <Lock className={`w-6 h-6 ${error ? "text-red-400" : "text-primary"}`} />
+        </div>
+        <h3 className="font-display text-lg font-bold text-cream mb-1">{title}</h3>
+        <p className="text-cream/40 text-sm font-body mb-6">{description}</p>
+        <input
+          type="password"
+          inputMode="numeric"
+          maxLength={8}
+          autoFocus
+          className={`w-full text-center text-2xl tracking-[0.5em] bg-black/50 border rounded-lg px-4 py-3 text-cream focus:outline-none transition mb-2 ${
+            error ? "border-red-500/60" : "border-gold/20 focus:border-primary"
+          }`}
+          value={pin}
+          onChange={(e) => setPin(e.target.value.replace(/\D/g, ""))}
+          onKeyDown={(e) => e.key === "Enter" && handleConfirm()}
+          placeholder="••••"
+        />
+        {error && <p className="text-red-400 text-xs font-body mb-2">PIN incorreto. Tente novamente.</p>}
+        <div className="flex gap-3 mt-4">
+          <button
+            onClick={onClose}
+            className="flex-1 border border-gold/20 text-cream/60 hover:text-cream rounded-lg py-2.5 text-sm font-body transition"
+          >
+            Cancelar
+          </button>
+          <button
+            onClick={handleConfirm}
+            className="flex-1 bg-gradient-to-r from-[#C9A84C] to-[#E5C97A] text-black font-semibold text-sm rounded-lg py-2.5 transition hover:scale-[1.02]"
+          >
+            Confirmar
+          </button>
+        </div>
+      </motion.div>
+    </motion.div>
+  );
+};
+
+// ── Modal editar/criar quarto ──────────────────────────────────────────────────
 interface RoomModalProps {
   editingRoom: Room | null;
   form: typeof EMPTY_FORM;
@@ -136,6 +224,8 @@ interface RoomModalProps {
   onAddGalleryImage: () => void;
   onRemoveGalleryImage: (url: string) => void;
   isPending: boolean;
+  priceUnlocked: boolean;
+  onRequestUnlock: () => void;
 }
 
 const RoomModal = ({
@@ -150,6 +240,8 @@ const RoomModal = ({
   onAddGalleryImage,
   onRemoveGalleryImage,
   isPending,
+  priceUnlocked,
+  onRequestUnlock,
 }: RoomModalProps) => (
   <motion.div
     initial={{ opacity: 0 }}
@@ -229,37 +321,100 @@ const RoomModal = ({
               onChange={(e) => setForm((f) => ({ ...f, display_order: Number(e.target.value) }))}
             />
           </div>
+
+          {/* Tarifa mínima — protegida por PIN */}
           <div>
-            <label className="block text-xs uppercase tracking-widest text-primary/70 mb-1.5">
-              Tarifa mínima — 1 pessoa (R$) *
-            </label>
-            <input
-              type="number"
-              min={0}
-              step="0.01"
-              className="w-full bg-black/50 border border-gold/20 rounded-lg px-4 py-3 text-cream text-sm focus:border-primary focus:outline-none transition"
-              value={form.price === 0 ? "" : form.price}
-              placeholder="0,00"
-              onFocus={(e) => e.target.select()}
-              onChange={(e) => setForm((f) => ({ ...f, price: e.target.value === "" ? 0 : Number(e.target.value) }))}
-              required
-            />
+            <div className="flex items-center justify-between mb-1.5">
+              <label className="text-xs uppercase tracking-widest text-primary/70">
+                Tarifa mínima — 1 pessoa (R$) *
+              </label>
+              {priceUnlocked ? (
+                <span className="flex items-center gap-1 text-[10px] text-green-400 font-body">
+                  <Unlock className="w-3 h-3" /> Desbloqueado
+                </span>
+              ) : (
+                <button
+                  type="button"
+                  onClick={onRequestUnlock}
+                  className="flex items-center gap-1 text-[10px] text-primary/60 hover:text-primary font-body transition"
+                >
+                  <Lock className="w-3 h-3" /> Desbloquear
+                </button>
+              )}
+            </div>
+            <div className="relative">
+              <input
+                type="number"
+                min={0}
+                step="0.01"
+                readOnly={!priceUnlocked}
+                className={`w-full bg-black/50 border rounded-lg px-4 py-3 pr-10 text-cream text-sm focus:outline-none transition ${
+                  priceUnlocked
+                    ? "border-green-500/40 focus:border-green-400"
+                    : "border-gold/20 opacity-60 cursor-not-allowed"
+                }`}
+                value={form.price === 0 ? "" : form.price}
+                placeholder="0,00"
+                onFocus={(e) => {
+                  if (priceUnlocked) e.target.select();
+                  else onRequestUnlock();
+                }}
+                onClick={() => {
+                  if (!priceUnlocked) onRequestUnlock();
+                }}
+                onChange={(e) =>
+                  priceUnlocked && setForm((f) => ({ ...f, price: e.target.value === "" ? 0 : Number(e.target.value) }))
+                }
+                required
+              />
+              <span className="absolute right-3 top-1/2 -translate-y-1/2 pointer-events-none">
+                {priceUnlocked ? (
+                  <Unlock className="w-4 h-4 text-green-400" />
+                ) : (
+                  <Lock className="w-4 h-4 text-primary/30" />
+                )}
+              </span>
+            </div>
           </div>
+
+          {/* Adicional por pessoa — protegida por PIN */}
           <div>
-            <label className="block text-xs uppercase tracking-widest text-primary/70 mb-1.5">
-              Adicional por pessoa (R$)
-            </label>
-            <input
-              type="number"
-              min={0}
-              step="0.01"
-              className="w-full bg-black/50 border border-gold/20 rounded-lg px-4 py-3 text-cream text-sm focus:border-primary focus:outline-none transition"
-              value={form.promotional_price}
-              onFocus={(e) => e.target.select()}
-              onChange={(e) => setForm((f) => ({ ...f, promotional_price: e.target.value }))}
-              placeholder="Vazio = sem adicional"
-            />
+            <div className="flex items-center justify-between mb-1.5">
+              <label className="text-xs uppercase tracking-widest text-primary/70">Adicional por pessoa (R$)</label>
+              {!priceUnlocked && <Lock className="w-3 h-3 text-primary/30" />}
+            </div>
+            <div className="relative">
+              <input
+                type="number"
+                min={0}
+                step="0.01"
+                readOnly={!priceUnlocked}
+                className={`w-full bg-black/50 border rounded-lg px-4 py-3 pr-10 text-cream text-sm focus:outline-none transition ${
+                  priceUnlocked
+                    ? "border-green-500/40 focus:border-green-400"
+                    : "border-gold/20 opacity-60 cursor-not-allowed"
+                }`}
+                value={form.promotional_price}
+                onFocus={(e) => {
+                  if (priceUnlocked) e.target.select();
+                  else onRequestUnlock();
+                }}
+                onClick={() => {
+                  if (!priceUnlocked) onRequestUnlock();
+                }}
+                onChange={(e) => priceUnlocked && setForm((f) => ({ ...f, promotional_price: e.target.value }))}
+                placeholder="Vazio = sem adicional"
+              />
+              <span className="absolute right-3 top-1/2 -translate-y-1/2 pointer-events-none">
+                {priceUnlocked ? (
+                  <Unlock className="w-4 h-4 text-green-400" />
+                ) : (
+                  <Lock className="w-4 h-4 text-primary/30" />
+                )}
+              </span>
+            </div>
           </div>
+
           <div className="sm:col-span-2">
             <label className="block text-xs uppercase tracking-widest text-primary/70 mb-1.5">Galeria de fotos</label>
             <div
@@ -451,6 +606,11 @@ const AdminQuartos = () => {
   const [filePreviewUrl, setFilePreviewUrl] = useState<string | null>(null);
   const fileInputRef = useRef<HTMLInputElement>(null);
 
+  // ── Estado de PIN ──
+  const [priceUnlocked, setPriceUnlocked] = useState(false);
+  const [pinModal, setPinModal] = useState<"price" | "delete" | null>(null);
+  const pendingDeleteId = useRef<string | null>(null);
+
   const { data: rooms = [], isLoading } = useQuery({
     queryKey: ["admin-rooms"],
     queryFn: async () => {
@@ -537,8 +697,10 @@ const AdminQuartos = () => {
     setEditingRoom(null);
     setForm(EMPTY_FORM);
     setFilePreviewUrl(null);
+    setPriceUnlocked(false);
     setModalOpen(true);
   };
+
   const openEdit = (room: Room) => {
     setEditingRoom(room);
     const gallery = room.gallery?.length ? room.gallery : room.image_url ? [room.image_url] : [];
@@ -557,13 +719,22 @@ const AdminQuartos = () => {
       display_order: room.display_order,
     });
     setFilePreviewUrl(null);
+    setPriceUnlocked(false); // sempre bloqueia ao abrir
     setModalOpen(true);
   };
+
   const closeModal = () => {
     setModalOpen(false);
     setEditingRoom(null);
     setForm(EMPTY_FORM);
     setFilePreviewUrl(null);
+    setPriceUnlocked(false);
+  };
+
+  // Solicita PIN antes de mostrar o confirm de exclusão
+  const requestDelete = (id: string) => {
+    pendingDeleteId.current = id;
+    setPinModal("delete");
   };
 
   const addGalleryImage = () => {
@@ -615,6 +786,53 @@ const AdminQuartos = () => {
     }
   };
 
+  const roomModalProps = {
+    editingRoom,
+    form,
+    setForm,
+    uploadingFile,
+    filePreviewUrl,
+    fileInputRef,
+    onClose: closeModal,
+    onSubmit: () => saveMutation.mutate(),
+    onAddGalleryImage: addGalleryImage,
+    onRemoveGalleryImage: removeGalleryImage,
+    isPending: saveMutation.isPending,
+    priceUnlocked,
+    onRequestUnlock: () => setPinModal("price"),
+  };
+
+  // Modais de PIN compartilhados entre as duas views
+  const PinModals = () => (
+    <AnimatePresence>
+      {pinModal === "price" && (
+        <PinModal
+          key="pin-price"
+          title="Editar tarifas"
+          description="Digite o PIN de supervisor para desbloquear os campos de preço."
+          onClose={() => setPinModal(null)}
+          onSuccess={() => setPriceUnlocked(true)}
+        />
+      )}
+      {pinModal === "delete" && (
+        <PinModal
+          key="pin-delete"
+          title="Confirmar exclusão"
+          description="Digite o PIN de supervisor para excluir este quarto."
+          onClose={() => {
+            setPinModal(null);
+            pendingDeleteId.current = null;
+          }}
+          onSuccess={() => {
+            if (pendingDeleteId.current) setDeleteConfirm(pendingDeleteId.current);
+            pendingDeleteId.current = null;
+          }}
+        />
+      )}
+    </AnimatePresence>
+  );
+
+  // ── View detalhe ───────────────────────────────────────────────────────────
   if (view === "detail" && selectedRoom) {
     const room = rooms.find((r) => r.id === selectedRoom.id) ?? selectedRoom;
     const images = room.gallery?.length ? room.gallery : room.image_url ? [room.image_url] : [];
@@ -724,7 +942,7 @@ const AdminQuartos = () => {
                   )}
                 </button>
                 <button
-                  onClick={() => setDeleteConfirm(room.id)}
+                  onClick={() => requestDelete(room.id)}
                   className="flex items-center justify-center border border-gold/20 text-cream/40 hover:text-red-400 hover:border-red-400/40 rounded-lg px-3 py-2.5 transition-all"
                 >
                   <Trash2 className="w-4 h-4" />
@@ -734,23 +952,7 @@ const AdminQuartos = () => {
           </div>
         </div>
         <input ref={fileInputRef} type="file" accept="image/*" className="hidden" onChange={handleFileUpload} />
-        <AnimatePresence>
-          {modalOpen && (
-            <RoomModal
-              editingRoom={editingRoom}
-              form={form}
-              setForm={setForm}
-              uploadingFile={uploadingFile}
-              filePreviewUrl={filePreviewUrl}
-              fileInputRef={fileInputRef}
-              onClose={closeModal}
-              onSubmit={() => saveMutation.mutate()}
-              onAddGalleryImage={addGalleryImage}
-              onRemoveGalleryImage={removeGalleryImage}
-              isPending={saveMutation.isPending}
-            />
-          )}
-        </AnimatePresence>
+        <AnimatePresence>{modalOpen && <RoomModal {...roomModalProps} />}</AnimatePresence>
         <AnimatePresence>
           {deleteConfirm && (
             <DeleteConfirm
@@ -760,10 +962,12 @@ const AdminQuartos = () => {
             />
           )}
         </AnimatePresence>
+        <PinModals />
       </div>
     );
   }
 
+  // ── View lista ─────────────────────────────────────────────────────────────
   return (
     <div className="min-h-screen bg-charcoal">
       <AdminHeader />
@@ -915,7 +1119,7 @@ const AdminQuartos = () => {
                         )}
                       </button>
                       <button
-                        onClick={() => setDeleteConfirm(room.id)}
+                        onClick={() => requestDelete(room.id)}
                         className="flex items-center justify-center text-xs text-cream/40 hover:text-red-400 border border-gold/15 hover:border-red-400/40 rounded-lg p-2 transition-all"
                       >
                         <Trash2 className="w-3.5 h-3.5" />
@@ -929,23 +1133,7 @@ const AdminQuartos = () => {
         )}
       </div>
       <input ref={fileInputRef} type="file" accept="image/*" className="hidden" onChange={handleFileUpload} />
-      <AnimatePresence>
-        {modalOpen && (
-          <RoomModal
-            editingRoom={editingRoom}
-            form={form}
-            setForm={setForm}
-            uploadingFile={uploadingFile}
-            filePreviewUrl={filePreviewUrl}
-            fileInputRef={fileInputRef}
-            onClose={closeModal}
-            onSubmit={() => saveMutation.mutate()}
-            onAddGalleryImage={addGalleryImage}
-            onRemoveGalleryImage={removeGalleryImage}
-            isPending={saveMutation.isPending}
-          />
-        )}
-      </AnimatePresence>
+      <AnimatePresence>{modalOpen && <RoomModal {...roomModalProps} />}</AnimatePresence>
       <AnimatePresence>
         {deleteConfirm && (
           <DeleteConfirm
@@ -955,6 +1143,7 @@ const AdminQuartos = () => {
           />
         )}
       </AnimatePresence>
+      <PinModals />
     </div>
   );
 };
