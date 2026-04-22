@@ -7,6 +7,7 @@ import { AuthProvider } from "@/hooks/useAuth";
 import { LangProvider } from "@/contexts/LangContext";
 import AdminLayout from "@/components/layout/AdminLayout";
 import { useEffect } from "react";
+import { supabase } from "@/integrations/supabase/client";
 
 import Index from "./pages/Index";
 import Quartos from "./pages/Quartos";
@@ -50,6 +51,16 @@ const ScrollToTop = () => {
   const { pathname } = useLocation();
   useEffect(() => {
     window.scrollTo(0, 0);
+    // Registra visita (ignora rotas administrativas)
+    if (!pathname.startsWith("/admin")) {
+      supabase
+        .from("page_views" as any)
+        .insert({
+          page: pathname,
+          user_agent: navigator.userAgent,
+        })
+        .then(() => {});
+    }
   }, [pathname]);
   return null;
 };
