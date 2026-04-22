@@ -214,6 +214,7 @@ const QuartoDetalhe = () => {
   const [checkIn, setCheckIn] = useState<Date>();
   const [checkOut, setCheckOut] = useState<Date>();
   const [guestsCount, setGuestsCount] = useState(1);
+  const [guestsInput, setGuestsInput] = useState("1");
   const [available, setAvailable] = useState<boolean | null>(null);
   const [categoryAvail, setCategoryAvail] = useState<{ free: number; total: number; freeRoomId: string | null } | null>(
     null,
@@ -233,7 +234,10 @@ const QuartoDetalhe = () => {
           const intent = JSON.parse(raw);
           if (intent.checkIn) setCheckIn(new Date(intent.checkIn + "T12:00:00"));
           if (intent.checkOut) setCheckOut(new Date(intent.checkOut + "T12:00:00"));
-          if (intent.guestsCount) setGuestsCount(intent.guestsCount);
+          if (intent.guestsCount) {
+            setGuestsCount(intent.guestsCount);
+            setGuestsInput(String(intent.guestsCount));
+          }
           // NÃO remove do sessionStorage aqui — o fluxo de login ainda precisa dele
         } catch {
           /* ignora */
@@ -251,7 +255,10 @@ const QuartoDetalhe = () => {
           const intent = JSON.parse(raw);
           if (intent.checkIn) setCheckIn(new Date(intent.checkIn + "T12:00:00"));
           if (intent.checkOut) setCheckOut(new Date(intent.checkOut + "T12:00:00"));
-          if (intent.guestsCount) setGuestsCount(intent.guestsCount);
+          if (intent.guestsCount) {
+            setGuestsCount(intent.guestsCount);
+            setGuestsInput(String(intent.guestsCount));
+          }
           sessionStorage.removeItem("reserva_intent");
           setPendingAvailCheck(true);
           setAutoReserve(true); // Cliente já clicou "Reservar" → criar automaticamente
@@ -358,6 +365,7 @@ const QuartoDetalhe = () => {
       setAvailable(null);
       setCategoryAvail(null);
       setGuestsCount(1);
+      setGuestsInput("1");
       setAutoReserve(false);
     },
     onError: (err: any) => {
@@ -543,10 +551,20 @@ const QuartoDetalhe = () => {
                       type="number"
                       min={1}
                       max={room.capacity}
-                      value={guestsCount}
-                      onChange={(e) =>
-                        setGuestsCount(Math.max(1, Math.min(room.capacity, parseInt(e.target.value) || 1)))
-                      }
+                      value={guestsInput}
+                      onChange={(e) => {
+                        setGuestsInput(e.target.value);
+                        const parsed = parseInt(e.target.value);
+                        if (!isNaN(parsed)) {
+                          setGuestsCount(Math.max(1, Math.min(room.capacity, parsed)));
+                        }
+                      }}
+                      onBlur={() => {
+                        const parsed = parseInt(guestsInput);
+                        const clamped = isNaN(parsed) ? 1 : Math.max(1, Math.min(room.capacity, parsed));
+                        setGuestsCount(clamped);
+                        setGuestsInput(String(clamped));
+                      }}
                       className="w-full bg-charcoal border border-gold/20 rounded-lg px-3 py-2 text-cream text-sm font-body focus:outline-none focus:border-primary/50 transition"
                     />
                   </div>
