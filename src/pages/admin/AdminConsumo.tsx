@@ -67,6 +67,91 @@ const ORDER_STATUS: Record<string, { label: string; color: string }> = {
 const EMPTY_ITEM = { name: "", category: "Bebidas", price: 0, available: true, description: "", display_order: 0 };
 const EMPTY_ORDER = { room_number: "", item_id: "", quantity: 1, notes: "", reservation_id: "" };
 
+// ── PIN de supervisor ──────────────────────────────────────────────────────────
+const SUPERVISOR_PIN = "Andre1982ok";
+
+// ── Modal de PIN ───────────────────────────────────────────────────────────────
+const PinModal = ({
+  title,
+  description,
+  onClose,
+  onSuccess,
+}: {
+  title: string;
+  description: string;
+  onClose: () => void;
+  onSuccess: () => void;
+}) => {
+  const [pinValue, setPinValue] = useState("");
+  const [pinError, setPinError] = useState(false);
+
+  const handleConfirm = () => {
+    if (pinValue === SUPERVISOR_PIN) {
+      onSuccess();
+      onClose();
+    } else {
+      setPinError(true);
+      setPinValue("");
+      setTimeout(() => setPinError(false), 1500);
+    }
+  };
+
+  return (
+    <motion.div
+      initial={{ opacity: 0 }}
+      animate={{ opacity: 1 }}
+      exit={{ opacity: 0 }}
+      className="fixed inset-0 z-[60] bg-black/80 backdrop-blur-sm flex items-center justify-center px-4"
+      onClick={(e) => e.target === e.currentTarget && onClose()}
+    >
+      <motion.div
+        initial={{ scale: 0.92, opacity: 0 }}
+        animate={{ scale: 1, opacity: 1 }}
+        exit={{ scale: 0.92, opacity: 0 }}
+        className="bg-charcoal border border-gold/20 rounded-2xl p-8 max-w-xs w-full text-center shadow-2xl"
+        onClick={(e) => e.stopPropagation()}
+      >
+        <div
+          className={`w-14 h-14 rounded-full flex items-center justify-center mx-auto mb-4 transition-colors ${
+            pinError ? "bg-red-500/20 border border-red-500/40" : "bg-primary/10 border border-primary/20"
+          }`}
+        >
+          <span className={`text-2xl ${pinError ? "text-red-400" : "text-primary"}`}>🔒</span>
+        </div>
+        <h3 className="font-display text-lg font-bold text-cream mb-1">{title}</h3>
+        <p className="text-cream/40 text-sm font-body mb-6">{description}</p>
+        <input
+          type="password"
+          maxLength={20}
+          autoFocus
+          className={`w-full text-center text-xl tracking-widest bg-black/50 border rounded-lg px-4 py-3 text-cream focus:outline-none transition mb-2 ${
+            pinError ? "border-red-500/60" : "border-gold/20 focus:border-primary"
+          }`}
+          value={pinValue}
+          onChange={(e) => setPinValue(e.target.value)}
+          onKeyDown={(e) => e.key === "Enter" && handleConfirm()}
+          placeholder="••••••••"
+        />
+        {pinError && <p className="text-red-400 text-xs font-body mb-2">Senha incorreta. Tente novamente.</p>}
+        <div className="flex gap-3 mt-4">
+          <button
+            onClick={onClose}
+            className="flex-1 border border-gold/20 text-cream/60 hover:text-cream rounded-lg py-2.5 text-sm font-body transition"
+          >
+            Cancelar
+          </button>
+          <button
+            onClick={handleConfirm}
+            className="flex-1 bg-gradient-to-r from-[#C9A84C] to-[#E5C97A] text-black font-semibold text-sm rounded-lg py-2.5 transition hover:scale-[1.02]"
+          >
+            Confirmar
+          </button>
+        </div>
+      </motion.div>
+    </motion.div>
+  );
+};
+
 const AdminConsumo = () => {
   const qc = useQueryClient();
   const [tab, setTab] = useState<"orders" | "items">("orders");
@@ -85,6 +170,12 @@ const AdminConsumo = () => {
   const [orderStatusFilter, setOrderStatusFilter] = useState("all");
   const [orderSearch, setOrderSearch] = useState("");
   const [deleteOrderConfirm, setDeleteOrderConfirm] = useState<string | null>(null);
+
+  // ── Estado PIN ────────────────────────────────────────────────────────────────
+  const [pinOrderOpen, setPinOrderOpen] = useState(false);
+  const [pinItemOpen, setPinItemOpen] = useState(false);
+  const pendingDeleteOrderRef = useRef<string | null>(null);
+  const pendingDeleteItemRef = useRef<string | null>(null);
 
   // ── Queries ───────────────────────────────────────────────────────────────────
   const { data: items = [], isLoading: loadingItems } = useQuery({
@@ -133,7 +224,6 @@ const AdminConsumo = () => {
 
   const playNotificationSound = useCallback(() => {
     try {
-      // Use Web Audio API for a simple notification beep
       const ctx = new (window.AudioContext || (window as any).webkitAudioContext)();
       const osc = ctx.createOscillator();
       const gain = ctx.createGain();
@@ -228,7 +318,6 @@ const AdminConsumo = () => {
   const saveOrderMutation = useMutation({
     mutationFn: async () => {
       if (editingOrder) {
-        // Editar pedido existente
         const item = items.find((i) => i.id === orderForm.item_id);
         if (!item) throw new Error("Selecione um item válido.");
         const total = item.price * Number(orderForm.quantity);
@@ -246,7 +335,6 @@ const AdminConsumo = () => {
           .eq("id", editingOrder.id);
         if (error) throw error;
       } else {
-        // Novo pedido
         const item = items.find((i) => i.id === orderForm.item_id);
         if (!item) throw new Error("Selecione um item válido.");
         const total = item.price * Number(orderForm.quantity);
@@ -343,7 +431,6 @@ const AdminConsumo = () => {
   const todayOrders = orders.filter((o) => o.created_at.startsWith(todayStr));
   const todayRevenue = todayOrders.reduce((s, o) => s + Number(o.total), 0);
 
-  // item mais pedido (all time)
   const itemCounts: Record<string, { name: string; qty: number }> = {};
   orders.forEach((o) => {
     if (!itemCounts[o.item_name]) itemCounts[o.item_name] = { name: o.item_name, qty: 0 };
@@ -544,7 +631,10 @@ const AdminConsumo = () => {
                           <Pencil className="w-4 h-4" />
                         </button>
                         <button
-                          onClick={() => setDeleteOrderConfirm(o.id)}
+                          onClick={() => {
+                            pendingDeleteOrderRef.current = o.id;
+                            setPinOrderOpen(true);
+                          }}
                           className="p-1.5 text-cream/30 hover:text-red-400 border border-gold/15 hover:border-red-400/40 rounded-lg transition-all"
                           title="Remover pedido"
                         >
@@ -643,7 +733,10 @@ const AdminConsumo = () => {
                           <Pencil className="w-4 h-4" />
                         </button>
                         <button
-                          onClick={() => setDeleteItemConfirm(item.id)}
+                          onClick={() => {
+                            pendingDeleteItemRef.current = item.id;
+                            setPinItemOpen(true);
+                          }}
                           className="p-1.5 text-cream/30 hover:text-red-400 border border-gold/15 hover:border-red-400/40 rounded-lg transition-all"
                         >
                           <Trash2 className="w-4 h-4" />
@@ -951,6 +1044,44 @@ const AdminConsumo = () => {
               </form>
             </motion.div>
           </motion.div>
+        )}
+      </AnimatePresence>
+
+      {/* ── PIN: Excluir pedido ───────────────────────────────────────────────── */}
+      <AnimatePresence>
+        {pinOrderOpen && (
+          <PinModal
+            key="pin-order"
+            title="Remover pedido"
+            description="Digite a senha de supervisor para remover este pedido."
+            onClose={() => {
+              setPinOrderOpen(false);
+              pendingDeleteOrderRef.current = null;
+            }}
+            onSuccess={() => {
+              if (pendingDeleteOrderRef.current) setDeleteOrderConfirm(pendingDeleteOrderRef.current);
+              pendingDeleteOrderRef.current = null;
+            }}
+          />
+        )}
+      </AnimatePresence>
+
+      {/* ── PIN: Excluir item do cardápio ─────────────────────────────────────── */}
+      <AnimatePresence>
+        {pinItemOpen && (
+          <PinModal
+            key="pin-item"
+            title="Remover item do cardápio"
+            description="Digite a senha de supervisor para remover este item."
+            onClose={() => {
+              setPinItemOpen(false);
+              pendingDeleteItemRef.current = null;
+            }}
+            onSuccess={() => {
+              if (pendingDeleteItemRef.current) setDeleteItemConfirm(pendingDeleteItemRef.current);
+              pendingDeleteItemRef.current = null;
+            }}
+          />
         )}
       </AnimatePresence>
 
