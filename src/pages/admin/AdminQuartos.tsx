@@ -180,14 +180,13 @@ const PinModal = ({
         <p className="text-cream/40 text-sm font-body mb-6">{description}</p>
         <input
           type="password"
-          inputMode="numeric"
           maxLength={8}
           autoFocus
           className={`w-full text-center text-2xl tracking-[0.5em] bg-black/50 border rounded-lg px-4 py-3 text-cream focus:outline-none transition mb-2 ${
             error ? "border-red-500/60" : "border-gold/20 focus:border-primary"
           }`}
           value={pin}
-          onChange={(e) => setPin(e.target.value.replace(/\D/g, ""))}
+          onChange={(e) => setPin(e.target.value)}
           onKeyDown={(e) => e.key === "Enter" && handleConfirm()}
           placeholder="••••"
         />
