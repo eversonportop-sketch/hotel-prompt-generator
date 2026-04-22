@@ -383,6 +383,7 @@ const AdminConsumo = () => {
       toast.success("Pedido removido.");
       qc.invalidateQueries({ queryKey: ["consumption-orders"] });
       setDeleteOrderConfirm(null);
+      setOrderSearch("");
     },
     onError: () => toast.error("Erro ao remover pedido."),
   });
