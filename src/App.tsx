@@ -46,20 +46,17 @@ import NotFound from "./pages/NotFound";
 
 const queryClient = new QueryClient();
 
-// Volta ao topo sempre que mudar de página
 const ScrollToTop = () => {
   const { pathname } = useLocation();
   useEffect(() => {
     window.scrollTo(0, 0);
-    // Registra visita (ignora rotas administrativas)
     if (!pathname.startsWith("/admin")) {
       supabase
         .from("page_views" as any)
-        .insert({
-          page: pathname,
-          user_agent: navigator.userAgent,
-        })
-        .then(() => {});
+        .insert({ page: pathname, user_agent: navigator.userAgent })
+        .then(({ error }) => {
+          if (error) console.error("[page_views] insert error:", error.message);
+        });
     }
   }, [pathname]);
   return null;
@@ -75,7 +72,6 @@ const App = () => (
           <BrowserRouter>
             <ScrollToTop />
             <Routes>
-              {/* ── Site público ── */}
               <Route path="/" element={<Index />} />
               <Route path="/quartos" element={<Quartos />} />
               <Route path="/quartos/:id" element={<QuartoDetalhe />} />
@@ -89,7 +85,6 @@ const App = () => (
               <Route path="/cadastro" element={<Cadastro />} />
               <Route path="/portal" element={<Portal />} />
 
-              {/* ── Admin — todas as páginas dentro do AdminLayout ── */}
               <Route path="/admin" element={<AdminLayout />}>
                 <Route index element={<AdminDashboard />} />
                 <Route path="reservas" element={<AdminReservas />} />
