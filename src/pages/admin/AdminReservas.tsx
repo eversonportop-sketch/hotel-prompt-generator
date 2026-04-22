@@ -248,6 +248,7 @@ const AdminReservas = () => {
       qc.invalidateQueries({ queryKey: ["reservas-lista"] });
       toast.success("Reserva cancelada.");
       setDeleteId(null);
+      setSearch("");
     },
     onError: () => toast.error("Erro ao cancelar."),
   });
