@@ -345,7 +345,7 @@ const RoomModal = ({
               <input
                 type="number"
                 min={0}
-                step="0.01"
+                step="1"
                 readOnly={!priceUnlocked}
                 className={`w-full bg-black/50 border rounded-lg px-4 py-3 pr-10 text-cream text-sm focus:outline-none transition ${
                   priceUnlocked
@@ -353,7 +353,7 @@ const RoomModal = ({
                     : "border-gold/20 opacity-60 cursor-not-allowed"
                 }`}
                 value={form.price === 0 ? "" : form.price}
-                placeholder="0,00"
+                placeholder="0"
                 onFocus={(e) => {
                   if (priceUnlocked) e.target.select();
                   else onRequestUnlock();
@@ -362,7 +362,8 @@ const RoomModal = ({
                   if (!priceUnlocked) onRequestUnlock();
                 }}
                 onChange={(e) =>
-                  priceUnlocked && setForm((f) => ({ ...f, price: e.target.value === "" ? 0 : Number(e.target.value) }))
+                  priceUnlocked &&
+                  setForm((f) => ({ ...f, price: e.target.value === "" ? 0 : Math.round(Number(e.target.value)) }))
                 }
                 required
               />
@@ -386,7 +387,7 @@ const RoomModal = ({
               <input
                 type="number"
                 min={0}
-                step="0.01"
+                step="1"
                 readOnly={!priceUnlocked}
                 className={`w-full bg-black/50 border rounded-lg px-4 py-3 pr-10 text-cream text-sm focus:outline-none transition ${
                   priceUnlocked
@@ -630,8 +631,8 @@ const AdminQuartos = () => {
         category: form.category,
         beds: form.beds,
         capacity: Number(form.capacity),
-        price: Number(form.price),
-        promotional_price: form.promotional_price !== "" ? Number(form.promotional_price) : null,
+        price: Math.round(Number(form.price)),
+        promotional_price: form.promotional_price !== "" ? Math.round(Number(form.promotional_price)) : null,
         description: form.description || null,
         image_url: allImages[0] || null,
         gallery: allImages,
@@ -718,7 +719,7 @@ const AdminQuartos = () => {
       display_order: room.display_order,
     });
     setFilePreviewUrl(null);
-    setPriceUnlocked(false); // sempre bloqueia ao abrir
+    setPriceUnlocked(false);
     setModalOpen(true);
   };
 
@@ -730,7 +731,6 @@ const AdminQuartos = () => {
     setPriceUnlocked(false);
   };
 
-  // Solicita PIN antes de mostrar o confirm de exclusão
   const requestDelete = (id: string) => {
     pendingDeleteId.current = id;
     setPinModal("delete");
@@ -801,7 +801,6 @@ const AdminQuartos = () => {
     onRequestUnlock: () => setPinModal("price"),
   };
 
-  // Modais de PIN compartilhados entre as duas views
   const PinModals = () => (
     <AnimatePresence>
       {pinModal === "price" && (
