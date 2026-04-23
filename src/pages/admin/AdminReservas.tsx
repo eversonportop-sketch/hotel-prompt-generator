@@ -322,7 +322,10 @@ const AdminReservas = () => {
     const n2 = nights(format(editCheckIn, "yyyy-MM-dd"), format(editCheckOut, "yyyy-MM-dd"));
     if (n2 < 1) return toast.error("Check-out deve ser após o check-in.");
     const room = (rooms as any[]).find((r) => r.id === editRoomId);
-    const total = n2 * Number(room?.promotional_price || room?.price || 0);
+    const basePrice = Number(room?.price || 0);
+    const extraPerPerson = room?.promotional_price ? Number(room.promotional_price) : 0;
+    const guestsQty = Number(editRes.guests_count || 1);
+    const total = n2 * (basePrice + extraPerPerson * Math.max(0, guestsQty - 1));
     setEditSaving(true);
     try {
       const { error } = await supabase
