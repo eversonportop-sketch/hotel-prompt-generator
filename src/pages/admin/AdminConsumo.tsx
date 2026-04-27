@@ -406,6 +406,8 @@ const AdminConsumo = () => {
     onSuccess: () => {
       toast.success(editingOrder ? "Pedido atualizado!" : "Pedido registrado!");
       qc.invalidateQueries({ queryKey: ["consumption-orders"] });
+      qc.invalidateQueries({ queryKey: ["consumption-stock-items"] });
+      qc.invalidateQueries({ queryKey: ["stock_items"] });
       setOrderModal(false);
       setOrderForm(EMPTY_ORDER);
       setEditingOrder(null);
@@ -449,6 +451,7 @@ const AdminConsumo = () => {
       available: item.available,
       description: item.description ?? "",
       display_order: item.display_order,
+      stock_item_id: item.stock_item_id ?? "",
     });
     setItemModal(true);
   };
