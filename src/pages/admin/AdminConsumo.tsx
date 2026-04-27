@@ -296,19 +296,20 @@ const AdminConsumo = () => {
 
   const saveItemMutation = useMutation({
     mutationFn: async () => {
-      const payload = {
+      const payload: Record<string, unknown> = {
         name: itemForm.name,
         category: itemForm.category,
         price: Number(itemForm.price),
         available: itemForm.available,
         description: itemForm.description || null,
         display_order: Number(itemForm.display_order),
+        stock_item_id: itemForm.stock_item_id ? itemForm.stock_item_id : null,
       };
       if (editingItem) {
-        const { error } = await supabase.from("consumption_items").update(payload).eq("id", editingItem.id);
+        const { error } = await supabase.from("consumption_items").update(payload as any).eq("id", editingItem.id);
         if (error) throw error;
       } else {
-        const { error } = await supabase.from("consumption_items").insert(payload);
+        const { error } = await supabase.from("consumption_items").insert(payload as any);
         if (error) throw error;
       }
     },
