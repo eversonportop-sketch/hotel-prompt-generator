@@ -41,6 +41,14 @@ interface ConsumptionItem {
   available: boolean;
   description: string | null;
   display_order: number;
+  stock_item_id: string | null;
+}
+
+interface StockItemLite {
+  id: string;
+  name: string;
+  unit: string;
+  current_quantity: number;
 }
 
 interface ConsumptionOrder {
@@ -64,7 +72,15 @@ const ORDER_STATUS: Record<string, { label: string; color: string }> = {
   billed: { label: "Faturado", color: "bg-blue-500/20 text-blue-400 border-blue-500/30" },
 };
 
-const EMPTY_ITEM = { name: "", category: "Bebidas", price: 0, available: true, description: "", display_order: 0 };
+const EMPTY_ITEM = {
+  name: "",
+  category: "Bebidas",
+  price: 0,
+  available: true,
+  description: "",
+  display_order: 0,
+  stock_item_id: "" as string,
+};
 const EMPTY_ORDER = { room_number: "", item_id: "", quantity: 1, notes: "", reservation_id: "" };
 
 // ── PIN de supervisor ──────────────────────────────────────────────────────────
