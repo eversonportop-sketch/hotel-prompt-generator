@@ -1089,6 +1089,26 @@ const AdminConsumo = () => {
                     </button>
                   </div>
                 </div>
+                <div>
+                  <label className="block text-xs uppercase tracking-widest text-primary/70 mb-1.5">
+                    Vincular ao estoque (opcional)
+                  </label>
+                  <select
+                    className="w-full bg-black/50 border border-gold/20 rounded-lg px-4 py-3 text-cream text-sm focus:border-primary focus:outline-none transition"
+                    value={itemForm.stock_item_id}
+                    onChange={(e) => setItemForm({ ...itemForm, stock_item_id: e.target.value })}
+                  >
+                    <option value="">— Sem vínculo —</option>
+                    {stockItems.map((s) => (
+                      <option key={s.id} value={s.id}>
+                        {s.name} ({s.current_quantity} {s.unit})
+                      </option>
+                    ))}
+                  </select>
+                  <p className="text-cream/30 text-[11px] font-body mt-1.5">
+                    Quando vinculado, cada pedido deste item dará baixa automática no estoque.
+                  </p>
+                </div>
                 <div className="flex gap-3 pt-2">
                   <button
                     type="button"
