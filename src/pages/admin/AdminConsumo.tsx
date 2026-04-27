@@ -41,6 +41,14 @@ interface ConsumptionItem {
   available: boolean;
   description: string | null;
   display_order: number;
+  stock_item_id: string | null;
+}
+
+interface StockItemLite {
+  id: string;
+  name: string;
+  unit: string;
+  current_quantity: number;
 }
 
 interface ConsumptionOrder {
@@ -64,7 +72,15 @@ const ORDER_STATUS: Record<string, { label: string; color: string }> = {
   billed: { label: "Faturado", color: "bg-blue-500/20 text-blue-400 border-blue-500/30" },
 };
 
-const EMPTY_ITEM = { name: "", category: "Bebidas", price: 0, available: true, description: "", display_order: 0 };
+const EMPTY_ITEM = {
+  name: "",
+  category: "Bebidas",
+  price: 0,
+  available: true,
+  description: "",
+  display_order: 0,
+  stock_item_id: "" as string,
+};
 const EMPTY_ORDER = { room_number: "", item_id: "", quantity: 1, notes: "", reservation_id: "" };
 
 // ── PIN de supervisor ──────────────────────────────────────────────────────────
@@ -183,7 +199,20 @@ const AdminConsumo = () => {
     queryFn: async () => {
       const { data, error } = await supabase.from("consumption_items").select("*").order("display_order");
       if (error) throw error;
-      return data as ConsumptionItem[];
+      return (data ?? []) as unknown as ConsumptionItem[];
+    },
+  });
+
+  // ── Query: itens de estoque (para vincular cardápio ↔ estoque) ──────────────
+  const { data: stockItems = [] } = useQuery({
+    queryKey: ["consumption-stock-items"],
+    queryFn: async () => {
+      const { data, error } = await supabase
+        .from("stock_items" as any)
+        .select("id, name, unit, current_quantity")
+        .order("name");
+      if (error) throw error;
+      return (data ?? []) as unknown as StockItemLite[];
     },
   });
 
@@ -267,19 +296,20 @@ const AdminConsumo = () => {
 
   const saveItemMutation = useMutation({
     mutationFn: async () => {
-      const payload = {
+      const payload: Record<string, unknown> = {
         name: itemForm.name,
         category: itemForm.category,
         price: Number(itemForm.price),
         available: itemForm.available,
         description: itemForm.description || null,
         display_order: Number(itemForm.display_order),
+        stock_item_id: itemForm.stock_item_id ? itemForm.stock_item_id : null,
       };
       if (editingItem) {
-        const { error } = await supabase.from("consumption_items").update(payload).eq("id", editingItem.id);
+        const { error } = await supabase.from("consumption_items").update(payload as any).eq("id", editingItem.id);
         if (error) throw error;
       } else {
-        const { error } = await supabase.from("consumption_items").insert(payload);
+        const { error } = await supabase.from("consumption_items").insert(payload as any);
         if (error) throw error;
       }
     },
@@ -337,12 +367,13 @@ const AdminConsumo = () => {
       } else {
         const item = items.find((i) => i.id === orderForm.item_id);
         if (!item) throw new Error("Selecione um item válido.");
-        const total = item.price * Number(orderForm.quantity);
+        const qty = Number(orderForm.quantity);
+        const total = item.price * qty;
         const { error } = await supabase.from("consumption_orders").insert({
           room_number: orderForm.room_number,
           item_id: item.id,
           item_name: item.name,
-          quantity: Number(orderForm.quantity),
+          quantity: qty,
           unit_price: item.price,
           total,
           status: "pending",
@@ -350,11 +381,33 @@ const AdminConsumo = () => {
           reservation_id: orderForm.reservation_id || null,
         });
         if (error) throw error;
+
+        // Baixa automática no estoque (se o item do cardápio estiver vinculado).
+        if (item.stock_item_id) {
+          const stock = stockItems.find((s) => s.id === item.stock_item_id);
+          if (stock) {
+            const newQty = Math.max(0, stock.current_quantity - qty);
+            await supabase.from("stock_movements" as any).insert({
+              item_id: stock.id,
+              movement_type: "saida",
+              quantity: qty,
+              previous_quantity: stock.current_quantity,
+              new_quantity: newQty,
+              notes: `Pedido — Quarto ${orderForm.room_number} (${item.name})`,
+            } as any);
+            await supabase
+              .from("stock_items" as any)
+              .update({ current_quantity: newQty, updated_at: new Date().toISOString() } as any)
+              .eq("id", stock.id);
+          }
+        }
       }
     },
     onSuccess: () => {
       toast.success(editingOrder ? "Pedido atualizado!" : "Pedido registrado!");
       qc.invalidateQueries({ queryKey: ["consumption-orders"] });
+      qc.invalidateQueries({ queryKey: ["consumption-stock-items"] });
+      qc.invalidateQueries({ queryKey: ["stock_items"] });
       setOrderModal(false);
       setOrderForm(EMPTY_ORDER);
       setEditingOrder(null);
@@ -398,6 +451,7 @@ const AdminConsumo = () => {
       available: item.available,
       description: item.description ?? "",
       display_order: item.display_order,
+      stock_item_id: item.stock_item_id ?? "",
     });
     setItemModal(true);
   };
@@ -716,6 +770,24 @@ const AdminConsumo = () => {
                     {item.description && (
                       <p className="text-cream/40 text-xs font-body mb-3 line-clamp-2">{item.description}</p>
                     )}
+                    {item.stock_item_id && (() => {
+                      const s = stockItems.find((st) => st.id === item.stock_item_id);
+                      if (!s) return null;
+                      const low = s.current_quantity <= 5;
+                      return (
+                        <div
+                          className={`flex items-center gap-1.5 text-[11px] font-body mb-3 px-2 py-1 rounded-md w-fit ${
+                            low
+                              ? "bg-red-500/10 text-red-400 border border-red-500/20"
+                              : "bg-cream/5 text-cream/60 border border-gold/10"
+                          }`}
+                          title="Estoque vinculado"
+                        >
+                          <Package className="w-3 h-3" />
+                          Estoque: {s.current_quantity} {s.unit}
+                        </div>
+                      );
+                    })()}
                     <div className="flex items-center justify-between pt-3 border-t border-gold/10">
                       <span className="font-display text-lg font-bold text-primary">
                         R$ {Number(item.price).toFixed(2)}
@@ -1016,6 +1088,26 @@ const AdminConsumo = () => {
                       {itemForm.available ? "Sim" : "Não"}
                     </button>
                   </div>
+                </div>
+                <div>
+                  <label className="block text-xs uppercase tracking-widest text-primary/70 mb-1.5">
+                    Vincular ao estoque (opcional)
+                  </label>
+                  <select
+                    className="w-full bg-black/50 border border-gold/20 rounded-lg px-4 py-3 text-cream text-sm focus:border-primary focus:outline-none transition"
+                    value={itemForm.stock_item_id}
+                    onChange={(e) => setItemForm({ ...itemForm, stock_item_id: e.target.value })}
+                  >
+                    <option value="">— Sem vínculo —</option>
+                    {stockItems.map((s) => (
+                      <option key={s.id} value={s.id}>
+                        {s.name} ({s.current_quantity} {s.unit})
+                      </option>
+                    ))}
+                  </select>
+                  <p className="text-cream/30 text-[11px] font-body mt-1.5">
+                    Quando vinculado, cada pedido deste item dará baixa automática no estoque.
+                  </p>
                 </div>
                 <div className="flex gap-3 pt-2">
                   <button

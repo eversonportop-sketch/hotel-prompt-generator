@@ -18,6 +18,7 @@ import {
   AlertTriangle,
   Loader2,
   Printer,
+  UtensilsCrossed,
 } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
 
@@ -88,6 +89,26 @@ const AdminEstoque = () => {
       return (data || []) as unknown as StockItem[];
     },
   });
+
+  // Itens do cardápio vinculados a cada item de estoque (para mostrar uso)
+  const { data: linkedConsumption = [] } = useQuery({
+    queryKey: ["stock_items_linked_consumption"],
+    queryFn: async () => {
+      const { data, error } = await supabase
+        .from("consumption_items")
+        .select("id, name, stock_item_id" as any);
+      if (error) throw error;
+      return (data || []) as unknown as Array<{ id: string; name: string; stock_item_id: string | null }>;
+    },
+  });
+
+  const linkedByStock = linkedConsumption.reduce<Record<string, string[]>>((acc, c) => {
+    if (c.stock_item_id) {
+      if (!acc[c.stock_item_id]) acc[c.stock_item_id] = [];
+      acc[c.stock_item_id].push(c.name);
+    }
+    return acc;
+  }, {});
 
   const filtered = items.filter((i) => {
     const matchSearch = !search || i.name.toLowerCase().includes(search.toLowerCase());
@@ -304,6 +325,7 @@ const AdminEstoque = () => {
         <div className="grid gap-3">
           {filtered.map((item) => {
             const isLow = item.current_quantity <= item.min_quantity && item.min_quantity > 0;
+            const linkedNames = linkedByStock[item.id] || [];
             return (
               <div
                 key={item.id}
@@ -318,6 +340,15 @@ const AdminEstoque = () => {
                     {isLow && (
                       <Badge className="text-[10px] bg-red-500/20 text-red-400 border-red-500/30">
                         <AlertTriangle className="w-3 h-3 mr-1" /> Baixo
+                      </Badge>
+                    )}
+                    {linkedNames.length > 0 && (
+                      <Badge
+                        className="text-[10px] bg-primary/15 text-primary border-primary/30"
+                        title={`Vinculado ao cardápio: ${linkedNames.join(", ")}`}
+                      >
+                        <UtensilsCrossed className="w-3 h-3 mr-1" />
+                        {linkedNames.length} no cardápio
                       </Badge>
                     )}
                   </div>
