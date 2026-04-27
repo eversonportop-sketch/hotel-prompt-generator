@@ -1,6 +1,7 @@
 // ─── AdminConsumo ──────────────────────────────────────────────────────────────
 // Módulo completo: consumo do frigobar e room service
-// Tabelas Supabase: consumption_items (cardápio), consumption_orders (pedidos)
+// Integração: ao registrar pedido, baixa automática no estoque via trigger SQL
+// PIN de supervisor exigido para: excluir pedido, excluir item, editar pedido
 import { useState, useEffect, useRef, useCallback } from "react";
 import { Link } from "react-router-dom";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
@@ -26,6 +27,8 @@ import {
   Bell,
   TrendingUp,
   Star,
+  Link2,
+  Link2Off,
 } from "lucide-react";
 import { format } from "date-fns";
 import { ptBR } from "date-fns/locale";
@@ -41,6 +44,7 @@ interface ConsumptionItem {
   available: boolean;
   description: string | null;
   display_order: number;
+  stock_item_id: string | null;
 }
 
 interface ConsumptionOrder {
@@ -51,9 +55,17 @@ interface ConsumptionOrder {
   quantity: number;
   unit_price: number;
   total: number;
-  status: string; // pending | delivered | billed
+  status: string;
   notes: string | null;
   created_at: string;
+}
+
+interface StockItem {
+  id: string;
+  name: string;
+  current_quantity: number;
+  unit: string;
+  category: string;
 }
 
 const CATEGORIES = ["Bebidas", "Snacks", "Laticínios", "Sobremesas", "Room Service", "Outros"];
@@ -64,7 +76,15 @@ const ORDER_STATUS: Record<string, { label: string; color: string }> = {
   billed: { label: "Faturado", color: "bg-blue-500/20 text-blue-400 border-blue-500/30" },
 };
 
-const EMPTY_ITEM = { name: "", category: "Bebidas", price: 0, available: true, description: "", display_order: 0 };
+const EMPTY_ITEM = {
+  name: "",
+  category: "Bebidas",
+  price: 0,
+  available: true,
+  description: "",
+  display_order: 0,
+  stock_item_id: "",
+};
 const EMPTY_ORDER = { room_number: "", item_id: "", quantity: 1, notes: "", reservation_id: "" };
 
 // ── PIN de supervisor ──────────────────────────────────────────────────────────
@@ -174,8 +194,10 @@ const AdminConsumo = () => {
   // ── Estado PIN ────────────────────────────────────────────────────────────────
   const [pinOrderOpen, setPinOrderOpen] = useState(false);
   const [pinItemOpen, setPinItemOpen] = useState(false);
+  const [pinEditOrderOpen, setPinEditOrderOpen] = useState(false);
   const pendingDeleteOrderRef = useRef<string | null>(null);
   const pendingDeleteItemRef = useRef<string | null>(null);
+  const pendingEditOrderRef = useRef<ConsumptionOrder | null>(null);
 
   // ── Queries ───────────────────────────────────────────────────────────────────
   const { data: items = [], isLoading: loadingItems } = useQuery({
@@ -184,6 +206,19 @@ const AdminConsumo = () => {
       const { data, error } = await supabase.from("consumption_items").select("*").order("display_order");
       if (error) throw error;
       return data as ConsumptionItem[];
+    },
+  });
+
+  // ── Query: itens de estoque (para vincular) ────────────────────────────────
+  const { data: stockItems = [] } = useQuery({
+    queryKey: ["stock_items_list"],
+    queryFn: async () => {
+      const { data, error } = await supabase
+        .from("stock_items" as any)
+        .select("id, name, current_quantity, unit, category")
+        .order("name");
+      if (error) throw error;
+      return (data || []) as unknown as StockItem[];
     },
   });
 
@@ -220,8 +255,6 @@ const AdminConsumo = () => {
   });
 
   // ── Realtime subscription ─────────────────────────────────────────────────────
-  const audioRef = useRef<HTMLAudioElement | null>(null);
-
   const playNotificationSound = useCallback(() => {
     try {
       const ctx = new (window.AudioContext || (window as any).webkitAudioContext)();
@@ -251,12 +284,14 @@ const AdminConsumo = () => {
           );
         }
         qc.invalidateQueries({ queryKey: ["consumption-orders"] });
+        qc.invalidateQueries({ queryKey: ["stock_items_list"] });
       })
       .on("postgres_changes", { event: "UPDATE", schema: "public", table: "consumption_orders" }, () => {
         qc.invalidateQueries({ queryKey: ["consumption-orders"] });
       })
       .on("postgres_changes", { event: "DELETE", schema: "public", table: "consumption_orders" }, () => {
         qc.invalidateQueries({ queryKey: ["consumption-orders"] });
+        qc.invalidateQueries({ queryKey: ["stock_items_list"] });
       })
       .subscribe();
 
@@ -265,6 +300,7 @@ const AdminConsumo = () => {
     };
   }, [qc, playNotificationSound]);
 
+  // ── Mutations: itens do cardápio ──────────────────────────────────────────────
   const saveItemMutation = useMutation({
     mutationFn: async () => {
       const payload = {
@@ -274,6 +310,7 @@ const AdminConsumo = () => {
         available: itemForm.available,
         description: itemForm.description || null,
         display_order: Number(itemForm.display_order),
+        stock_item_id: itemForm.stock_item_id || null,
       };
       if (editingItem) {
         const { error } = await supabase.from("consumption_items").update(payload).eq("id", editingItem.id);
@@ -338,6 +375,18 @@ const AdminConsumo = () => {
         const item = items.find((i) => i.id === orderForm.item_id);
         if (!item) throw new Error("Selecione um item válido.");
         const total = item.price * Number(orderForm.quantity);
+
+        // Verifica estoque antes de registrar (aviso, não bloqueio)
+        if (item.stock_item_id) {
+          const stockItem = stockItems.find((s) => s.id === item.stock_item_id);
+          if (stockItem && stockItem.current_quantity < Number(orderForm.quantity)) {
+            toast.warning(
+              `⚠️ Estoque baixo: ${stockItem.name} tem apenas ${stockItem.current_quantity} ${stockItem.unit} disponível(is). Baixa registrada mesmo assim.`,
+              { duration: 6000 },
+            );
+          }
+        }
+
         const { error } = await supabase.from("consumption_orders").insert({
           room_number: orderForm.room_number,
           item_id: item.id,
@@ -350,11 +399,25 @@ const AdminConsumo = () => {
           reservation_id: orderForm.reservation_id || null,
         });
         if (error) throw error;
+
+        // Notifica sobre baixa no estoque
+        if (item.stock_item_id) {
+          const stockItem = stockItems.find((s) => s.id === item.stock_item_id);
+          if (stockItem) {
+            toast.info(
+              `📦 Estoque: ${stockItem.name} debitado automaticamente (−${orderForm.quantity} ${stockItem.unit})`,
+              {
+                duration: 4000,
+              },
+            );
+          }
+        }
       }
     },
     onSuccess: () => {
       toast.success(editingOrder ? "Pedido atualizado!" : "Pedido registrado!");
       qc.invalidateQueries({ queryKey: ["consumption-orders"] });
+      qc.invalidateQueries({ queryKey: ["stock_items_list"] });
       setOrderModal(false);
       setOrderForm(EMPTY_ORDER);
       setEditingOrder(null);
@@ -380,8 +443,9 @@ const AdminConsumo = () => {
       if (error) throw error;
     },
     onSuccess: () => {
-      toast.success("Pedido removido.");
+      toast.success("Pedido removido. Estoque revertido automaticamente.");
       qc.invalidateQueries({ queryKey: ["consumption-orders"] });
+      qc.invalidateQueries({ queryKey: ["stock_items_list"] });
       setDeleteOrderConfirm(null);
       setOrderSearch("");
     },
@@ -398,11 +462,17 @@ const AdminConsumo = () => {
       available: item.available,
       description: item.description ?? "",
       display_order: item.display_order,
+      stock_item_id: item.stock_item_id ?? "",
     });
     setItemModal(true);
   };
 
-  const openEditOrder = (order: ConsumptionOrder) => {
+  const requestEditOrder = (order: ConsumptionOrder) => {
+    pendingEditOrderRef.current = order;
+    setPinEditOrderOpen(true);
+  };
+
+  const doEditOrder = (order: ConsumptionOrder) => {
     setEditingOrder(order);
     setOrderForm({
       room_number: order.room_number,
@@ -579,6 +649,8 @@ const AdminConsumo = () => {
               <div className="space-y-3">
                 {filteredOrders.map((o, i) => {
                   const cfg = ORDER_STATUS[o.status] ?? ORDER_STATUS.pending;
+                  const linkedItem = items.find((it) => it.id === o.item_id);
+                  const hasStockLink = !!linkedItem?.stock_item_id;
                   return (
                     <motion.div
                       key={o.id}
@@ -595,6 +667,11 @@ const AdminConsumo = () => {
                           <span className="text-xs text-cream/30 font-body">
                             {format(new Date(o.created_at), "dd/MM HH:mm", { locale: ptBR })}
                           </span>
+                          {hasStockLink && (
+                            <span className="text-xs px-2 py-0.5 rounded-full border bg-emerald-500/10 text-emerald-400 border-emerald-500/20 font-body flex items-center gap-1">
+                              <Link2 className="w-3 h-3" /> Estoque
+                            </span>
+                          )}
                         </div>
                         <div className="flex items-center gap-2 flex-wrap">
                           <BedDouble className="w-4 h-4 text-primary/60" />
@@ -625,9 +702,9 @@ const AdminConsumo = () => {
                           ))}
                         </select>
                         <button
-                          onClick={() => openEditOrder(o)}
+                          onClick={() => requestEditOrder(o)}
                           className="p-1.5 text-cream/30 hover:text-primary border border-gold/15 hover:border-primary/40 rounded-lg transition-all"
-                          title="Editar pedido"
+                          title="Editar pedido (requer senha)"
                         >
                           <Pencil className="w-4 h-4" />
                         </button>
@@ -637,7 +714,7 @@ const AdminConsumo = () => {
                             setPinOrderOpen(true);
                           }}
                           className="p-1.5 text-cream/30 hover:text-red-400 border border-gold/15 hover:border-red-400/40 rounded-lg transition-all"
-                          title="Remover pedido"
+                          title="Remover pedido (requer senha)"
                         >
                           <Trash2 className="w-4 h-4" />
                         </button>
@@ -694,58 +771,78 @@ const AdminConsumo = () => {
               </div>
             ) : (
               <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-4">
-                {filteredItems.map((item, i) => (
-                  <motion.div
-                    key={item.id}
-                    initial={{ opacity: 0, y: 12 }}
-                    animate={{ opacity: 1, y: 0 }}
-                    transition={{ delay: i * 0.04 }}
-                    className={`bg-charcoal-light border rounded-xl p-5 ${item.available ? "border-gold/15" : "border-red-900/30 opacity-60"}`}
-                  >
-                    <div className="flex items-start justify-between gap-2 mb-2">
-                      <div>
-                        <span className="text-xs text-primary font-body tracking-wider uppercase">{item.category}</span>
-                        <h3 className="font-display text-base font-semibold text-cream mt-0.5">{item.name}</h3>
+                {filteredItems.map((item, i) => {
+                  const linkedStock = stockItems.find((s) => s.id === item.stock_item_id);
+                  return (
+                    <motion.div
+                      key={item.id}
+                      initial={{ opacity: 0, y: 12 }}
+                      animate={{ opacity: 1, y: 0 }}
+                      transition={{ delay: i * 0.04 }}
+                      className={`bg-charcoal-light border rounded-xl p-5 ${item.available ? "border-gold/15" : "border-red-900/30 opacity-60"}`}
+                    >
+                      <div className="flex items-start justify-between gap-2 mb-2">
+                        <div>
+                          <span className="text-xs text-primary font-body tracking-wider uppercase">
+                            {item.category}
+                          </span>
+                          <h3 className="font-display text-base font-semibold text-cream mt-0.5">{item.name}</h3>
+                        </div>
+                        <span
+                          className={`text-xs px-2 py-0.5 rounded-full font-body shrink-0 ${item.available ? "bg-green-500/20 text-green-400" : "bg-red-500/20 text-red-400"}`}
+                        >
+                          {item.available ? "Disponível" : "Indisponível"}
+                        </span>
                       </div>
-                      <span
-                        className={`text-xs px-2 py-0.5 rounded-full font-body shrink-0 ${item.available ? "bg-green-500/20 text-green-400" : "bg-red-500/20 text-red-400"}`}
-                      >
-                        {item.available ? "Disponível" : "Indisponível"}
-                      </span>
-                    </div>
-                    {item.description && (
-                      <p className="text-cream/40 text-xs font-body mb-3 line-clamp-2">{item.description}</p>
-                    )}
-                    <div className="flex items-center justify-between pt-3 border-t border-gold/10">
-                      <span className="font-display text-lg font-bold text-primary">
-                        R$ {Number(item.price).toFixed(2)}
-                      </span>
-                      <div className="flex gap-2">
-                        <button
-                          onClick={() => toggleItemMutation.mutate({ id: item.id, available: item.available })}
-                          className="p-1.5 text-cream/30 hover:text-yellow-400 border border-gold/15 hover:border-yellow-400/40 rounded-lg transition-all"
-                        >
-                          {item.available ? <ToggleRight className="w-4 h-4" /> : <ToggleLeft className="w-4 h-4" />}
-                        </button>
-                        <button
-                          onClick={() => openEditItem(item)}
-                          className="p-1.5 text-cream/30 hover:text-primary border border-gold/15 hover:border-primary/40 rounded-lg transition-all"
-                        >
-                          <Pencil className="w-4 h-4" />
-                        </button>
-                        <button
-                          onClick={() => {
-                            pendingDeleteItemRef.current = item.id;
-                            setPinItemOpen(true);
-                          }}
-                          className="p-1.5 text-cream/30 hover:text-red-400 border border-gold/15 hover:border-red-400/40 rounded-lg transition-all"
-                        >
-                          <Trash2 className="w-4 h-4" />
-                        </button>
+                      {item.description && (
+                        <p className="text-cream/40 text-xs font-body mb-2 line-clamp-2">{item.description}</p>
+                      )}
+                      {/* Badge de estoque vinculado */}
+                      {linkedStock ? (
+                        <div className="flex items-center gap-1.5 mb-3 text-xs text-emerald-400 font-body bg-emerald-500/10 border border-emerald-500/20 rounded-lg px-2.5 py-1.5">
+                          <Link2 className="w-3.5 h-3.5 shrink-0" />
+                          <span>
+                            Estoque: <strong>{linkedStock.name}</strong> ({linkedStock.current_quantity}{" "}
+                            {linkedStock.unit})
+                          </span>
+                        </div>
+                      ) : (
+                        <div className="flex items-center gap-1.5 mb-3 text-xs text-cream/25 font-body">
+                          <Link2Off className="w-3.5 h-3.5" />
+                          <span>Sem vínculo de estoque</span>
+                        </div>
+                      )}
+                      <div className="flex items-center justify-between pt-3 border-t border-gold/10">
+                        <span className="font-display text-lg font-bold text-primary">
+                          R$ {Number(item.price).toFixed(2)}
+                        </span>
+                        <div className="flex gap-2">
+                          <button
+                            onClick={() => toggleItemMutation.mutate({ id: item.id, available: item.available })}
+                            className="p-1.5 text-cream/30 hover:text-yellow-400 border border-gold/15 hover:border-yellow-400/40 rounded-lg transition-all"
+                          >
+                            {item.available ? <ToggleRight className="w-4 h-4" /> : <ToggleLeft className="w-4 h-4" />}
+                          </button>
+                          <button
+                            onClick={() => openEditItem(item)}
+                            className="p-1.5 text-cream/30 hover:text-primary border border-gold/15 hover:border-primary/40 rounded-lg transition-all"
+                          >
+                            <Pencil className="w-4 h-4" />
+                          </button>
+                          <button
+                            onClick={() => {
+                              pendingDeleteItemRef.current = item.id;
+                              setPinItemOpen(true);
+                            }}
+                            className="p-1.5 text-cream/30 hover:text-red-400 border border-gold/15 hover:border-red-400/40 rounded-lg transition-all"
+                          >
+                            <Trash2 className="w-4 h-4" />
+                          </button>
+                        </div>
                       </div>
-                    </div>
-                  </motion.div>
-                ))}
+                    </motion.div>
+                  );
+                })}
               </div>
             )}
           </motion.div>
@@ -831,15 +928,42 @@ const AdminConsumo = () => {
                       if (!catItems.length) return null;
                       return (
                         <optgroup key={cat} label={cat}>
-                          {catItems.map((i) => (
-                            <option key={i.id} value={i.id}>
-                              {i.name} — R$ {Number(i.price).toFixed(2)}
-                            </option>
-                          ))}
+                          {catItems.map((i) => {
+                            const stockItem = stockItems.find((s) => s.id === i.stock_item_id);
+                            return (
+                              <option key={i.id} value={i.id}>
+                                {i.name} — R$ {Number(i.price).toFixed(2)}
+                                {stockItem ? ` (estoque: ${stockItem.current_quantity} ${stockItem.unit})` : ""}
+                              </option>
+                            );
+                          })}
                         </optgroup>
                       );
                     })}
                   </select>
+                  {/* Aviso de estoque baixo */}
+                  {selectedItem?.stock_item_id &&
+                    (() => {
+                      const s = stockItems.find((st) => st.id === selectedItem.stock_item_id);
+                      if (!s) return null;
+                      if (s.current_quantity <= 0)
+                        return (
+                          <p className="text-red-400 text-xs mt-1 font-body flex items-center gap-1">
+                            ⚠️ Sem estoque disponível para este item!
+                          </p>
+                        );
+                      if (s.current_quantity < Number(orderForm.quantity))
+                        return (
+                          <p className="text-yellow-400 text-xs mt-1 font-body flex items-center gap-1">
+                            ⚠️ Quantidade solicitada maior que o estoque ({s.current_quantity} {s.unit})
+                          </p>
+                        );
+                      return (
+                        <p className="text-emerald-400 text-xs mt-1 font-body flex items-center gap-1">
+                          <Link2 className="w-3 h-3" /> Estoque atual: {s.current_quantity} {s.unit}
+                        </p>
+                      );
+                    })()}
                 </div>
                 <div>
                   <label className="block text-xs uppercase tracking-widest text-primary/70 mb-1.5">Quantidade</label>
@@ -857,6 +981,14 @@ const AdminConsumo = () => {
                     <span className="font-display font-bold text-primary text-lg">
                       R$ {(selectedItem.price * Number(orderForm.quantity)).toFixed(2)}
                     </span>
+                  </div>
+                )}
+                {!editingOrder && selectedItem?.stock_item_id && (
+                  <div className="bg-emerald-500/5 border border-emerald-500/20 rounded-lg px-4 py-3 flex items-center gap-2">
+                    <Link2 className="w-4 h-4 text-emerald-400 shrink-0" />
+                    <p className="text-emerald-400/80 text-xs font-body">
+                      Ao registrar, o estoque será debitado automaticamente.
+                    </p>
                   </div>
                 )}
                 <div>
@@ -922,7 +1054,7 @@ const AdminConsumo = () => {
               initial={{ opacity: 0, y: 30 }}
               animate={{ opacity: 1, y: 0 }}
               exit={{ opacity: 0, y: 20 }}
-              className="bg-charcoal border border-gold/20 rounded-2xl w-full max-w-md shadow-2xl"
+              className="bg-charcoal border border-gold/20 rounded-2xl w-full max-w-md shadow-2xl max-h-[90vh] overflow-y-auto"
             >
               <div className="flex items-center justify-between p-6 border-b border-gold/10">
                 <h2 className="font-display text-xl font-bold text-cream">
@@ -990,6 +1122,29 @@ const AdminConsumo = () => {
                     placeholder="Descrição breve (opcional)"
                   />
                 </div>
+
+                {/* ── Vínculo com estoque ──────────────────────────────────── */}
+                <div>
+                  <label className="block text-xs uppercase tracking-widest text-primary/70 mb-1.5">
+                    Vincular ao Estoque (opcional)
+                  </label>
+                  <select
+                    className="w-full bg-black/50 border border-gold/20 rounded-lg px-4 py-3 text-cream text-sm focus:border-primary focus:outline-none transition"
+                    value={itemForm.stock_item_id}
+                    onChange={(e) => setItemForm({ ...itemForm, stock_item_id: e.target.value })}
+                  >
+                    <option value="">— Sem vínculo —</option>
+                    {stockItems.map((s) => (
+                      <option key={s.id} value={s.id}>
+                        {s.name} ({s.current_quantity} {s.unit}) · {s.category}
+                      </option>
+                    ))}
+                  </select>
+                  <p className="text-cream/30 text-xs mt-1 font-body">
+                    Se vinculado, cada pedido deste item debita automaticamente o estoque.
+                  </p>
+                </div>
+
                 <div className="grid grid-cols-2 gap-4">
                   <div>
                     <label className="block text-xs uppercase tracking-widest text-primary/70 mb-1.5">Ordem</label>
@@ -1048,6 +1203,27 @@ const AdminConsumo = () => {
         )}
       </AnimatePresence>
 
+      {/* ── PIN: Editar pedido ────────────────────────────────────────────────── */}
+      <AnimatePresence>
+        {pinEditOrderOpen && (
+          <PinModal
+            key="pin-edit-order"
+            title="Editar pedido"
+            description="Digite a senha de supervisor para editar este pedido."
+            onClose={() => {
+              setPinEditOrderOpen(false);
+              pendingEditOrderRef.current = null;
+            }}
+            onSuccess={() => {
+              if (pendingEditOrderRef.current) {
+                doEditOrder(pendingEditOrderRef.current);
+              }
+              pendingEditOrderRef.current = null;
+            }}
+          />
+        )}
+      </AnimatePresence>
+
       {/* ── PIN: Excluir pedido ───────────────────────────────────────────────── */}
       <AnimatePresence>
         {pinOrderOpen && (
@@ -1103,7 +1279,10 @@ const AdminConsumo = () => {
             >
               <Trash2 className="w-10 h-10 text-red-400 mx-auto mb-4" />
               <h3 className="font-display text-xl font-bold text-cream mb-2">Remover pedido?</h3>
-              <p className="text-cream/50 text-sm font-body mb-6">Esta ação não pode ser desfeita.</p>
+              <p className="text-cream/50 text-sm font-body mb-2">Esta ação não pode ser desfeita.</p>
+              <p className="text-emerald-400/70 text-xs font-body mb-6">
+                ℹ️ O estoque será revertido automaticamente se este item tiver vínculo.
+              </p>
               <div className="flex gap-3">
                 <button
                   onClick={() => setDeleteOrderConfirm(null)}
