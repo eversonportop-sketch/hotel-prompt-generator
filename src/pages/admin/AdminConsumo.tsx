@@ -367,12 +367,13 @@ const AdminConsumo = () => {
       } else {
         const item = items.find((i) => i.id === orderForm.item_id);
         if (!item) throw new Error("Selecione um item válido.");
-        const total = item.price * Number(orderForm.quantity);
+        const qty = Number(orderForm.quantity);
+        const total = item.price * qty;
         const { error } = await supabase.from("consumption_orders").insert({
           room_number: orderForm.room_number,
           item_id: item.id,
           item_name: item.name,
-          quantity: Number(orderForm.quantity),
+          quantity: qty,
           unit_price: item.price,
           total,
           status: "pending",
@@ -380,6 +381,26 @@ const AdminConsumo = () => {
           reservation_id: orderForm.reservation_id || null,
         });
         if (error) throw error;
+
+        // Baixa automática no estoque (se o item do cardápio estiver vinculado).
+        if (item.stock_item_id) {
+          const stock = stockItems.find((s) => s.id === item.stock_item_id);
+          if (stock) {
+            const newQty = Math.max(0, stock.current_quantity - qty);
+            await supabase.from("stock_movements" as any).insert({
+              item_id: stock.id,
+              movement_type: "saida",
+              quantity: qty,
+              previous_quantity: stock.current_quantity,
+              new_quantity: newQty,
+              notes: `Pedido — Quarto ${orderForm.room_number} (${item.name})`,
+            } as any);
+            await supabase
+              .from("stock_items" as any)
+              .update({ current_quantity: newQty, updated_at: new Date().toISOString() } as any)
+              .eq("id", stock.id);
+          }
+        }
       }
     },
     onSuccess: () => {
