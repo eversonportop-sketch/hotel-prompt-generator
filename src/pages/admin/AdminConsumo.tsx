@@ -199,7 +199,20 @@ const AdminConsumo = () => {
     queryFn: async () => {
       const { data, error } = await supabase.from("consumption_items").select("*").order("display_order");
       if (error) throw error;
-      return data as ConsumptionItem[];
+      return (data ?? []) as unknown as ConsumptionItem[];
+    },
+  });
+
+  // ── Query: itens de estoque (para vincular cardápio ↔ estoque) ──────────────
+  const { data: stockItems = [] } = useQuery({
+    queryKey: ["consumption-stock-items"],
+    queryFn: async () => {
+      const { data, error } = await supabase
+        .from("stock_items" as any)
+        .select("id, name, unit, current_quantity")
+        .order("name");
+      if (error) throw error;
+      return (data ?? []) as unknown as StockItemLite[];
     },
   });
 
