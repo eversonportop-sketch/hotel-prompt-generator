@@ -770,6 +770,24 @@ const AdminConsumo = () => {
                     {item.description && (
                       <p className="text-cream/40 text-xs font-body mb-3 line-clamp-2">{item.description}</p>
                     )}
+                    {item.stock_item_id && (() => {
+                      const s = stockItems.find((st) => st.id === item.stock_item_id);
+                      if (!s) return null;
+                      const low = s.current_quantity <= 5;
+                      return (
+                        <div
+                          className={`flex items-center gap-1.5 text-[11px] font-body mb-3 px-2 py-1 rounded-md w-fit ${
+                            low
+                              ? "bg-red-500/10 text-red-400 border border-red-500/20"
+                              : "bg-cream/5 text-cream/60 border border-gold/10"
+                          }`}
+                          title="Estoque vinculado"
+                        >
+                          <Package className="w-3 h-3" />
+                          Estoque: {s.current_quantity} {s.unit}
+                        </div>
+                      );
+                    })()}
                     <div className="flex items-center justify-between pt-3 border-t border-gold/10">
                       <span className="font-display text-lg font-bold text-primary">
                         R$ {Number(item.price).toFixed(2)}
