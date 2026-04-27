@@ -325,6 +325,7 @@ const AdminEstoque = () => {
         <div className="grid gap-3">
           {filtered.map((item) => {
             const isLow = item.current_quantity <= item.min_quantity && item.min_quantity > 0;
+            const linkedNames = linkedByStock[item.id] || [];
             return (
               <div
                 key={item.id}
@@ -339,6 +340,15 @@ const AdminEstoque = () => {
                     {isLow && (
                       <Badge className="text-[10px] bg-red-500/20 text-red-400 border-red-500/30">
                         <AlertTriangle className="w-3 h-3 mr-1" /> Baixo
+                      </Badge>
+                    )}
+                    {linkedNames.length > 0 && (
+                      <Badge
+                        className="text-[10px] bg-primary/15 text-primary border-primary/30"
+                        title={`Vinculado ao cardápio: ${linkedNames.join(", ")}`}
+                      >
+                        <UtensilsCrossed className="w-3 h-3 mr-1" />
+                        {linkedNames.length} no cardápio
                       </Badge>
                     )}
                   </div>
