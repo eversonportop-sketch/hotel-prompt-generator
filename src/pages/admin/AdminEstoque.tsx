@@ -19,7 +19,19 @@ import {
   Loader2,
   Printer,
   UtensilsCrossed,
+  Pencil,
+  Trash2,
 } from "lucide-react";
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+} from "@/components/ui/alert-dialog";
 import { useToast } from "@/hooks/use-toast";
 
 const CATEGORIES = ["Geral", "Limpeza", "Alimentos", "Bebidas", "Descartáveis", "Manutenção", "Escritório"];
@@ -69,6 +81,8 @@ const AdminEstoque = () => {
   const [search, setSearch] = useState("");
   const [catFilter, setCatFilter] = useState("all");
   const [itemModal, setItemModal] = useState(false);
+  const [editingItem, setEditingItem] = useState<StockItem | null>(null);
+  const [deleteConfirm, setDeleteConfirm] = useState<StockItem | null>(null);
   const [moveModal, setMoveModal] = useState(false);
   const [form, setForm] = useState<NewItemForm>(emptyItem);
   const [moveForm, setMoveForm] = useState<MovementForm>({
@@ -118,9 +132,9 @@ const AdminEstoque = () => {
 
   const categories = [...new Set(items.map((i) => i.category))];
 
-  const createItem = useMutation({
+  const saveItem = useMutation({
     mutationFn: async (f: NewItemForm) => {
-      const { error } = await supabase.from("stock_items" as any).insert({
+      const payload = {
         name: f.name,
         category: f.category,
         unit: f.unit,
@@ -128,16 +142,39 @@ const AdminEstoque = () => {
         min_quantity: f.min_quantity,
         cost_price: f.cost_price,
         notes: f.notes || null,
-      } as any);
-      if (error) throw error;
+      };
+      if (editingItem) {
+        const { error } = await supabase
+          .from("stock_items" as any)
+          .update({ ...payload, updated_at: new Date().toISOString() } as any)
+          .eq("id", editingItem.id);
+        if (error) throw error;
+      } else {
+        const { error } = await supabase.from("stock_items" as any).insert(payload as any);
+        if (error) throw error;
+      }
     },
     onSuccess: () => {
       qc.invalidateQueries({ queryKey: ["stock_items"] });
       setItemModal(false);
+      setEditingItem(null);
       setForm(emptyItem);
-      toast({ title: "Item criado com sucesso" });
+      toast({ title: editingItem ? "Item atualizado" : "Item criado com sucesso" });
     },
-    onError: () => toast({ title: "Erro ao criar item", variant: "destructive" }),
+    onError: (e: any) => toast({ title: e.message || "Erro ao salvar item", variant: "destructive" }),
+  });
+
+  const deleteItem = useMutation({
+    mutationFn: async (id: string) => {
+      const { error } = await supabase.from("stock_items" as any).delete().eq("id", id);
+      if (error) throw error;
+    },
+    onSuccess: () => {
+      qc.invalidateQueries({ queryKey: ["stock_items"] });
+      setDeleteConfirm(null);
+      toast({ title: "Item removido" });
+    },
+    onError: (e: any) => toast({ title: e.message || "Erro ao remover item", variant: "destructive" }),
   });
 
   const createMovement = useMutation({
@@ -181,6 +218,26 @@ const AdminEstoque = () => {
   const openMoveFor = (id: string) => {
     setMoveForm({ item_id: id, type: "entrada", quantity: 0, notes: "" });
     setMoveModal(true);
+  };
+
+  const openEditItem = (item: StockItem) => {
+    setEditingItem(item);
+    setForm({
+      name: item.name,
+      category: item.category,
+      unit: item.unit,
+      current_quantity: item.current_quantity,
+      min_quantity: item.min_quantity,
+      cost_price: item.cost_price,
+      notes: item.notes || "",
+    });
+    setItemModal(true);
+  };
+
+  const openNewItem = () => {
+    setEditingItem(null);
+    setForm(emptyItem);
+    setItemModal(true);
   };
 
   const printReport = () => {
@@ -268,10 +325,7 @@ const AdminEstoque = () => {
           <Button
             variant="gold-outline"
             size="sm"
-            onClick={() => {
-              setForm(emptyItem);
-              setItemModal(true);
-            }}
+            onClick={openNewItem}
           >
             <Plus className="w-4 h-4 mr-1" /> Novo Item
           </Button>
@@ -366,25 +420,54 @@ const AdminEstoque = () => {
                     {item.cost_price > 0 && <span>Custo: R$ {item.cost_price.toFixed(2)}</span>}
                   </div>
                 </div>
-                <Button
-                  variant="ghost"
-                  size="sm"
-                  className="text-primary hover:text-primary hover:bg-primary/10 shrink-0"
-                  onClick={() => openMoveFor(item.id)}
-                >
-                  <ArrowUpDown className="w-4 h-4" />
-                </Button>
+                <div className="flex items-center gap-1 shrink-0">
+                  <Button
+                    variant="ghost"
+                    size="sm"
+                    className="text-primary hover:text-primary hover:bg-primary/10"
+                    onClick={() => openMoveFor(item.id)}
+                    title="Movimentar"
+                  >
+                    <ArrowUpDown className="w-4 h-4" />
+                  </Button>
+                  <Button
+                    variant="ghost"
+                    size="sm"
+                    className="text-cream/60 hover:text-cream hover:bg-white/5"
+                    onClick={() => openEditItem(item)}
+                    title="Editar"
+                  >
+                    <Pencil className="w-4 h-4" />
+                  </Button>
+                  <Button
+                    variant="ghost"
+                    size="sm"
+                    className="text-red-400/80 hover:text-red-400 hover:bg-red-500/10"
+                    onClick={() => setDeleteConfirm(item)}
+                    title="Excluir"
+                  >
+                    <Trash2 className="w-4 h-4" />
+                  </Button>
+                </div>
               </div>
             );
           })}
         </div>
       )}
 
-      {/* Modal: Novo Item */}
-      <Dialog open={itemModal} onOpenChange={setItemModal}>
+      {/* Modal: Novo / Editar Item */}
+      <Dialog
+        open={itemModal}
+        onOpenChange={(o) => {
+          setItemModal(o);
+          if (!o) setEditingItem(null);
+        }}
+      >
         <DialogContent className="bg-charcoal-light border-white/10 text-cream max-w-lg">
           <DialogHeader>
-            <DialogTitle className="font-display text-cream">Novo Item de Estoque</DialogTitle>
+            <DialogTitle className="font-display text-cream">
+              {editingItem ? "Editar Item de Estoque" : "Novo Item de Estoque"}
+            </DialogTitle>
           </DialogHeader>
           <div className="grid grid-cols-2 gap-4 mt-2">
             <div className="col-span-2">
@@ -474,10 +557,10 @@ const AdminEstoque = () => {
             </Button>
             <Button
               variant="gold"
-              disabled={!form.name || createItem.isPending}
-              onClick={() => createItem.mutate(form)}
+              disabled={!form.name || saveItem.isPending}
+              onClick={() => saveItem.mutate(form)}
             >
-              {createItem.isPending ? <Loader2 className="w-4 h-4 animate-spin" /> : "Salvar"}
+              {saveItem.isPending ? <Loader2 className="w-4 h-4 animate-spin" /> : "Salvar"}
             </Button>
           </div>
         </DialogContent>
@@ -569,6 +652,31 @@ const AdminEstoque = () => {
           </div>
         </DialogContent>
       </Dialog>
+
+      {/* Confirmar exclusão */}
+      <AlertDialog open={!!deleteConfirm} onOpenChange={(o) => !o && setDeleteConfirm(null)}>
+        <AlertDialogContent className="bg-charcoal-light border-white/10 text-cream">
+          <AlertDialogHeader>
+            <AlertDialogTitle className="text-cream">Excluir item de estoque?</AlertDialogTitle>
+            <AlertDialogDescription className="text-white/50">
+              {deleteConfirm
+                ? `O item "${deleteConfirm.name}" será removido permanentemente. Esta ação não pode ser desfeita.`
+                : ""}
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel className="bg-charcoal border-white/10 text-cream hover:bg-white/5">
+              Cancelar
+            </AlertDialogCancel>
+            <AlertDialogAction
+              onClick={() => deleteConfirm && deleteItem.mutate(deleteConfirm.id)}
+              className="bg-red-500/80 hover:bg-red-500 text-white"
+            >
+              {deleteItem.isPending ? <Loader2 className="w-4 h-4 animate-spin" /> : "Excluir"}
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
     </div>
   );
 };
