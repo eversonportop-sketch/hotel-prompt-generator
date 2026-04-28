@@ -652,6 +652,31 @@ const AdminEstoque = () => {
           </div>
         </DialogContent>
       </Dialog>
+
+      {/* Confirmar exclusão */}
+      <AlertDialog open={!!deleteConfirm} onOpenChange={(o) => !o && setDeleteConfirm(null)}>
+        <AlertDialogContent className="bg-charcoal-light border-white/10 text-cream">
+          <AlertDialogHeader>
+            <AlertDialogTitle className="text-cream">Excluir item de estoque?</AlertDialogTitle>
+            <AlertDialogDescription className="text-white/50">
+              {deleteConfirm
+                ? `O item "${deleteConfirm.name}" será removido permanentemente. Esta ação não pode ser desfeita.`
+                : ""}
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel className="bg-charcoal border-white/10 text-cream hover:bg-white/5">
+              Cancelar
+            </AlertDialogCancel>
+            <AlertDialogAction
+              onClick={() => deleteConfirm && deleteItem.mutate(deleteConfirm.id)}
+              className="bg-red-500/80 hover:bg-red-500 text-white"
+            >
+              {deleteItem.isPending ? <Loader2 className="w-4 h-4 animate-spin" /> : "Excluir"}
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
     </div>
   );
 };
