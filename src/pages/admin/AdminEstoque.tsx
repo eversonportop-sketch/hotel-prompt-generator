@@ -19,7 +19,19 @@ import {
   Loader2,
   Printer,
   UtensilsCrossed,
+  Pencil,
+  Trash2,
 } from "lucide-react";
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+} from "@/components/ui/alert-dialog";
 import { useToast } from "@/hooks/use-toast";
 
 const CATEGORIES = ["Geral", "Limpeza", "Alimentos", "Bebidas", "Descartáveis", "Manutenção", "Escritório"];
@@ -69,6 +81,8 @@ const AdminEstoque = () => {
   const [search, setSearch] = useState("");
   const [catFilter, setCatFilter] = useState("all");
   const [itemModal, setItemModal] = useState(false);
+  const [editingItem, setEditingItem] = useState<StockItem | null>(null);
+  const [deleteConfirm, setDeleteConfirm] = useState<StockItem | null>(null);
   const [moveModal, setMoveModal] = useState(false);
   const [form, setForm] = useState<NewItemForm>(emptyItem);
   const [moveForm, setMoveForm] = useState<MovementForm>({
