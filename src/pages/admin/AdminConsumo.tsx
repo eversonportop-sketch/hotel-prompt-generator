@@ -384,22 +384,35 @@ const AdminConsumo = () => {
 
         // Baixa automática no estoque (se o item do cardápio estiver vinculado).
         if (item.stock_item_id) {
-          const stock = stockItems.find((s) => s.id === item.stock_item_id);
-          if (stock) {
-            const newQty = Math.max(0, stock.current_quantity - qty);
-            await supabase.from("stock_movements" as any).insert({
-              item_id: stock.id,
-              movement_type: "saida",
-              quantity: qty,
-              previous_quantity: stock.current_quantity,
-              new_quantity: newQty,
-              notes: `Pedido — Quarto ${orderForm.room_number} (${item.name})`,
-            } as any);
-            await supabase
-              .from("stock_items" as any)
-              .update({ current_quantity: newQty, updated_at: new Date().toISOString() } as any)
-              .eq("id", stock.id);
-          }
+          // Re-buscar o estoque atual para evitar dados rançosos da query em cache
+          const { data: freshStock, error: stockFetchErr } = await supabase
+            .from("stock_items" as any)
+            .select("id, current_quantity")
+            .eq("id", item.stock_item_id)
+            .maybeSingle();
+          if (stockFetchErr) throw new Error(`Falha ao ler estoque: ${stockFetchErr.message}`);
+          if (!freshStock) throw new Error("Item de estoque vinculado não encontrado.");
+
+          const currentQty = Number((freshStock as any).current_quantity) || 0;
+          const newQty = Math.max(0, currentQty - qty);
+
+          const { error: moveErr } = await supabase.from("stock_movements" as any).insert({
+            item_id: (freshStock as any).id,
+            movement_type: "saida",
+            quantity: qty,
+            previous_quantity: currentQty,
+            new_quantity: newQty,
+            notes: `Pedido — Quarto ${orderForm.room_number} (${item.name})`,
+          } as any);
+          if (moveErr) throw new Error(`Falha ao registrar movimento: ${moveErr.message}`);
+
+          const { error: updErr } = await supabase
+            .from("stock_items" as any)
+            .update({ current_quantity: newQty, updated_at: new Date().toISOString() } as any)
+            .eq("id", (freshStock as any).id);
+          if (updErr) throw new Error(`Falha ao atualizar estoque: ${updErr.message}`);
+
+          toast.success(`Estoque atualizado: ${item.name} (-${qty})`);
         }
       }
     },
