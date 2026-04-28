@@ -455,11 +455,19 @@ const AdminEstoque = () => {
         </div>
       )}
 
-      {/* Modal: Novo Item */}
-      <Dialog open={itemModal} onOpenChange={setItemModal}>
+      {/* Modal: Novo / Editar Item */}
+      <Dialog
+        open={itemModal}
+        onOpenChange={(o) => {
+          setItemModal(o);
+          if (!o) setEditingItem(null);
+        }}
+      >
         <DialogContent className="bg-charcoal-light border-white/10 text-cream max-w-lg">
           <DialogHeader>
-            <DialogTitle className="font-display text-cream">Novo Item de Estoque</DialogTitle>
+            <DialogTitle className="font-display text-cream">
+              {editingItem ? "Editar Item de Estoque" : "Novo Item de Estoque"}
+            </DialogTitle>
           </DialogHeader>
           <div className="grid grid-cols-2 gap-4 mt-2">
             <div className="col-span-2">
@@ -549,10 +557,10 @@ const AdminEstoque = () => {
             </Button>
             <Button
               variant="gold"
-              disabled={!form.name || createItem.isPending}
-              onClick={() => createItem.mutate(form)}
+              disabled={!form.name || saveItem.isPending}
+              onClick={() => saveItem.mutate(form)}
             >
-              {createItem.isPending ? <Loader2 className="w-4 h-4 animate-spin" /> : "Salvar"}
+              {saveItem.isPending ? <Loader2 className="w-4 h-4 animate-spin" /> : "Salvar"}
             </Button>
           </div>
         </DialogContent>
