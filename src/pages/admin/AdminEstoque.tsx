@@ -325,10 +325,7 @@ const AdminEstoque = () => {
           <Button
             variant="gold-outline"
             size="sm"
-            onClick={() => {
-              setForm(emptyItem);
-              setItemModal(true);
-            }}
+            onClick={openNewItem}
           >
             <Plus className="w-4 h-4 mr-1" /> Novo Item
           </Button>
@@ -423,14 +420,35 @@ const AdminEstoque = () => {
                     {item.cost_price > 0 && <span>Custo: R$ {item.cost_price.toFixed(2)}</span>}
                   </div>
                 </div>
-                <Button
-                  variant="ghost"
-                  size="sm"
-                  className="text-primary hover:text-primary hover:bg-primary/10 shrink-0"
-                  onClick={() => openMoveFor(item.id)}
-                >
-                  <ArrowUpDown className="w-4 h-4" />
-                </Button>
+                <div className="flex items-center gap-1 shrink-0">
+                  <Button
+                    variant="ghost"
+                    size="sm"
+                    className="text-primary hover:text-primary hover:bg-primary/10"
+                    onClick={() => openMoveFor(item.id)}
+                    title="Movimentar"
+                  >
+                    <ArrowUpDown className="w-4 h-4" />
+                  </Button>
+                  <Button
+                    variant="ghost"
+                    size="sm"
+                    className="text-cream/60 hover:text-cream hover:bg-white/5"
+                    onClick={() => openEditItem(item)}
+                    title="Editar"
+                  >
+                    <Pencil className="w-4 h-4" />
+                  </Button>
+                  <Button
+                    variant="ghost"
+                    size="sm"
+                    className="text-red-400/80 hover:text-red-400 hover:bg-red-500/10"
+                    onClick={() => setDeleteConfirm(item)}
+                    title="Excluir"
+                  >
+                    <Trash2 className="w-4 h-4" />
+                  </Button>
+                </div>
               </div>
             );
           })}
