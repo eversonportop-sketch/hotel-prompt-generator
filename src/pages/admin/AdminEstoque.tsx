@@ -132,9 +132,9 @@ const AdminEstoque = () => {
 
   const categories = [...new Set(items.map((i) => i.category))];
 
-  const createItem = useMutation({
+  const saveItem = useMutation({
     mutationFn: async (f: NewItemForm) => {
-      const { error } = await supabase.from("stock_items" as any).insert({
+      const payload = {
         name: f.name,
         category: f.category,
         unit: f.unit,
@@ -142,16 +142,39 @@ const AdminEstoque = () => {
         min_quantity: f.min_quantity,
         cost_price: f.cost_price,
         notes: f.notes || null,
-      } as any);
-      if (error) throw error;
+      };
+      if (editingItem) {
+        const { error } = await supabase
+          .from("stock_items" as any)
+          .update({ ...payload, updated_at: new Date().toISOString() } as any)
+          .eq("id", editingItem.id);
+        if (error) throw error;
+      } else {
+        const { error } = await supabase.from("stock_items" as any).insert(payload as any);
+        if (error) throw error;
+      }
     },
     onSuccess: () => {
       qc.invalidateQueries({ queryKey: ["stock_items"] });
       setItemModal(false);
+      setEditingItem(null);
       setForm(emptyItem);
-      toast({ title: "Item criado com sucesso" });
+      toast({ title: editingItem ? "Item atualizado" : "Item criado com sucesso" });
     },
-    onError: () => toast({ title: "Erro ao criar item", variant: "destructive" }),
+    onError: (e: any) => toast({ title: e.message || "Erro ao salvar item", variant: "destructive" }),
+  });
+
+  const deleteItem = useMutation({
+    mutationFn: async (id: string) => {
+      const { error } = await supabase.from("stock_items" as any).delete().eq("id", id);
+      if (error) throw error;
+    },
+    onSuccess: () => {
+      qc.invalidateQueries({ queryKey: ["stock_items"] });
+      setDeleteConfirm(null);
+      toast({ title: "Item removido" });
+    },
+    onError: (e: any) => toast({ title: e.message || "Erro ao remover item", variant: "destructive" }),
   });
 
   const createMovement = useMutation({
@@ -195,6 +218,26 @@ const AdminEstoque = () => {
   const openMoveFor = (id: string) => {
     setMoveForm({ item_id: id, type: "entrada", quantity: 0, notes: "" });
     setMoveModal(true);
+  };
+
+  const openEditItem = (item: StockItem) => {
+    setEditingItem(item);
+    setForm({
+      name: item.name,
+      category: item.category,
+      unit: item.unit,
+      current_quantity: item.current_quantity,
+      min_quantity: item.min_quantity,
+      cost_price: item.cost_price,
+      notes: item.notes || "",
+    });
+    setItemModal(true);
+  };
+
+  const openNewItem = () => {
+    setEditingItem(null);
+    setForm(emptyItem);
+    setItemModal(true);
   };
 
   const printReport = () => {
