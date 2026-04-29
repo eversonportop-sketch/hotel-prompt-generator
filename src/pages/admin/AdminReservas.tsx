@@ -174,6 +174,9 @@ const AdminReservas = () => {
   const pendingDeleteRef = React.useRef<string | null>(null);
   const [drawerOpen, setDrawerOpen] = useState(false);
   const [periodoFat, setPeriodoFat] = useState<"hoje" | "semana" | "mes" | "ano">("hoje");
+  const [relatorioOpen, setRelatorioOpen] = useState(false);
+  const [pinRelatorioOpen, setPinRelatorioOpen] = useState(false);
+  const [relatorioAutenticado, setRelatorioAutenticado] = useState(false);
 
   // Modal Estender Estadia
   const [extendRes, setExtendRes] = useState<Reservation | null>(null);
