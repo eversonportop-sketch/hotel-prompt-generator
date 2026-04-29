@@ -17,6 +17,8 @@ import {
   TrendingUp,
   Lock,
   CalendarPlus,
+  FileText,
+  Printer,
 } from "lucide-react";
 import { format, differenceInDays, addDays, startOfDay, startOfWeek, startOfMonth, startOfYear } from "date-fns";
 import { ptBR } from "date-fns/locale";
