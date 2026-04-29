@@ -446,6 +446,20 @@ const AdminReservas = () => {
               Este ano
             </option>
           </select>
+          <button
+            onClick={() => {
+              if (relatorioAutenticado) {
+                setRelatorioOpen(true);
+              } else {
+                setPinRelatorioOpen(true);
+              }
+            }}
+            className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-black text-xs font-semibold hover:brightness-110 transition-all ml-2"
+            style={{ background: "linear-gradient(135deg,#C9A84C,#E5C97A)" }}
+          >
+            <FileText className="w-3.5 h-3.5" />
+            Gerar Relatório
+          </button>
         </div>
 
         {/* Cards resumo */}
