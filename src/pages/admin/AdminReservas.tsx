@@ -177,6 +177,8 @@ const AdminReservas = () => {
   const [relatorioOpen, setRelatorioOpen] = useState(false);
   const [pinRelatorioOpen, setPinRelatorioOpen] = useState(false);
   const [relatorioAutenticado, setRelatorioAutenticado] = useState(false);
+  const [fatAutenticado, setFatAutenticado] = useState(false);
+  const [pinFatOpen, setPinFatOpen] = useState(false);
 
   // Modal Estender Estadia
   const [extendRes, setExtendRes] = useState<Reservation | null>(null);
@@ -463,7 +465,22 @@ const AdminReservas = () => {
         </div>
 
         {/* Cards resumo */}
-        {(() => {
+        {!fatAutenticado ? (
+          <div className="flex flex-col items-center justify-center py-12 gap-4">
+            <div className="w-14 h-14 rounded-full bg-white/5 border border-white/10 flex items-center justify-center">
+              <Lock className="w-6 h-6 text-primary" />
+            </div>
+            <p className="text-white/40 text-sm font-body uppercase tracking-widest">Acesso restrito</p>
+            <button
+              onClick={() => setPinFatOpen(true)}
+              className="flex items-center gap-1.5 px-5 py-2 rounded-lg text-black text-xs font-semibold hover:brightness-110 transition-all"
+              style={{ background: "linear-gradient(135deg,#C9A84C,#E5C97A)" }}
+            >
+              <Lock className="w-3.5 h-3.5" />
+              Desbloquear
+            </button>
+          </div>
+        ) : (() => {
           const desde =
             periodoFat === "hoje"
               ? startOfDay(now)
@@ -963,6 +980,15 @@ const AdminReservas = () => {
             setRelatorioAutenticado(true);
             setRelatorioOpen(true);
           }}
+        />
+      )}
+
+      {pinFatOpen && (
+        <PinModal
+          title="Acesso ao Faturamento"
+          description="Digite a senha de administrador para visualizar."
+          onClose={() => setPinFatOpen(false)}
+          onSuccess={() => setFatAutenticado(true)}
         />
       )}
 
