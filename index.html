@@ -28,6 +28,17 @@
     <link rel="apple-touch-icon" href="/icon-192.png" />
     <link rel="manifest" href="/manifest.json" />
     <meta name="theme-color" content="#0F172A" />
+    <style>
+      @media print {
+        body > * { display: none !important; }
+        #relatorio-print { display: flex !important; flex-direction: column; max-height: none !important; overflow: visible !important; background: #fff !important; color: #000 !important; border: none !important; position: fixed; inset: 0; padding: 2rem; font-size: 12px; }
+        #relatorio-print .no-print { display: none !important; }
+        #relatorio-print .print-only { display: block !important; }
+        #relatorio-print table { border-collapse: collapse; width: 100%; margin-top: 0.5rem; }
+        #relatorio-print th, #relatorio-print td { border: 1px solid #ccc; padding: 5px 8px; color: #000; }
+        #relatorio-print th { background: #f0f0f0; font-weight: bold; }
+      }
+    </style>
   </head>
 
   <body>
