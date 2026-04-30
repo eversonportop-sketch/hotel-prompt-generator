@@ -51,6 +51,20 @@
         #relatorio-print table { border-collapse: collapse; width: 100%; }
         #relatorio-print th, #relatorio-print td { border: 1px solid #ccc; padding: 5px 8px; color: #000; }
         #relatorio-print th { background: #f0f0f0; font-weight: bold; }
+        #relatorio-print * {
+          color: #000 !important;
+          -webkit-print-color-adjust: exact;
+          print-color-adjust: exact;
+        }
+        #relatorio-print h1,
+        #relatorio-print h2,
+        #relatorio-print p,
+        #relatorio-print td,
+        #relatorio-print th,
+        #relatorio-print span {
+          color: #000 !important;
+          opacity: 1 !important;
+        }
       }
     </style>
   </head>
