@@ -45,14 +45,23 @@
           color: #000 !important;
           border-radius: 0 !important;
         }
-        #relatorio-print > div {
+        #relatorio-print > div,
+        #relatorio-print .print-scroll {
           max-height: none !important;
           overflow: visible !important;
           height: auto !important;
         }
+
+        /* Permitir múltiplas páginas */
+        html, body { height: auto !important; overflow: visible !important; }
+        #relatorio-print table { page-break-inside: auto; }
+        #relatorio-print tr { page-break-inside: avoid; page-break-after: auto; }
+        #relatorio-print h4 { page-break-after: avoid; }
+
         #relatorio-print .no-print { display: none !important; }
         #relatorio-print .print-only { display: block !important; }
 
+        /* Zerar todos os backgrounds e forçar preto */
         #relatorio-print,
         #relatorio-print div,
         #relatorio-print p,
@@ -77,6 +86,7 @@
           box-shadow: none !important;
         }
 
+        /* Cards do resumo */
         #relatorio-print .report-card {
           background: #f5f5f5 !important;
           border: 1px solid #ddd !important;
@@ -84,6 +94,7 @@
         #relatorio-print .report-label { color: #555 !important; }
         #relatorio-print .report-value { color: #000 !important; font-weight: bold; }
 
+        /* Tabelas */
         #relatorio-print table { border-collapse: collapse; width: 100%; }
         #relatorio-print th { background: #eeeeee !important; font-weight: bold; }
         #relatorio-print th,
