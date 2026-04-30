@@ -30,11 +30,25 @@
     <meta name="theme-color" content="#0F172A" />
     <style>
       @media print {
-        body > * { display: none !important; }
-        #relatorio-print { display: flex !important; flex-direction: column; max-height: none !important; overflow: visible !important; background: #fff !important; color: #000 !important; border: none !important; position: fixed; inset: 0; padding: 2rem; font-size: 12px; }
+        body * { visibility: hidden; }
+        #relatorio-print, #relatorio-print * { visibility: visible; }
+        #relatorio-print {
+          position: fixed;
+          top: 0;
+          left: 0;
+          width: 100%;
+          background: white !important;
+          color: black !important;
+          padding: 2rem;
+          font-size: 12px;
+          border: none !important;
+          box-shadow: none !important;
+          max-height: none !important;
+          overflow: visible !important;
+        }
         #relatorio-print .no-print { display: none !important; }
         #relatorio-print .print-only { display: block !important; }
-        #relatorio-print table { border-collapse: collapse; width: 100%; margin-top: 0.5rem; }
+        #relatorio-print table { border-collapse: collapse; width: 100%; }
         #relatorio-print th, #relatorio-print td { border: 1px solid #ccc; padding: 5px 8px; color: #000; }
         #relatorio-print th { background: #f0f0f0; font-weight: bold; }
       }
