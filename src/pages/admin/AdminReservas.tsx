@@ -1076,7 +1076,7 @@ const AdminReservas = () => {
                     </div>
                   </div>
 
-                  <div className="overflow-y-auto p-6 space-y-6">
+                  <div className="overflow-y-auto p-6 space-y-6 print-scroll">
                     <div className="hidden print-only">
                       <h1 className="text-xl font-bold">Hotel SB — Relatório de Faturamento</h1>
                       <p>Período: {periodoLabel}</p>
