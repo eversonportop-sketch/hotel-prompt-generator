@@ -175,6 +175,11 @@ const AdminReservas = () => {
   const [drawerOpen, setDrawerOpen] = useState(false);
   const [periodoFat, setPeriodoFat] = useState<"hoje" | "semana" | "mes" | "ano">("hoje");
   const [relatorioOpen, setRelatorioOpen] = useState(false);
+  React.useEffect(() => {
+    return () => {
+      setRelatorioOpen(false);
+    };
+  }, []);
   const [pinRelatorioOpen, setPinRelatorioOpen] = useState(false);
   const [relatorioAutenticado, setRelatorioAutenticado] = useState(false);
   const [fatAutenticado, setFatAutenticado] = useState(false);
@@ -480,120 +485,122 @@ const AdminReservas = () => {
               Desbloquear
             </button>
           </div>
-        ) : (() => {
-          const desde =
-            periodoFat === "hoje"
-              ? startOfDay(now)
-              : periodoFat === "semana"
-                ? startOfWeek(now, { weekStartsOn: 1 })
-                : periodoFat === "mes"
-                  ? startOfMonth(now)
-                  : startOfYear(now);
-          const resPeriodo = finalizadas.filter((r) => new Date(r.checked_out_at!) >= desde);
-          const totalPeriodo = resPeriodo.reduce((s, r) => s + Number(r.total_price), 0);
-          const ticketMedio = resPeriodo.length > 0 ? totalPeriodo / resPeriodo.length : 0;
-          return (
-            <>
-              <div className="grid grid-cols-3 gap-3">
-                <div className="bg-primary/8 border border-primary/20 rounded-lg px-4 py-3">
-                  <p className="text-[10px] text-primary/50 font-body uppercase tracking-widest mb-1">Total</p>
-                  <p className="font-display text-xl font-bold text-primary">
-                    R$ {totalPeriodo.toLocaleString("pt-BR", { minimumFractionDigits: 2 })}
-                  </p>
+        ) : (
+          (() => {
+            const desde =
+              periodoFat === "hoje"
+                ? startOfDay(now)
+                : periodoFat === "semana"
+                  ? startOfWeek(now, { weekStartsOn: 1 })
+                  : periodoFat === "mes"
+                    ? startOfMonth(now)
+                    : startOfYear(now);
+            const resPeriodo = finalizadas.filter((r) => new Date(r.checked_out_at!) >= desde);
+            const totalPeriodo = resPeriodo.reduce((s, r) => s + Number(r.total_price), 0);
+            const ticketMedio = resPeriodo.length > 0 ? totalPeriodo / resPeriodo.length : 0;
+            return (
+              <>
+                <div className="grid grid-cols-3 gap-3">
+                  <div className="bg-primary/8 border border-primary/20 rounded-lg px-4 py-3">
+                    <p className="text-[10px] text-primary/50 font-body uppercase tracking-widest mb-1">Total</p>
+                    <p className="font-display text-xl font-bold text-primary">
+                      R$ {totalPeriodo.toLocaleString("pt-BR", { minimumFractionDigits: 2 })}
+                    </p>
+                  </div>
+                  <div className="bg-white/[0.03] border border-white/5 rounded-lg px-4 py-3">
+                    <p className="text-[10px] text-white/30 font-body uppercase tracking-widest mb-1">Checkouts</p>
+                    <p className="font-display text-xl font-bold text-cream/80">{resPeriodo.length}</p>
+                  </div>
+                  <div className="bg-white/[0.03] border border-white/5 rounded-lg px-4 py-3">
+                    <p className="text-[10px] text-white/30 font-body uppercase tracking-widest mb-1">Ticket médio</p>
+                    <p className="font-display text-xl font-bold text-cream/80">
+                      R$ {ticketMedio.toLocaleString("pt-BR", { minimumFractionDigits: 2 })}
+                    </p>
+                  </div>
                 </div>
-                <div className="bg-white/[0.03] border border-white/5 rounded-lg px-4 py-3">
-                  <p className="text-[10px] text-white/30 font-body uppercase tracking-widest mb-1">Checkouts</p>
-                  <p className="font-display text-xl font-bold text-cream/80">{resPeriodo.length}</p>
-                </div>
-                <div className="bg-white/[0.03] border border-white/5 rounded-lg px-4 py-3">
-                  <p className="text-[10px] text-white/30 font-body uppercase tracking-widest mb-1">Ticket médio</p>
-                  <p className="font-display text-xl font-bold text-cream/80">
-                    R$ {ticketMedio.toLocaleString("pt-BR", { minimumFractionDigits: 2 })}
-                  </p>
-                </div>
-              </div>
 
-              {/* Tabela detalhada */}
-              {resPeriodo.length === 0 ? (
-                <p className="text-center text-white/20 text-sm font-body py-4">Nenhum checkout no período.</p>
-              ) : (
-                <div className="overflow-x-auto rounded-lg border border-white/5">
-                  <table className="w-full text-sm">
-                    <thead>
-                      <tr className="border-b border-white/5 bg-white/[0.02]">
-                        {["Hóspede", "Quarto", "Período", "Checkout", "Valor"].map((h) => (
-                          <th
-                            key={h}
-                            className="text-left px-4 py-2.5 text-[10px] uppercase tracking-widest text-white/25 font-body"
-                          >
-                            {h}
-                          </th>
-                        ))}
-                      </tr>
-                    </thead>
-                    <tbody>
-                      {resPeriodo.map((r) => {
-                        const n2 = nights(r.check_in, r.check_out);
-                        return (
-                          <tr
-                            key={r.id}
-                            className="border-b border-white/5 last:border-0 hover:bg-white/[0.02] transition-colors"
-                          >
-                            <td className="px-4 py-3">
-                              <div className="flex items-center gap-2">
-                                <div className="w-6 h-6 rounded-full bg-white/5 border border-white/8 flex items-center justify-center shrink-0">
-                                  <span className="text-white/40 text-[10px] font-bold">
-                                    {r.guestName[0]?.toUpperCase() ?? "?"}
-                                  </span>
+                {/* Tabela detalhada */}
+                {resPeriodo.length === 0 ? (
+                  <p className="text-center text-white/20 text-sm font-body py-4">Nenhum checkout no período.</p>
+                ) : (
+                  <div className="overflow-x-auto rounded-lg border border-white/5">
+                    <table className="w-full text-sm">
+                      <thead>
+                        <tr className="border-b border-white/5 bg-white/[0.02]">
+                          {["Hóspede", "Quarto", "Período", "Checkout", "Valor"].map((h) => (
+                            <th
+                              key={h}
+                              className="text-left px-4 py-2.5 text-[10px] uppercase tracking-widest text-white/25 font-body"
+                            >
+                              {h}
+                            </th>
+                          ))}
+                        </tr>
+                      </thead>
+                      <tbody>
+                        {resPeriodo.map((r) => {
+                          const n2 = nights(r.check_in, r.check_out);
+                          return (
+                            <tr
+                              key={r.id}
+                              className="border-b border-white/5 last:border-0 hover:bg-white/[0.02] transition-colors"
+                            >
+                              <td className="px-4 py-3">
+                                <div className="flex items-center gap-2">
+                                  <div className="w-6 h-6 rounded-full bg-white/5 border border-white/8 flex items-center justify-center shrink-0">
+                                    <span className="text-white/40 text-[10px] font-bold">
+                                      {r.guestName[0]?.toUpperCase() ?? "?"}
+                                    </span>
+                                  </div>
+                                  <span className="text-cream/80 font-body">{r.guestName}</span>
                                 </div>
-                                <span className="text-cream/80 font-body">{r.guestName}</span>
-                              </div>
-                            </td>
-                            <td className="px-4 py-3">
-                              <p className="text-cream/70 font-body">{(r.rooms as any)?.name ?? "—"}</p>
-                              <p className="text-white/30 text-xs font-body">{(r.rooms as any)?.category}</p>
-                            </td>
-                            <td className="px-4 py-3 whitespace-nowrap">
-                              <p className="text-white/50 text-xs font-body">
-                                {fmt(r.check_in)} → {fmt(r.check_out)}
-                              </p>
-                              <p className="text-white/25 text-xs font-body">{n2}n</p>
-                            </td>
-                            <td className="px-4 py-3 whitespace-nowrap">
-                              <p className="text-white/50 text-xs font-body">
-                                {format(new Date(r.checked_out_at!), "dd/MM/yyyy HH:mm", { locale: ptBR })}
-                              </p>
-                            </td>
-                            <td className="px-4 py-3">
-                              <span className="text-primary font-semibold font-body">
-                                R$ {Number(r.total_price).toLocaleString("pt-BR", { minimumFractionDigits: 2 })}
-                              </span>
-                            </td>
-                          </tr>
-                        );
-                      })}
-                    </tbody>
-                    <tfoot>
-                      <tr className="border-t border-primary/20 bg-primary/5">
-                        <td
-                          colSpan={4}
-                          className="px-4 py-3 text-xs text-white/30 font-body font-semibold uppercase tracking-wider"
-                        >
-                          Total do período
-                        </td>
-                        <td className="px-4 py-3">
-                          <span className="text-primary font-display font-bold text-base">
-                            R$ {totalPeriodo.toLocaleString("pt-BR", { minimumFractionDigits: 2 })}
-                          </span>
-                        </td>
-                      </tr>
-                    </tfoot>
-                  </table>
-                </div>
-              )}
-            </>
-          );
-        })()}
+                              </td>
+                              <td className="px-4 py-3">
+                                <p className="text-cream/70 font-body">{(r.rooms as any)?.name ?? "—"}</p>
+                                <p className="text-white/30 text-xs font-body">{(r.rooms as any)?.category}</p>
+                              </td>
+                              <td className="px-4 py-3 whitespace-nowrap">
+                                <p className="text-white/50 text-xs font-body">
+                                  {fmt(r.check_in)} → {fmt(r.check_out)}
+                                </p>
+                                <p className="text-white/25 text-xs font-body">{n2}n</p>
+                              </td>
+                              <td className="px-4 py-3 whitespace-nowrap">
+                                <p className="text-white/50 text-xs font-body">
+                                  {format(new Date(r.checked_out_at!), "dd/MM/yyyy HH:mm", { locale: ptBR })}
+                                </p>
+                              </td>
+                              <td className="px-4 py-3">
+                                <span className="text-primary font-semibold font-body">
+                                  R$ {Number(r.total_price).toLocaleString("pt-BR", { minimumFractionDigits: 2 })}
+                                </span>
+                              </td>
+                            </tr>
+                          );
+                        })}
+                      </tbody>
+                      <tfoot>
+                        <tr className="border-t border-primary/20 bg-primary/5">
+                          <td
+                            colSpan={4}
+                            className="px-4 py-3 text-xs text-white/30 font-body font-semibold uppercase tracking-wider"
+                          >
+                            Total do período
+                          </td>
+                          <td className="px-4 py-3">
+                            <span className="text-primary font-display font-bold text-base">
+                              R$ {totalPeriodo.toLocaleString("pt-BR", { minimumFractionDigits: 2 })}
+                            </span>
+                          </td>
+                        </tr>
+                      </tfoot>
+                    </table>
+                  </div>
+                )}
+              </>
+            );
+          })()
+        )}
       </div>
 
       {/* Search + Filter */}
@@ -993,228 +1000,268 @@ const AdminReservas = () => {
       )}
 
       {/* ═══ MODAL RELATÓRIO ═══ */}
-      {relatorioOpen && (() => {
-        const desde =
-          periodoFat === "hoje"
-            ? startOfDay(now)
-            : periodoFat === "semana"
-              ? startOfWeek(now, { weekStartsOn: 1 })
-              : periodoFat === "mes"
-                ? startOfMonth(now)
-                : startOfYear(now);
+      {relatorioOpen &&
+        (() => {
+          const desde =
+            periodoFat === "hoje"
+              ? startOfDay(now)
+              : periodoFat === "semana"
+                ? startOfWeek(now, { weekStartsOn: 1 })
+                : periodoFat === "mes"
+                  ? startOfMonth(now)
+                  : startOfYear(now);
 
-        const resPeriodoRel = finalizadas.filter(
-          (r) => new Date(r.checked_out_at!) >= desde
-        );
-        const totalRel = resPeriodoRel.reduce((s, r) => s + Number(r.total_price), 0);
-        const ticketMedioRel = resPeriodoRel.length > 0 ? totalRel / resPeriodoRel.length : 0;
+          const resPeriodoRel = finalizadas.filter((r) => new Date(r.checked_out_at!) >= desde);
+          const totalRel = resPeriodoRel.reduce((s, r) => s + Number(r.total_price), 0);
+          const ticketMedioRel = resPeriodoRel.length > 0 ? totalRel / resPeriodoRel.length : 0;
 
-        const periodoLabel =
-          periodoFat === "hoje"
-            ? "Hoje"
-            : periodoFat === "semana"
-              ? "Esta semana"
-              : periodoFat === "mes"
-                ? "Este mês"
-                : "Este ano";
+          const periodoLabel =
+            periodoFat === "hoje"
+              ? "Hoje"
+              : periodoFat === "semana"
+                ? "Esta semana"
+                : periodoFat === "mes"
+                  ? "Este mês"
+                  : "Este ano";
 
-        const porQuarto: Record<string, { nome: string; categoria: string; reservas: number; noites: number; total: number }> = {};
-        resPeriodoRel.forEach((r) => {
-          const nome = (r.rooms as any)?.name ?? "—";
-          const cat = (r.rooms as any)?.category ?? "—";
-          const n2 = nights(r.check_in, r.check_out);
-          if (!porQuarto[nome]) porQuarto[nome] = { nome, categoria: cat, reservas: 0, noites: 0, total: 0 };
-          porQuarto[nome].reservas += 1;
-          porQuarto[nome].noites += n2;
-          porQuarto[nome].total += Number(r.total_price);
-        });
-        const quartosList = Object.values(porQuarto).sort((a, b) => b.total - a.total);
+          const porQuarto: Record<
+            string,
+            { nome: string; categoria: string; reservas: number; noites: number; total: number }
+          > = {};
+          resPeriodoRel.forEach((r) => {
+            const nome = (r.rooms as any)?.name ?? "—";
+            const cat = (r.rooms as any)?.category ?? "—";
+            const n2 = nights(r.check_in, r.check_out);
+            if (!porQuarto[nome]) porQuarto[nome] = { nome, categoria: cat, reservas: 0, noites: 0, total: 0 };
+            porQuarto[nome].reservas += 1;
+            porQuarto[nome].noites += n2;
+            porQuarto[nome].total += Number(r.total_price);
+          });
+          const quartosList = Object.values(porQuarto).sort((a, b) => b.total - a.total);
 
-        return (
-          <>
-            <div
-              className="fixed inset-0 z-[55] bg-black/80 backdrop-blur-sm no-print"
-              onClick={() => setRelatorioOpen(false)}
-            />
-            <div className="fixed inset-0 z-[55] flex items-center justify-center p-4 pointer-events-none no-print">
+          return (
+            <>
               <div
-                id="relatorio-print"
-                className="bg-[#111114] border border-white/10 rounded-2xl w-full max-w-5xl max-h-[90vh] flex flex-col shadow-2xl pointer-events-auto"
-                onClick={(e) => e.stopPropagation()}
-              >
-                <div className="flex items-center justify-between p-5 border-b border-white/10 no-print">
-                  <div className="flex items-center gap-2">
-                    <FileText className="w-4 h-4 text-primary" />
-                    <h3 className="font-display text-base font-semibold text-cream">
-                      Relatório de Faturamento — {periodoLabel}
-                    </h3>
-                  </div>
-                  <div className="flex items-center gap-2">
-                    <button
-                      onClick={() => window.print()}
-                      className="flex items-center gap-1.5 px-4 py-2 rounded-lg text-black text-sm font-semibold hover:brightness-110 transition-all"
-                      style={{ background: "linear-gradient(135deg,#C9A84C,#E5C97A)" }}
-                    >
-                      <Printer className="w-4 h-4" />
-                      Imprimir
-                    </button>
-                    <button
-                      onClick={() => setRelatorioOpen(false)}
-                      className="text-white/25 hover:text-cream transition-colors ml-2"
-                    >
-                      <X className="w-5 h-5" />
-                    </button>
-                  </div>
-                </div>
-
-                <div className="overflow-y-auto p-6 space-y-6">
-                  <div className="hidden print-only">
-                    <h1 className="text-xl font-bold">Hotel SB — Relatório de Faturamento</h1>
-                    <p>Período: {periodoLabel}</p>
-                    <p>Gerado em: {format(now, "dd/MM/yyyy 'às' HH:mm", { locale: ptBR })}</p>
+                className="fixed inset-0 z-[55] bg-black/80 backdrop-blur-sm no-print"
+                onClick={() => setRelatorioOpen(false)}
+              />
+              <div className="fixed inset-0 z-[55] flex items-center justify-center p-4 pointer-events-none no-print">
+                <div
+                  id="relatorio-print"
+                  className="bg-[#111114] border border-white/10 rounded-2xl w-full max-w-5xl max-h-[90vh] flex flex-col shadow-2xl pointer-events-auto"
+                  onClick={(e) => e.stopPropagation()}
+                >
+                  <div className="flex items-center justify-between p-5 border-b border-white/10 no-print">
+                    <div className="flex items-center gap-2">
+                      <FileText className="w-4 h-4 text-primary" />
+                      <h3 className="font-display text-base font-semibold text-cream">
+                        Relatório de Faturamento — {periodoLabel}
+                      </h3>
+                    </div>
+                    <div className="flex items-center gap-2">
+                      <button
+                        onClick={() => window.print()}
+                        className="flex items-center gap-1.5 px-4 py-2 rounded-lg text-black text-sm font-semibold hover:brightness-110 transition-all"
+                        style={{ background: "linear-gradient(135deg,#C9A84C,#E5C97A)" }}
+                      >
+                        <Printer className="w-4 h-4" />
+                        Imprimir
+                      </button>
+                      <button
+                        onClick={() => setRelatorioOpen(false)}
+                        className="text-white/25 hover:text-cream transition-colors ml-2"
+                      >
+                        <X className="w-5 h-5" />
+                      </button>
+                    </div>
                   </div>
 
-                  <div>
-                    <h4 className="text-xs font-semibold uppercase tracking-widest text-white/40 mb-3 font-body">
-                      Resumo Executivo
-                    </h4>
-                    <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
-                      <div className="bg-charcoal-light border border-white/5 rounded-lg p-4">
-                        <p className="text-white/40 text-xs font-body mb-1">Total Faturado</p>
-                        <p className="text-cream text-lg font-display font-semibold">
-                          R$ {totalRel.toLocaleString("pt-BR", { minimumFractionDigits: 2 })}
-                        </p>
-                      </div>
-                      <div className="bg-charcoal-light border border-white/5 rounded-lg p-4">
-                        <p className="text-white/40 text-xs font-body mb-1">Checkouts</p>
-                        <p className="text-cream text-lg font-display font-semibold">{resPeriodoRel.length}</p>
-                      </div>
-                      <div className="bg-charcoal-light border border-white/5 rounded-lg p-4">
-                        <p className="text-white/40 text-xs font-body mb-1">Ticket Médio</p>
-                        <p className="text-cream text-lg font-display font-semibold">
-                          R$ {ticketMedioRel.toLocaleString("pt-BR", { minimumFractionDigits: 2 })}
-                        </p>
-                      </div>
-                      {quartosList[0] && (
-                        <div className="bg-charcoal-light border border-white/5 rounded-lg p-4">
-                          <p className="text-white/40 text-xs font-body mb-1">Melhor Quarto</p>
-                          <p className="text-cream text-sm font-display font-semibold">{quartosList[0].nome}</p>
-                          <p className="text-primary text-xs font-body mt-1">
-                            R$ {quartosList[0].total.toLocaleString("pt-BR", { minimumFractionDigits: 2 })}
+                  <div className="overflow-y-auto p-6 space-y-6">
+                    <div className="hidden print-only">
+                      <h1 className="text-xl font-bold">Hotel SB — Relatório de Faturamento</h1>
+                      <p>Período: {periodoLabel}</p>
+                      <p>Gerado em: {format(now, "dd/MM/yyyy 'às' HH:mm", { locale: ptBR })}</p>
+                    </div>
+
+                    <div>
+                      <h4 className="text-xs font-semibold uppercase tracking-widest text-white/40 mb-3 font-body">
+                        Resumo Executivo
+                      </h4>
+                      <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
+                        <div
+                          className="report-card rounded-lg p-4"
+                          style={{ background: "rgba(255,255,255,0.04)", border: "1px solid rgba(255,255,255,0.08)" }}
+                        >
+                          <p className="report-label text-xs font-body mb-1" style={{ color: "rgba(255,255,255,0.4)" }}>
+                            Total Faturado
+                          </p>
+                          <p className="report-value text-lg font-display font-semibold" style={{ color: "#E5C97A" }}>
+                            R$ {totalRel.toLocaleString("pt-BR", { minimumFractionDigits: 2 })}
                           </p>
                         </div>
-                      )}
-                    </div>
-                  </div>
-
-                  {quartosList.length > 0 && (
-                    <div>
-                      <h4 className="text-xs font-semibold uppercase tracking-widest text-white/40 mb-3 font-body">
-                        Faturamento por Quarto
-                      </h4>
-                      <div className="overflow-x-auto">
-                        <table className="w-full text-sm">
-                          <thead>
-                            <tr className="border-b border-white/10">
-                              {["Quarto", "Categoria", "Reservas", "Noites", "Total (R$)", "% do Total"].map((h) => (
-                                <th key={h} className="text-left text-xs uppercase tracking-wider text-white/40 font-body py-2 px-3">
-                                  {h}
-                                </th>
-                              ))}
-                            </tr>
-                          </thead>
-                          <tbody>
-                            {quartosList.map((q) => (
-                              <tr key={q.nome} className="border-b border-white/5">
-                                <td className="py-2 px-3 text-cream font-body">{q.nome}</td>
-                                <td className="py-2 px-3 text-white/60 font-body">{q.categoria}</td>
-                                <td className="py-2 px-3 text-white/60 font-body">{q.reservas}</td>
-                                <td className="py-2 px-3 text-white/60 font-body">{q.noites}n</td>
-                                <td className="py-2 px-3 text-cream font-body">
-                                  R$ {q.total.toLocaleString("pt-BR", { minimumFractionDigits: 2 })}
-                                </td>
-                                <td className="py-2 px-3 text-primary font-body">
-                                  {totalRel > 0 ? ((q.total / totalRel) * 100).toFixed(1) : "0"}%
-                                </td>
-                              </tr>
-                            ))}
-                          </tbody>
-                        </table>
+                        <div
+                          className="report-card rounded-lg p-4"
+                          style={{ background: "rgba(255,255,255,0.04)", border: "1px solid rgba(255,255,255,0.08)" }}
+                        >
+                          <p className="report-label text-xs font-body mb-1" style={{ color: "rgba(255,255,255,0.4)" }}>
+                            Checkouts
+                          </p>
+                          <p className="report-value text-lg font-display font-semibold" style={{ color: "#f5f0e8" }}>
+                            {resPeriodoRel.length}
+                          </p>
+                        </div>
+                        <div
+                          className="report-card rounded-lg p-4"
+                          style={{ background: "rgba(255,255,255,0.04)", border: "1px solid rgba(255,255,255,0.08)" }}
+                        >
+                          <p className="report-label text-xs font-body mb-1" style={{ color: "rgba(255,255,255,0.4)" }}>
+                            Ticket Médio
+                          </p>
+                          <p className="report-value text-lg font-display font-semibold" style={{ color: "#f5f0e8" }}>
+                            R$ {ticketMedioRel.toLocaleString("pt-BR", { minimumFractionDigits: 2 })}
+                          </p>
+                        </div>
+                        {quartosList[0] && (
+                          <div
+                            className="report-card rounded-lg p-4"
+                            style={{ background: "rgba(255,255,255,0.04)", border: "1px solid rgba(255,255,255,0.08)" }}
+                          >
+                            <p
+                              className="report-label text-xs font-body mb-1"
+                              style={{ color: "rgba(255,255,255,0.4)" }}
+                            >
+                              Melhor Quarto
+                            </p>
+                            <p className="report-value text-sm font-display font-semibold" style={{ color: "#f5f0e8" }}>
+                              {quartosList[0].nome}
+                            </p>
+                            <p className="report-value text-xs font-body mt-1" style={{ color: "#E5C97A" }}>
+                              R$ {quartosList[0].total.toLocaleString("pt-BR", { minimumFractionDigits: 2 })}
+                            </p>
+                          </div>
+                        )}
                       </div>
                     </div>
-                  )}
 
-                  {resPeriodoRel.length === 0 ? (
-                    <p className="text-white/40 text-sm font-body text-center py-8">
-                      Nenhum checkout no período selecionado.
-                    </p>
-                  ) : (
-                    <div>
-                      <h4 className="text-xs font-semibold uppercase tracking-widest text-white/40 mb-3 font-body">
-                        Lista Completa de Checkouts
-                      </h4>
-                      <div className="overflow-x-auto">
-                        <table className="w-full text-sm">
-                          <thead>
-                            <tr className="border-b border-white/10">
-                              {["Hóspede", "Quarto", "Período", "Checkout", "Valor"].map((h) => (
-                                <th key={h} className="text-left text-xs uppercase tracking-wider text-white/40 font-body py-2 px-3">
-                                  {h}
-                                </th>
-                              ))}
-                            </tr>
-                          </thead>
-                          <tbody>
-                            {resPeriodoRel.map((r) => {
-                              const n2 = nights(r.check_in, r.check_out);
-                              return (
-                                <tr key={r.id} className="border-b border-white/5">
-                                  <td className="py-2 px-3">
-                                    <div className="flex items-center gap-2">
-                                      <div className="w-7 h-7 rounded-full bg-primary/15 border border-primary/25 flex items-center justify-center text-primary text-xs font-semibold">
-                                        {r.guestName[0]?.toUpperCase() ?? "?"}
-                                      </div>
-                                      <span className="text-cream font-body">{r.guestName}</span>
-                                    </div>
+                    {quartosList.length > 0 && (
+                      <div>
+                        <h4 className="text-xs font-semibold uppercase tracking-widest text-white/40 mb-3 font-body">
+                          Faturamento por Quarto
+                        </h4>
+                        <div className="overflow-x-auto">
+                          <table className="w-full text-sm">
+                            <thead>
+                              <tr className="border-b border-white/10">
+                                {["Quarto", "Categoria", "Reservas", "Noites", "Total (R$)", "% do Total"].map((h) => (
+                                  <th
+                                    key={h}
+                                    className="text-left text-xs uppercase tracking-wider text-white/40 font-body py-2 px-3"
+                                  >
+                                    {h}
+                                  </th>
+                                ))}
+                              </tr>
+                            </thead>
+                            <tbody>
+                              {quartosList.map((q) => (
+                                <tr key={q.nome} className="border-b border-white/5">
+                                  <td className="py-2 px-3 text-cream font-body">{q.nome}</td>
+                                  <td className="py-2 px-3 text-white/60 font-body">{q.categoria}</td>
+                                  <td className="py-2 px-3 text-white/60 font-body">{q.reservas}</td>
+                                  <td className="py-2 px-3 text-white/60 font-body">{q.noites}n</td>
+                                  <td className="py-2 px-3 text-cream font-body">
+                                    R$ {q.total.toLocaleString("pt-BR", { minimumFractionDigits: 2 })}
                                   </td>
-                                  <td className="py-2 px-3">
-                                    <p className="text-cream font-body">{(r.rooms as any)?.name ?? "—"}</p>
-                                    <p className="text-white/40 text-xs font-body">{(r.rooms as any)?.category}</p>
-                                  </td>
-                                  <td className="py-2 px-3">
-                                    <p className="text-white/60 text-xs font-body">{fmt(r.check_in)} → {fmt(r.check_out)}</p>
-                                    <p className="text-white/40 text-xs font-body">{n2}n</p>
-                                  </td>
-                                  <td className="py-2 px-3 text-white/60 text-xs font-body">
-                                    {format(new Date(r.checked_out_at!), "dd/MM/yyyy HH:mm", { locale: ptBR })}
-                                  </td>
-                                  <td className="py-2 px-3 text-cream font-semibold font-body">
-                                    R$ {Number(r.total_price).toLocaleString("pt-BR", { minimumFractionDigits: 2 })}
+                                  <td className="py-2 px-3 text-primary font-body">
+                                    {totalRel > 0 ? ((q.total / totalRel) * 100).toFixed(1) : "0"}%
                                   </td>
                                 </tr>
-                              );
-                            })}
-                          </tbody>
-                          <tfoot>
-                            <tr className="border-t border-white/20">
-                              <td colSpan={4} className="py-3 px-3 text-right text-white/60 font-body uppercase text-xs tracking-wider">
-                                Total do período
-                              </td>
-                              <td className="py-3 px-3 text-primary font-display font-semibold">
-                                R$ {totalRel.toLocaleString("pt-BR", { minimumFractionDigits: 2 })}
-                              </td>
-                            </tr>
-                          </tfoot>
-                        </table>
+                              ))}
+                            </tbody>
+                          </table>
+                        </div>
                       </div>
-                    </div>
-                  )}
+                    )}
+
+                    {resPeriodoRel.length === 0 ? (
+                      <p className="text-white/40 text-sm font-body text-center py-8">
+                        Nenhum checkout no período selecionado.
+                      </p>
+                    ) : (
+                      <div>
+                        <h4 className="text-xs font-semibold uppercase tracking-widest text-white/40 mb-3 font-body">
+                          Lista Completa de Checkouts
+                        </h4>
+                        <div className="overflow-x-auto">
+                          <table className="w-full text-sm">
+                            <thead>
+                              <tr className="border-b border-white/10">
+                                {["Hóspede", "Quarto", "Período", "Checkout", "Valor"].map((h) => (
+                                  <th
+                                    key={h}
+                                    className="text-left text-xs uppercase tracking-wider text-white/40 font-body py-2 px-3"
+                                  >
+                                    {h}
+                                  </th>
+                                ))}
+                              </tr>
+                            </thead>
+                            <tbody>
+                              {resPeriodoRel.map((r) => {
+                                const n2 = nights(r.check_in, r.check_out);
+                                return (
+                                  <tr key={r.id} className="border-b border-white/5">
+                                    <td className="py-2 px-3">
+                                      <div className="flex items-center gap-2">
+                                        <div className="w-7 h-7 rounded-full bg-primary/15 border border-primary/25 flex items-center justify-center text-primary text-xs font-semibold">
+                                          {r.guestName[0]?.toUpperCase() ?? "?"}
+                                        </div>
+                                        <span className="text-cream font-body">{r.guestName}</span>
+                                      </div>
+                                    </td>
+                                    <td className="py-2 px-3">
+                                      <p className="text-cream font-body">{(r.rooms as any)?.name ?? "—"}</p>
+                                      <p className="text-white/40 text-xs font-body">{(r.rooms as any)?.category}</p>
+                                    </td>
+                                    <td className="py-2 px-3">
+                                      <p className="text-white/60 text-xs font-body">
+                                        {fmt(r.check_in)} → {fmt(r.check_out)}
+                                      </p>
+                                      <p className="text-white/40 text-xs font-body">{n2}n</p>
+                                    </td>
+                                    <td className="py-2 px-3 text-white/60 text-xs font-body">
+                                      {format(new Date(r.checked_out_at!), "dd/MM/yyyy HH:mm", { locale: ptBR })}
+                                    </td>
+                                    <td className="py-2 px-3 text-cream font-semibold font-body">
+                                      R$ {Number(r.total_price).toLocaleString("pt-BR", { minimumFractionDigits: 2 })}
+                                    </td>
+                                  </tr>
+                                );
+                              })}
+                            </tbody>
+                            <tfoot>
+                              <tr className="border-t border-white/20">
+                                <td
+                                  colSpan={4}
+                                  className="py-3 px-3 text-right text-white/60 font-body uppercase text-xs tracking-wider"
+                                >
+                                  Total do período
+                                </td>
+                                <td className="py-3 px-3 text-primary font-display font-semibold">
+                                  R$ {totalRel.toLocaleString("pt-BR", { minimumFractionDigits: 2 })}
+                                </td>
+                              </tr>
+                            </tfoot>
+                          </table>
+                        </div>
+                      </div>
+                    )}
+                  </div>
                 </div>
               </div>
-            </div>
-          </>
-        );
-      })()}
+            </>
+          );
+        })()}
 
       {/* ═══ MODAL EXCLUIR ═══ */}
       {deleteId && (
