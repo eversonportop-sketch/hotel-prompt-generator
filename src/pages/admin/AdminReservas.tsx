@@ -1060,7 +1060,41 @@ const AdminReservas = () => {
                     </div>
                     <div className="flex items-center gap-2">
                       <button
-                        onClick={() => window.print()}
+                        onClick={() => {
+                          const conteudo = document.getElementById("relatorio-print");
+                          if (!conteudo) return;
+                          const win = window.open("", "_blank");
+                          if (!win) return;
+                          win.document.write(`
+                            <!DOCTYPE html>
+                            <html lang="pt-BR">
+                            <head>
+                              <meta charset="UTF-8"/>
+                              <title>Relatório Hotel SB</title>
+                              <style>
+                                body { font-family: Arial, sans-serif; padding: 2rem; color: #000; background: #fff; }
+                                table { width: 100%; border-collapse: collapse; margin-bottom: 20px; font-size: 13px; }
+                                th { background: #eee; font-weight: bold; text-align: left; padding: 6px 8px; border: 1px solid #ccc; }
+                                td { padding: 6px 8px; border: 1px solid #ddd; vertical-align: top; }
+                                tfoot td { font-weight: bold; background: #f0f0f0; }
+                                h1 { font-size: 20px; } h4 { font-size: 11px; text-transform: uppercase; letter-spacing: 2px; color: #555; margin: 20px 0 8px; }
+                                .no-print { display: none !important; }
+                                .grid { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; margin-bottom: 16px; }
+                                .report-card { border: 1px solid #ddd; border-radius: 6px; padding: 12px; background: #f9f9f9; }
+                                .report-label { font-size: 11px; color: #666; margin-bottom: 4px; }
+                                .report-value { font-size: 18px; font-weight: bold; color: #000; }
+                                * { color: #000 !important; background: #fff !important; box-shadow: none !important; border-color: #ddd !important; }
+                                .report-card { background: #f9f9f9 !important; }
+                                th { background: #eee !important; }
+                                tfoot td { background: #f0f0f0 !important; }
+                              </style>
+                            </head>
+                            <body>${conteudo.innerHTML}</body>
+                            </html>
+                          `);
+                          win.document.close();
+                          setTimeout(() => { win.focus(); win.print(); }, 800);
+                        }}
                         className="flex items-center gap-1.5 px-4 py-2 rounded-lg text-black text-sm font-semibold hover:brightness-110 transition-all"
                         style={{ background: "linear-gradient(135deg,#C9A84C,#E5C97A)" }}
                       >
