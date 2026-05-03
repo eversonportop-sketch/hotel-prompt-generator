@@ -125,11 +125,18 @@ const AdminClientes = () => {
         if (ref) countMap[ref] = (countMap[ref] || 0) + 1;
       });
 
-      const guests: Cliente[] = (g.data || []).map((x: any) => ({
-        ...x,
-        source: "guest" as const,
-        reservations_count: countMap[x.id] || 0,
-      }));
+      // IDs de guests que já foram migrados para um profile (reservas com profile_id preenchido)
+      const migratedGuestIds = new Set(
+        (reservas || []).filter((r: any) => r.guest_id && r.profile_id).map((r: any) => r.guest_id as string),
+      );
+
+      const guests: Cliente[] = (g.data || [])
+        .filter((x: any) => !migratedGuestIds.has(x.id))
+        .map((x: any) => ({
+          ...x,
+          source: "guest" as const,
+          reservations_count: countMap[x.id] || 0,
+        }));
       const profiles: Cliente[] = (p.data || []).map((x: any) => ({
         ...x,
         email: null,
