@@ -704,16 +704,25 @@ const AdminReservas = () => {
                           </button>
                         )}
                         {r.status === "checked_in" && (
-                          <button
-                            onClick={() => {
-                              setExtendRes(r);
-                              setExtendCheckOut(new Date(r.check_out + "T12:00:00"));
-                            }}
-                            className="p-1.5 rounded-lg text-white/25 hover:text-blue-400 hover:bg-blue-500/10 transition-colors"
-                            title="Estender estadia"
-                          >
-                            <CalendarPlus className="w-3.5 h-3.5" />
-                          </button>
+                          <>
+                            <button
+                              onClick={() => openEdit(r)}
+                              className="p-1.5 rounded-lg text-white/25 hover:text-cream hover:bg-white/8 transition-colors"
+                              title="Editar reserva"
+                            >
+                              <Pencil className="w-3.5 h-3.5" />
+                            </button>
+                            <button
+                              onClick={() => {
+                                setExtendRes(r);
+                                setExtendCheckOut(new Date(r.check_out + "T12:00:00"));
+                              }}
+                              className="p-1.5 rounded-lg text-white/25 hover:text-blue-400 hover:bg-blue-500/10 transition-colors"
+                              title="Estender estadia"
+                            >
+                              <CalendarPlus className="w-3.5 h-3.5" />
+                            </button>
+                          </>
                         )}
                         <button
                           onClick={() => {
@@ -1093,7 +1102,10 @@ const AdminReservas = () => {
                             </html>
                           `);
                           win.document.close();
-                          setTimeout(() => { win.focus(); win.print(); }, 800);
+                          setTimeout(() => {
+                            win.focus();
+                            win.print();
+                          }, 800);
                         }}
                         className="flex items-center gap-1.5 px-4 py-2 rounded-lg text-black text-sm font-semibold hover:brightness-110 transition-all"
                         style={{ background: "linear-gradient(135deg,#C9A84C,#E5C97A)" }}
