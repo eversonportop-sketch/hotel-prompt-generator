@@ -274,6 +274,7 @@ const AdminReservas = () => {
       qc.invalidateQueries({ queryKey: ["reservas-lista"] });
       toast.success("Reserva excluída.");
       setDeleteId(null);
+      setSearch("");
     },
     onError: () => toast.error("Erro ao excluir."),
   });
