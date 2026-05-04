@@ -212,6 +212,20 @@ const AdminCheckout = () => {
         .update({ status: "checked_out", checked_out_at: new Date().toISOString() } as any)
         .eq("id", selectedRes.id);
       if (error) throw error;
+
+      // Verificar se limpeza automática está ativada
+      const { data: setting } = await supabase
+        .from("hotel_settings" as any)
+        .select("value")
+        .eq("key", "auto_cleaning")
+        .single();
+      const autoClean = !setting || (setting as any).value !== "false";
+      if (autoClean && selectedRes.room_id) {
+        await supabase
+          .from("rooms")
+          .update({ status: "cleaning" } as any)
+          .eq("id", selectedRes.room_id);
+      }
     },
     onSuccess: () => {
       toast.success("Checkout finalizado!");
