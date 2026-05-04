@@ -21,6 +21,7 @@ const KEYS = [
   "instagram",
   "facebook",
   "google_maps_url",
+  "auto_cleaning",
 ];
 
 const DEFAULT_SETTINGS: Record<string, string> = {
@@ -38,6 +39,7 @@ const DEFAULT_SETTINGS: Record<string, string> = {
   instagram: "",
   facebook: "",
   google_maps_url: "",
+  auto_cleaning: "true",
 };
 
 const AdminConfiguracoes = () => {
@@ -212,6 +214,34 @@ const AdminConfiguracoes = () => {
                 "https://maps.google.com/...",
                 <MapPin className="w-4 h-4" />,
               )}
+            </div>
+          </div>
+
+          {/* Operacional */}
+          <div className="bg-charcoal-light border border-gold/10 rounded-xl p-6">
+            <h2 className="font-display text-base font-semibold text-cream mb-5 pb-3 border-b border-gold/10">
+              Operacional
+            </h2>
+            <div className="flex items-center justify-between">
+              <div>
+                <p className="text-cream text-sm font-body font-medium">Limpeza automática após checkout</p>
+                <p className="text-cream/40 text-xs font-body mt-0.5">
+                  Quando ativado, o quarto vai para "Em Limpeza" automaticamente após o checkout.
+                </p>
+              </div>
+              <button
+                type="button"
+                onClick={() => setForm({ ...form, auto_cleaning: form.auto_cleaning === "true" ? "false" : "true" })}
+                className={`relative w-12 h-6 rounded-full transition-colors duration-200 focus:outline-none ${
+                  form.auto_cleaning === "true" ? "bg-primary" : "bg-white/10"
+                }`}
+              >
+                <span
+                  className={`absolute top-0.5 left-0.5 w-5 h-5 rounded-full bg-white shadow transition-transform duration-200 ${
+                    form.auto_cleaning === "true" ? "translate-x-6" : "translate-x-0"
+                  }`}
+                />
+              </button>
             </div>
           </div>
 
