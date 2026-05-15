@@ -199,6 +199,13 @@ const AdminReservas = () => {
   const [editCheckinTime, setEditCheckinTime] = useState(""); // HH:MM
   const [editNotes, setEditNotes] = useState("");
   const [editSaving, setEditSaving] = useState(false);
+  const [editGuestsCount, setEditGuestsCount] = useState(1);
+
+  // Desconto com PIN de supervisor
+  const [editDiscount, setEditDiscount] = useState<number>(0);
+  const [editDiscountType, setEditDiscountType] = useState<"percent" | "fixed">("percent");
+  const [discountUnlocked, setDiscountUnlocked] = useState(false);
+  const [pinDiscountOpen, setPinDiscountOpen] = useState(false);
 
   // ─── Queries ───────────────────────────────────────────────────────────────
   const { data: reservations = [], isLoading } = useQuery({
@@ -329,7 +336,6 @@ const AdminReservas = () => {
     setEditRoomId(r.rooms ? (r.rooms as any).id : "");
     setEditCheckIn(new Date(r.check_in + "T12:00:00"));
     setEditCheckOut(new Date(r.check_out + "T12:00:00"));
-    // Se já fez check-in, pré-preenche a hora registrada; senão deixa vazio
     if (r.checked_in_at) {
       const d = new Date(r.checked_in_at);
       setEditCheckinTime(
@@ -339,6 +345,10 @@ const AdminReservas = () => {
       setEditCheckinTime("");
     }
     setEditNotes(r.notes || "");
+    setEditGuestsCount(r.guests_count || 1);
+    setEditDiscount(0);
+    setEditDiscountType("percent");
+    setDiscountUnlocked(false);
   };
 
   const handleEditSave = async () => {
@@ -348,8 +358,15 @@ const AdminReservas = () => {
     const room = (rooms as any[]).find((r) => r.id === editRoomId);
     const basePrice = Number(room?.price || 0);
     const extraPerPerson = room?.promotional_price ? Number(room.promotional_price) : 0;
-    const guestsQty = Number(editRes.guests_count || 1);
-    const total = n2 * (basePrice + extraPerPerson * Math.max(0, guestsQty - 1));
+    const guestsQty = Number(editGuestsCount || 1);
+    const baseTotal = n2 * (basePrice + extraPerPerson * Math.max(0, guestsQty - 1));
+    const discountAmount =
+      discountUnlocked && editDiscount > 0
+        ? editDiscountType === "percent"
+          ? baseTotal * (editDiscount / 100)
+          : editDiscount
+        : 0;
+    const total = Math.max(0, parseFloat((baseTotal - discountAmount).toFixed(2)));
     setEditSaving(true);
 
     // Monta o checked_in_at com a data e hora editadas (só se já fez check-in)
@@ -370,6 +387,7 @@ const AdminReservas = () => {
         check_out: format(editCheckOut, "yyyy-MM-dd"),
         total_price: total,
         notes: editNotes || null,
+        guests_count: guestsQty,
       };
       if (newCheckedInAt !== undefined) {
         updatePayload.checked_in_at = newCheckedInAt;
@@ -898,6 +916,127 @@ const AdminReservas = () => {
                     </p>
                   </div>
                 )}
+                {/* Número de hóspedes — editável sempre */}
+                <div>
+                  <label className="text-[10px] text-white/40 font-body uppercase tracking-widest block mb-2">
+                    Número de Hóspedes
+                  </label>
+                  <div className="flex items-center gap-3">
+                    <button
+                      type="button"
+                      onClick={() => setEditGuestsCount((v) => Math.max(1, v - 1))}
+                      className="w-9 h-9 rounded-lg bg-[#1a1a1f] border border-white/8 text-cream flex items-center justify-center text-lg hover:border-white/20 transition"
+                    >
+                      −
+                    </button>
+                    <span className="text-cream font-display text-xl font-semibold w-8 text-center">
+                      {editGuestsCount}
+                    </span>
+                    <button
+                      type="button"
+                      onClick={() => {
+                        const room = (rooms as any[]).find((r) => r.id === editRoomId);
+                        const cap = room?.capacity ?? 99;
+                        setEditGuestsCount((v) => Math.min(cap, v + 1));
+                      }}
+                      className="w-9 h-9 rounded-lg bg-[#1a1a1f] border border-white/8 text-cream flex items-center justify-center text-lg hover:border-white/20 transition"
+                    >
+                      +
+                    </button>
+                    <span className="text-white/25 text-xs font-body">
+                      {(() => {
+                        const room = (rooms as any[]).find((r) => r.id === editRoomId);
+                        return room ? `máx. ${room.capacity} hósp.` : "";
+                      })()}
+                    </span>
+                  </div>
+                </div>
+
+                {/* Desconto com PIN de supervisor */}
+                <div className="rounded-xl border border-white/8 bg-[#1a1a1f] p-4 space-y-3">
+                  <div className="flex items-center justify-between">
+                    <div className="flex items-center gap-2">
+                      <Lock className="w-3.5 h-3.5 text-amber-400" />
+                      <span className="text-[10px] text-white/40 font-body uppercase tracking-widest">
+                        Desconto (supervisor)
+                      </span>
+                    </div>
+                    {!discountUnlocked ? (
+                      <button
+                        type="button"
+                        onClick={() => setPinDiscountOpen(true)}
+                        className="flex items-center gap-1 px-3 py-1 rounded-lg text-black text-xs font-semibold hover:brightness-110 transition-all"
+                        style={{ background: "linear-gradient(135deg,#C9A84C,#E5C97A)" }}
+                      >
+                        <Lock className="w-3 h-3" /> Desbloquear
+                      </button>
+                    ) : (
+                      <span className="text-xs text-emerald-400 font-body flex items-center gap-1">
+                        <CheckCircle2 className="w-3 h-3" /> Autorizado
+                      </span>
+                    )}
+                  </div>
+                  {discountUnlocked && (
+                    <div className="space-y-2">
+                      <div className="flex gap-2">
+                        <button
+                          type="button"
+                          onClick={() => setEditDiscountType("percent")}
+                          className={`flex-1 py-1.5 rounded-lg text-xs font-body border transition-colors ${editDiscountType === "percent" ? "border-amber-500/50 bg-amber-500/10 text-amber-300" : "border-white/8 text-white/30 hover:border-white/20"}`}
+                        >
+                          % Percentual
+                        </button>
+                        <button
+                          type="button"
+                          onClick={() => setEditDiscountType("fixed")}
+                          className={`flex-1 py-1.5 rounded-lg text-xs font-body border transition-colors ${editDiscountType === "fixed" ? "border-amber-500/50 bg-amber-500/10 text-amber-300" : "border-white/8 text-white/30 hover:border-white/20"}`}
+                        >
+                          R$ Valor fixo
+                        </button>
+                      </div>
+                      <div className="flex items-center gap-2">
+                        <span className="text-white/30 text-sm font-body">
+                          {editDiscountType === "percent" ? "%" : "R$"}
+                        </span>
+                        <input
+                          type="number"
+                          min={0}
+                          max={editDiscountType === "percent" ? 100 : undefined}
+                          step={editDiscountType === "percent" ? 1 : 0.01}
+                          value={editDiscount}
+                          onChange={(e) => setEditDiscount(Number(e.target.value))}
+                          className="flex-1 bg-black/30 border border-white/10 rounded-lg px-3 py-2 text-cream text-sm font-body focus:outline-none focus:border-amber-500/50 transition"
+                        />
+                      </div>
+                      {editDiscount > 0 && editCheckIn && editCheckOut && (() => {
+                        const n2 = nights(format(editCheckIn, "yyyy-MM-dd"), format(editCheckOut, "yyyy-MM-dd"));
+                        const room = (rooms as any[]).find((r) => r.id === editRoomId);
+                        const basePrice = Number(room?.price || 0);
+                        const extra = room?.promotional_price ? Number(room.promotional_price) : 0;
+                        const baseTotal = n2 * (basePrice + extra * Math.max(0, editGuestsCount - 1));
+                        const disc = editDiscountType === "percent" ? baseTotal * (editDiscount / 100) : editDiscount;
+                        const finalTotal = Math.max(0, baseTotal - disc);
+                        return (
+                          <div className="text-xs font-body space-y-0.5 pt-1 border-t border-white/5">
+                            <div className="flex justify-between text-white/30">
+                              <span>Total base</span>
+                              <span>R$ {baseTotal.toLocaleString("pt-BR", { minimumFractionDigits: 2 })}</span>
+                            </div>
+                            <div className="flex justify-between text-red-400">
+                              <span>Desconto</span>
+                              <span>− R$ {disc.toLocaleString("pt-BR", { minimumFractionDigits: 2 })}</span>
+                            </div>
+                            <div className="flex justify-between text-amber-300 font-semibold">
+                              <span>Total final</span>
+                              <span>R$ {finalTotal.toLocaleString("pt-BR", { minimumFractionDigits: 2 })}</span>
+                            </div>
+                          </div>
+                        );
+                      })()}
+                    </div>
+                  )}
+                </div>
+
                 <div>
                   <label className="text-[10px] text-white/40 font-body uppercase tracking-widest block mb-2">
                     Observações
@@ -1014,6 +1153,15 @@ const AdminReservas = () => {
             </div>
           </div>
         </>
+      )}
+
+      {pinDiscountOpen && (
+        <PinModal
+          title="Autorizar Desconto"
+          description="Digite o PIN de supervisor para aplicar desconto."
+          onClose={() => setPinDiscountOpen(false)}
+          onSuccess={() => setDiscountUnlocked(true)}
+        />
       )}
 
       {/* ═══ MODAL PIN EXCLUSÃO ═══ */}
