@@ -174,7 +174,10 @@ const AdminReservas = () => {
   const [pinDeleteOpen, setPinDeleteOpen] = useState(false);
   const pendingDeleteRef = React.useRef<string | null>(null);
   const [drawerOpen, setDrawerOpen] = useState(false);
-  const [periodoFat, setPeriodoFat] = useState<"hoje" | "semana" | "mes" | "ano">("hoje");
+  const [periodoFat, setPeriodoFat] = useState<"hoje" | "semana" | "mes" | "ano" | "custom">("hoje");
+  const [customDateStart, setCustomDateStart] = useState<Date | undefined>(undefined);
+  const [customDateEnd, setCustomDateEnd] = useState<Date | undefined>(undefined);
+  const [customPickerOpen, setCustomPickerOpen] = useState<"start" | "end" | null>(null);
   const [relatorioOpen, setRelatorioOpen] = useState(false);
   React.useEffect(() => {
     return () => {
@@ -480,25 +483,71 @@ const AdminReservas = () => {
               Faturamento — Finalizadas
             </h3>
           </div>
-          <select
-            value={periodoFat}
-            onChange={(e) => setPeriodoFat(e.target.value as any)}
-            className="text-xs border border-white/10 text-cream font-body rounded-lg px-3 py-1.5 outline-none cursor-pointer transition-colors appearance-none"
-            style={{ background: "#1a1a20" }}
-          >
-            <option value="hoje" style={{ background: "#1a1a20" }}>
-              Hoje
-            </option>
-            <option value="semana" style={{ background: "#1a1a20" }}>
-              Esta semana
-            </option>
-            <option value="mes" style={{ background: "#1a1a20" }}>
-              Este mês
-            </option>
-            <option value="ano" style={{ background: "#1a1a20" }}>
-              Este ano
-            </option>
-          </select>
+          <div className="flex items-center gap-1.5 flex-wrap">
+            {(["hoje", "semana", "mes", "ano", "custom"] as const).map((p) => (
+              <button
+                key={p}
+                onClick={() => {
+                  setPeriodoFat(p);
+                  if (p !== "custom") setCustomPickerOpen(null);
+                }}
+                className={`text-xs px-2.5 py-1 rounded-md font-body transition-all border ${
+                  periodoFat === p
+                    ? "text-black border-transparent"
+                    : "text-white/40 border-white/10 hover:text-cream hover:border-white/20"
+                }`}
+                style={periodoFat === p ? { background: "linear-gradient(135deg,#C9A84C,#E5C97A)" } : {}}
+              >
+                {p === "hoje" ? "Hoje" : p === "semana" ? "Semana" : p === "mes" ? "Mês" : p === "ano" ? "Ano" : "Personalizado"}
+              </button>
+            ))}
+            {periodoFat === "custom" && (
+              <div className="flex items-center gap-1.5 mt-1 w-full">
+                <div className="relative">
+                  <button
+                    onClick={() => setCustomPickerOpen(customPickerOpen === "start" ? null : "start")}
+                    className="text-xs px-3 py-1.5 rounded-lg border border-white/10 text-cream font-body hover:border-primary/40 transition-colors whitespace-nowrap"
+                    style={{ background: "#1a1a20" }}
+                  >
+                    {customDateStart ? format(customDateStart, "dd/MM/yyyy") : "Data início"}
+                  </button>
+                  {customPickerOpen === "start" && (
+                    <div className="absolute top-full left-0 mt-1 z-50 bg-[#111114] border border-white/10 rounded-xl shadow-2xl">
+                      <Calendar
+                        mode="single"
+                        selected={customDateStart}
+                        onSelect={(d) => { setCustomDateStart(d); setCustomPickerOpen(null); }}
+                        locale={ptBR}
+                        className="text-cream"
+                      />
+                    </div>
+                  )}
+                </div>
+                <span className="text-white/30 text-xs">→</span>
+                <div className="relative">
+                  <button
+                    onClick={() => setCustomPickerOpen(customPickerOpen === "end" ? null : "end")}
+                    className="text-xs px-3 py-1.5 rounded-lg border border-white/10 text-cream font-body hover:border-primary/40 transition-colors whitespace-nowrap"
+                    style={{ background: "#1a1a20" }}
+                  >
+                    {customDateEnd ? format(customDateEnd, "dd/MM/yyyy") : "Data fim"}
+                  </button>
+                  {customPickerOpen === "end" && (
+                    <div className="absolute top-full left-0 mt-1 z-50 bg-[#111114] border border-white/10 rounded-xl shadow-2xl">
+                      <Calendar
+                        mode="single"
+                        selected={customDateEnd}
+                        onSelect={(d) => { setCustomDateEnd(d); setCustomPickerOpen(null); }}
+                        locale={ptBR}
+                        disabled={(d) => customDateStart ? d < customDateStart : false}
+                        className="text-cream"
+                      />
+                    </div>
+                  )}
+                </div>
+              </div>
+            )}
+          </div>
           <button
             onClick={() => {
               if (relatorioAutenticado) {
@@ -533,15 +582,24 @@ const AdminReservas = () => {
           </div>
         ) : (
           (() => {
-            const desde =
+          const desde =
               periodoFat === "hoje"
                 ? startOfDay(now)
                 : periodoFat === "semana"
                   ? startOfWeek(now, { weekStartsOn: 1 })
                   : periodoFat === "mes"
                     ? startOfMonth(now)
-                    : startOfYear(now);
-            const resPeriodo = finalizadas.filter((r) => new Date(r.checked_out_at!) >= desde);
+                    : periodoFat === "custom"
+                      ? (customDateStart ? startOfDay(customDateStart) : startOfDay(now))
+                      : startOfYear(now);
+            const ate =
+              periodoFat === "custom" && customDateEnd
+                ? new Date(customDateEnd.getFullYear(), customDateEnd.getMonth(), customDateEnd.getDate(), 23, 59, 59, 999)
+                : new Date(9999, 0, 1);
+            const resPeriodo = finalizadas.filter((r) => {
+              const d = new Date(r.checked_out_at!);
+              return d >= desde && d <= ate;
+            });
             const totalPeriodo = resPeriodo.reduce((s, r) => s + Number(r.total_price), 0);
             const ticketMedio = resPeriodo.length > 0 ? totalPeriodo / resPeriodo.length : 0;
             return (
@@ -1212,9 +1270,18 @@ const AdminReservas = () => {
                 ? startOfWeek(now, { weekStartsOn: 1 })
                 : periodoFat === "mes"
                   ? startOfMonth(now)
-                  : startOfYear(now);
+                  : periodoFat === "custom"
+                    ? (customDateStart ? startOfDay(customDateStart) : startOfDay(now))
+                    : startOfYear(now);
+          const ateRel =
+            periodoFat === "custom" && customDateEnd
+              ? new Date(customDateEnd.getFullYear(), customDateEnd.getMonth(), customDateEnd.getDate(), 23, 59, 59, 999)
+              : new Date(9999, 0, 1);
 
-          const resPeriodoRel = finalizadas.filter((r) => new Date(r.checked_out_at!) >= desde);
+          const resPeriodoRel = finalizadas.filter((r) => {
+            const d = new Date(r.checked_out_at!);
+            return d >= desde && d <= ateRel;
+          });
           const totalRel = resPeriodoRel.reduce((s, r) => s + Number(r.total_price), 0);
           const ticketMedioRel = resPeriodoRel.length > 0 ? totalRel / resPeriodoRel.length : 0;
 
@@ -1225,7 +1292,9 @@ const AdminReservas = () => {
                 ? "Esta semana"
                 : periodoFat === "mes"
                   ? "Este mês"
-                  : "Este ano";
+                  : periodoFat === "custom"
+                    ? `${customDateStart ? format(customDateStart, "dd/MM/yyyy") : "?"} → ${customDateEnd ? format(customDateEnd, "dd/MM/yyyy") : "?"}`
+                    : "Este ano";
 
           const porQuarto: Record<
             string,
