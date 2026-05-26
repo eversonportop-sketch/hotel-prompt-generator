@@ -244,10 +244,25 @@ const AdminReservas = () => {
         });
       }
 
+      // Buscar totais de consumo faturado por reserva
+      const allIds = rows.map((r: any) => r.id);
+      const consumoMap: Record<string, number> = {};
+      if (allIds.length > 0) {
+        const { data: consumos } = await supabase
+          .from("consumption_orders")
+          .select("reservation_id, total")
+          .in("reservation_id", allIds)
+          .in("status", ["pending", "delivered", "billed"]);
+        (consumos || []).forEach((c: any) => {
+          consumoMap[c.reservation_id] = (consumoMap[c.reservation_id] || 0) + Number(c.total);
+        });
+      }
+
       return rows.map((r) => ({
         ...r,
         guestName: (r.guest_id && gMap[r.guest_id]) || (r.profile_id && gMap[r.profile_id]) || "—",
         guestPhone: (r.guest_id && phoneMap[r.guest_id]) || (r.profile_id && phoneMap[r.profile_id]) || null,
+        _consumoTotal: consumoMap[r.id] || 0,
       })) as Reservation[];
     },
   });
@@ -628,11 +643,10 @@ const AdminReservas = () => {
               periodoFat === "custom" && customDateEnd
                 ? new Date(customDateEnd.getFullYear(), customDateEnd.getMonth(), customDateEnd.getDate(), 23, 59, 59, 999)
                 : new Date(9999, 0, 1);
-            const resPeriodo = finalizadas.filter((r) => {
-              const d = new Date(r.checked_out_at!);
-              return d >= desde && d <= ate;
-            });
-            const totalPeriodo = resPeriodo.reduce((s, r) => s + Number(r.total_price), 0);
+            const resPeriodo = finalizadas
+              .filter((r) => { const d = new Date(r.checked_out_at!); return d >= desde && d <= ate; })
+              .sort((a, b) => new Date(b.checked_out_at!).getTime() - new Date(a.checked_out_at!).getTime());
+            const totalPeriodo = resPeriodo.reduce((s, r) => s + Number(r.total_price) + ((r as any)._consumoTotal || 0), 0);
             const ticketMedio = resPeriodo.length > 0 ? totalPeriodo / resPeriodo.length : 0;
             return (
               <>
@@ -708,8 +722,13 @@ const AdminReservas = () => {
                               </td>
                               <td className="px-4 py-3">
                                 <span className="text-primary font-semibold font-body">
-                                  R$ {Number(r.total_price).toLocaleString("pt-BR", { minimumFractionDigits: 2 })}
+                                  R$ {(Number(r.total_price) + ((r as any)._consumoTotal || 0)).toLocaleString("pt-BR", { minimumFractionDigits: 2 })}
                                 </span>
+                                {(r as any)._consumoTotal > 0 && (
+                                  <p className="text-white/30 text-[10px] font-body mt-0.5">
+                                    diárias {Number(r.total_price).toLocaleString("pt-BR",{minimumFractionDigits:2})} + cons. {((r as any)._consumoTotal).toLocaleString("pt-BR",{minimumFractionDigits:2})}
+                                  </p>
+                                )}
                               </td>
                             </tr>
                           );
@@ -1335,11 +1354,10 @@ const AdminReservas = () => {
               ? new Date(customDateEnd.getFullYear(), customDateEnd.getMonth(), customDateEnd.getDate(), 23, 59, 59, 999)
               : new Date(9999, 0, 1);
 
-          const resPeriodoRel = finalizadas.filter((r) => {
-            const d = new Date(r.checked_out_at!);
-            return d >= desde && d <= ateRel;
-          });
-          const totalRel = resPeriodoRel.reduce((s, r) => s + Number(r.total_price), 0);
+          const resPeriodoRel = finalizadas
+            .filter((r) => { const d = new Date(r.checked_out_at!); return d >= desde && d <= ateRel; })
+            .sort((a, b) => new Date(b.checked_out_at!).getTime() - new Date(a.checked_out_at!).getTime());
+          const totalRel = resPeriodoRel.reduce((s, r) => s + Number(r.total_price) + ((r as any)._consumoTotal || 0), 0);
           const ticketMedioRel = resPeriodoRel.length > 0 ? totalRel / resPeriodoRel.length : 0;
 
           const periodoLabel =
@@ -1364,7 +1382,7 @@ const AdminReservas = () => {
             if (!porQuarto[nome]) porQuarto[nome] = { nome, categoria: cat, reservas: 0, noites: 0, total: 0 };
             porQuarto[nome].reservas += 1;
             porQuarto[nome].noites += n2;
-            porQuarto[nome].total += Number(r.total_price);
+            porQuarto[nome].total += Number(r.total_price) + ((r as any)._consumoTotal || 0);
           });
           const quartosList = Object.values(porQuarto).sort((a, b) => b.total - a.total);
 
@@ -1599,7 +1617,12 @@ const AdminReservas = () => {
                                       {format(new Date(r.checked_out_at!), "dd/MM/yyyy HH:mm", { locale: ptBR })}
                                     </td>
                                     <td className="py-2 px-3 text-cream font-semibold font-body">
-                                      R$ {Number(r.total_price).toLocaleString("pt-BR", { minimumFractionDigits: 2 })}
+                                      R$ {(Number(r.total_price) + ((r as any)._consumoTotal || 0)).toLocaleString("pt-BR", { minimumFractionDigits: 2 })}
+                                      {(r as any)._consumoTotal > 0 && (
+                                        <p className="text-white/30 text-[10px] font-body font-normal mt-0.5">
+                                          diárias {Number(r.total_price).toLocaleString("pt-BR",{minimumFractionDigits:2})} + cons. {((r as any)._consumoTotal).toLocaleString("pt-BR",{minimumFractionDigits:2})}
+                                        </p>
+                                      )}
                                     </td>
                                   </tr>
                                 );
