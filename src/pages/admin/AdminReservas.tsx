@@ -299,6 +299,39 @@ const AdminReservas = () => {
     return r.guestName.toLowerCase().includes(q) || (r.rooms as any)?.name?.toLowerCase().includes(q);
   });
 
+  // ─── Agrupamento e ordenação por chegada ──────────────────────────────────
+  const sortByCheckIn = (a: Reservation, b: Reservation) =>
+    new Date(a.check_in).getTime() - new Date(b.check_in).getTime();
+
+  const groupedReservations: Array<{ key: string; label: string; items: Reservation[] }> = [];
+  if (statusFilter === "all") {
+    const groups = [
+      { key: "checked_in", label: "🏨 Hospedados" },
+      { key: "confirmed", label: "✅ Confirmadas" },
+      { key: "checked_out", label: "📋 Finalizadas" },
+      { key: "canceled", label: "❌ Canceladas" },
+    ];
+    for (const g of groups) {
+      const items = filtered.filter((r) => r.status === g.key).sort(sortByCheckIn);
+      if (items.length > 0) groupedReservations.push({ ...g, items });
+    }
+  } else {
+    const items = filtered.sort(sortByCheckIn);
+    if (items.length > 0) {
+      const statusLabel: Record<string, string> = {
+        checked_in: "🏨 Hospedados",
+        confirmed: "✅ Confirmadas",
+        checked_out: "📋 Finalizadas",
+        canceled: "❌ Canceladas",
+      };
+      groupedReservations.push({
+        key: statusFilter,
+        label: statusLabel[statusFilter] ?? statusFilter,
+        items,
+      });
+    }
+  }
+
   const kpis = [
     {
       label: "Total",
@@ -739,35 +772,42 @@ const AdminReservas = () => {
         <div className="flex items-center justify-center py-20 text-white/20 gap-2 font-body">
           <Loader2 className="w-4 h-4 animate-spin" /> Carregando...
         </div>
-      ) : filtered.length === 0 ? (
+      ) : groupedReservations.length === 0 ? (
         <div className="text-center py-20">
           <CalendarDays className="w-12 h-12 text-primary/20 mx-auto mb-3" />
           <p className="text-white/30 font-body text-sm">Nenhuma reserva encontrada.</p>
         </div>
       ) : (
-        <div className="bg-charcoal-light border border-white/5 rounded-xl overflow-x-auto">
-          <table className="w-full">
-            <thead>
-              <tr className="border-b border-white/5">
-                {["Hóspede", "Quarto", "Período", "Noites", "Status", ""].map((h) => (
-                  <th
-                    key={h}
-                    className="text-left px-5 py-3.5 text-[10px] uppercase tracking-widest text-white/25 font-body"
-                  >
-                    {h}
-                  </th>
-                ))}
-              </tr>
-            </thead>
-            <tbody>
-              {filtered.map((r) => {
-                const st = STATUS[r.status as keyof typeof STATUS] ?? STATUS.confirmed;
-                const n2 = nights(r.check_in, r.check_out);
-                return (
-                  <tr
-                    key={r.id}
-                    className="border-b border-white/5 last:border-0 hover:bg-white/[0.02] transition-colors group"
-                  >
+        <div className="flex flex-col gap-6">
+          {groupedReservations.map((group) => (
+            <div key={group.key} className="bg-charcoal-light border border-white/5 rounded-xl overflow-x-auto">
+              {/* Cabeçalho do grupo */}
+              <div className="px-5 py-3 border-b border-white/8 flex items-center gap-2">
+                <span className="text-sm font-semibold font-body text-cream/80">{group.label}</span>
+                <span className="ml-1 text-xs font-body text-white/30 bg-white/5 rounded-full px-2 py-0.5">{group.items.length}</span>
+              </div>
+              <table className="w-full">
+                <thead>
+                  <tr className="border-b border-white/5">
+                    {["Hóspede", "Quarto", "Período", "Noites", "Status", ""].map((h) => (
+                      <th
+                        key={h}
+                        className="text-left px-5 py-3.5 text-[10px] uppercase tracking-widest text-white/25 font-body"
+                      >
+                        {h}
+                      </th>
+                    ))}
+                  </tr>
+                </thead>
+                <tbody>
+                  {group.items.map((r) => {
+                    const st = STATUS[r.status as keyof typeof STATUS] ?? STATUS.confirmed;
+                    const n2 = nights(r.check_in, r.check_out);
+                    return (
+                      <tr
+                        key={r.id}
+                        className="border-b border-white/5 last:border-0 hover:bg-white/[0.02] transition-colors group"
+                      >
                     <td className="px-5 py-4">
                       <div className="flex items-center gap-2.5">
                         <div className="w-7 h-7 rounded-full bg-white/5 border border-white/8 flex items-center justify-center shrink-0">
@@ -842,9 +882,11 @@ const AdminReservas = () => {
                     </td>
                   </tr>
                 );
-              })}
-            </tbody>
-          </table>
+                  })}
+                </tbody>
+              </table>
+            </div>
+          ))}
         </div>
       )}
 
