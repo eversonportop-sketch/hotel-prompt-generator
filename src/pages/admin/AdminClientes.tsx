@@ -15,6 +15,9 @@ import {
   MapPin,
   ChevronDown,
   UserPlus,
+  CalendarDays,
+  BedDouble,
+  TrendingUp,
 } from "lucide-react";
 import { format } from "date-fns";
 import { ptBR } from "date-fns/locale";
@@ -102,6 +105,8 @@ const AdminClientes = () => {
   const [deleteId, setDeleteId] = useState<{ id: string; source: "guest" | "profile"; name: string } | null>(null);
   const [expandedId, setExpandedId] = useState<string | null>(null);
   const [sortBy, setSortBy] = useState<"date" | "name">("date");
+  const [historyData, setHistoryData] = useState<Record<string, any[]>>({});
+  const [historyLoading, setHistoryLoading] = useState<string | null>(null);
 
   const { data: clientes = [], isLoading } = useQuery({
     queryKey: ["clientes-lista"],
@@ -220,6 +225,24 @@ const AdminClientes = () => {
     },
     onError: () => toast.error("Erro ao excluir. Verifique se não há reservas vinculadas."),
   });
+
+  const fetchHistory = async (clienteId: string, source: "guest" | "profile") => {
+    if (historyData[clienteId]) return; // já carregado
+    setHistoryLoading(clienteId);
+    try {
+      const field = source === "guest" ? "guest_id" : "profile_id";
+      const { data } = await supabase
+        .from("reservations")
+        .select("id, check_in, check_out, total_price, status, checked_in_at, checked_out_at, rooms(name, category)")
+        .eq(field, clienteId)
+        .order("check_in", { ascending: false });
+      setHistoryData((prev) => ({ ...prev, [clienteId]: data || [] }));
+    } catch {
+      setHistoryData((prev) => ({ ...prev, [clienteId]: [] }));
+    } finally {
+      setHistoryLoading(null);
+    }
+  };
 
   const filtered = clientes
     .filter((c) => {
@@ -379,7 +402,11 @@ const AdminClientes = () => {
                   <div className="flex items-center gap-2 shrink-0">
                     <span className="text-white/20 text-xs font-body hidden md:block">{fmt(c.created_at)}</span>
                     <button
-                      onClick={() => setExpandedId(isExpanded ? null : c.id)}
+                      onClick={() => {
+                        const next = isExpanded ? null : c.id;
+                        setExpandedId(next);
+                        if (next) fetchHistory(c.id, c.source);
+                      }}
                       className={`p-1.5 rounded-lg text-white/25 hover:text-cream hover:bg-white/8 transition-all ${isExpanded ? "bg-white/5 text-cream" : ""}`}
                     >
                       <ChevronDown className={`w-4 h-4 transition-transform ${isExpanded ? "rotate-180" : ""}`} />
@@ -399,15 +426,96 @@ const AdminClientes = () => {
                   </div>
                 </div>
 
-                {/* Expandido: detalhes */}
+                {/* Expandido: detalhes + histórico */}
                 {isExpanded && (
-                  <div className="border-t border-white/5 px-5 py-4 grid grid-cols-2 md:grid-cols-4 gap-4">
-                    <DetailItem label="RG" value={c.rg} />
-                    <DetailItem label="Nacionalidade" value={c.nationality} />
-                    <DetailItem label="Cidade" value={c.city ? `${c.city}${c.state ? ` / ${c.state}` : ""}` : null} />
-                    <DetailItem label="Endereço" value={c.address} />
-                    <DetailItem label="Cadastrado em" value={fmt(c.created_at)} />
-                    <DetailItem label="Origem" value={c.source === "guest" ? "Recepção" : "Portal online"} />
+                  <div className="border-t border-white/5">
+                    {/* Dados pessoais */}
+                    <div className="px-5 py-4 grid grid-cols-2 md:grid-cols-4 gap-4 border-b border-white/5">
+                      <DetailItem label="RG" value={c.rg} />
+                      <DetailItem label="Nacionalidade" value={c.nationality} />
+                      <DetailItem label="Cidade" value={c.city ? `${c.city}${c.state ? ` / ${c.state}` : ""}` : null} />
+                      <DetailItem label="Endereço" value={c.address} />
+                      <DetailItem label="Cadastrado em" value={fmt(c.created_at)} />
+                      <DetailItem label="Origem" value={c.source === "guest" ? "Recepção" : "Portal online"} />
+                    </div>
+                    {/* Histórico de estadias */}
+                    <div className="px-5 py-4">
+                      <div className="flex items-center gap-2 mb-3">
+                        <CalendarDays className="w-3.5 h-3.5 text-primary/60" />
+                        <p className="text-[10px] text-white/30 font-body uppercase tracking-widest">Histórico de Estadias</p>
+                      </div>
+                      {historyLoading === c.id ? (
+                        <div className="flex items-center gap-2 text-white/20 text-xs font-body py-2">
+                          <Loader2 className="w-3.5 h-3.5 animate-spin" /> Carregando...
+                        </div>
+                      ) : !historyData[c.id] || historyData[c.id].length === 0 ? (
+                        <p className="text-white/20 text-xs font-body py-2">Nenhuma estadia registrada.</p>
+                      ) : (
+                        <div className="space-y-2">
+                          {/* Resumo geral */}
+                          <div className="grid grid-cols-3 gap-2 mb-3">
+                            <div className="bg-white/[0.03] border border-white/5 rounded-lg px-3 py-2">
+                              <p className="text-[10px] text-white/25 font-body uppercase tracking-wider mb-0.5">Estadias</p>
+                              <p className="text-cream font-display font-bold text-lg">{historyData[c.id].length}</p>
+                            </div>
+                            <div className="bg-white/[0.03] border border-white/5 rounded-lg px-3 py-2">
+                              <p className="text-[10px] text-white/25 font-body uppercase tracking-wider mb-0.5">Total gasto</p>
+                              <p className="text-primary font-display font-bold text-lg">
+                                R$ {historyData[c.id].filter((r: any) => r.status === "checked_out").reduce((s: number, r: any) => s + Number(r.total_price), 0).toLocaleString("pt-BR", { minimumFractionDigits: 0 })}
+                              </p>
+                            </div>
+                            <div className="bg-white/[0.03] border border-white/5 rounded-lg px-3 py-2">
+                              <p className="text-[10px] text-white/25 font-body uppercase tracking-wider mb-0.5">Última visita</p>
+                              <p className="text-cream/70 font-body text-sm">
+                                {historyData[c.id][0]?.check_in
+                                  ? format(new Date(historyData[c.id][0].check_in + "T12:00:00"), "dd MMM yy", { locale: ptBR })
+                                  : "—"}
+                              </p>
+                            </div>
+                          </div>
+                          {/* Lista de reservas */}
+                          <div className="overflow-x-auto rounded-lg border border-white/5">
+                            <table className="w-full text-xs">
+                              <thead>
+                                <tr className="border-b border-white/5 bg-white/[0.02]">
+                                  {["Quarto", "Período", "Noites", "Valor", "Status"].map((h) => (
+                                    <th key={h} className="text-left px-3 py-2 text-[10px] uppercase tracking-wider text-white/25 font-body">{h}</th>
+                                  ))}
+                                </tr>
+                              </thead>
+                              <tbody>
+                                {historyData[c.id].map((r: any) => {
+                                  const n = Math.max(0, Math.round((new Date(r.check_out + "T12:00:00").getTime() - new Date(r.check_in + "T12:00:00").getTime()) / 86400000));
+                                  const statusMap: Record<string, { label: string; color: string }> = {
+                                    confirmed:   { label: "Confirmada", color: "text-emerald-400" },
+                                    checked_in:  { label: "Hospedado",  color: "text-blue-400" },
+                                    checked_out: { label: "Finalizada", color: "text-white/40" },
+                                    canceled:    { label: "Cancelada",  color: "text-red-400" },
+                                  };
+                                  const st = statusMap[r.status] || { label: r.status, color: "text-white/40" };
+                                  return (
+                                    <tr key={r.id} className="border-b border-white/5 last:border-0 hover:bg-white/[0.02] transition-colors">
+                                      <td className="px-3 py-2.5">
+                                        <p className="text-cream/80 font-body">{r.rooms?.name ?? "—"}</p>
+                                        <p className="text-white/25 text-[10px] font-body">{r.rooms?.category}</p>
+                                      </td>
+                                      <td className="px-3 py-2.5 whitespace-nowrap text-white/50 font-body">
+                                        {format(new Date(r.check_in + "T12:00:00"), "dd/MM/yy", { locale: ptBR })} → {format(new Date(r.check_out + "T12:00:00"), "dd/MM/yy", { locale: ptBR })}
+                                      </td>
+                                      <td className="px-3 py-2.5 text-white/40 font-body">{n}n</td>
+                                      <td className="px-3 py-2.5 text-primary font-semibold font-body">
+                                        R$ {Number(r.total_price).toLocaleString("pt-BR", { minimumFractionDigits: 2 })}
+                                      </td>
+                                      <td className={`px-3 py-2.5 font-body ${st.color}`}>{st.label}</td>
+                                    </tr>
+                                  );
+                                })}
+                              </tbody>
+                            </table>
+                          </div>
+                        </div>
+                      )}
+                    </div>
                   </div>
                 )}
               </div>
