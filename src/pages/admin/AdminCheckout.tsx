@@ -212,6 +212,13 @@ const AdminCheckout = () => {
         .update({ status: "checked_out", checked_out_at: new Date().toISOString() } as any)
         .eq("id", selectedRes.id);
       if (error) throw error;
+      // Marcar quarto como precisando de limpeza
+      if (selectedRes.room_id) {
+        await supabase
+          .from("rooms")
+          .update({ needs_cleaning: true } as any)
+          .eq("id", selectedRes.room_id);
+      }
     },
     onSuccess: () => {
       toast.success("Checkout finalizado!");
