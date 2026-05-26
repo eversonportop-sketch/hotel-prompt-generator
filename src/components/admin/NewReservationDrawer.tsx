@@ -187,6 +187,9 @@ const NewReservationDrawer = ({ open, onClose }: Props) => {
   const [checkIn, setCheckIn] = useState<Date | undefined>(new Date());
   const [checkOut, setCheckOut] = useState<Date | undefined>(addDays(new Date(), 1));
   const [guestsCount, setGuestsCount] = useState(1);
+  // Crianças
+  const [childrenAges, setChildrenAges] = useState<number[]>([]);
+  const [childrenPay, setChildrenPay] = useState(false);
   // Geral
   const [notes, setNotes] = useState("");
   const [paymentMethod, setPaymentMethod] = useState("dinheiro");
@@ -296,7 +299,9 @@ const NewReservationDrawer = ({ open, onClose }: Props) => {
       : 0;
   const basePrice = selectedRoom ? Number(selectedRoom.price) : 0;
   const extraPerPerson = selectedRoom?.promotional_price ? Number(selectedRoom.promotional_price) : 0;
-  const pricePerNight = basePrice + extraPerPerson * Math.max(0, guestsCount - 1);
+  const payingAdults = Math.max(0, guestsCount - 1);
+  const payingChildren = childrenPay ? childrenAges.length : 0;
+  const pricePerNight = basePrice + extraPerPerson * (payingAdults + payingChildren);
   const totalPrice = nights > 0 ? nights * pricePerNight : 0;
   const guestDisplayName = isNewGuest ? guestData.full_name : selectedGuest?.full_name || "";
   const hospedeOk = isNewGuest ? guestData.full_name.trim().length >= 2 : !!selectedGuest;
@@ -330,6 +335,8 @@ const NewReservationDrawer = ({ open, onClose }: Props) => {
     setCheckIn(new Date());
     setCheckOut(addDays(new Date(), 1));
     setGuestsCount(1);
+    setChildrenAges([]);
+    setChildrenPay(false);
     setNotes("");
     setPaymentMethod("dinheiro");
     setDoCheckin(false);
@@ -366,7 +373,8 @@ const NewReservationDrawer = ({ open, onClose }: Props) => {
         guestId = gd.id;
       }
       const status = doCheckin ? "checked_in" : "confirmed";
-      const notesText = [notes, paymentMethod ? `Pagamento: ${paymentMethod}` : ""].filter(Boolean).join(" | ") || null;
+      const childrenNote = childrenAges.length > 0 ? `Crianças: ${childrenAges.length} (idades: ${childrenAges.join(", ")} anos) · ${childrenPay ? "paga" : "grátis"}` : "";
+      const notesText = [notes, paymentMethod ? `Pagamento: ${paymentMethod}` : "", childrenNote].filter(Boolean).join(" | ") || null;
       const isProfile = selectedGuest?._source === "profile";
       const { error } = await supabase.from("reservations").insert({
         guest_id: isProfile ? null : guestId,
@@ -781,6 +789,79 @@ const NewReservationDrawer = ({ open, onClose }: Props) => {
                       )}
                     </div>
                   </div>
+                  {/* ── CRIANÇAS ── */}
+                  <div>
+                    <label className="flex items-center gap-1.5 text-[10px] text-white/35 font-body uppercase tracking-[0.15em] mb-3">
+                      <Users className="w-3.5 h-3.5" /> Crianças
+                    </label>
+                    {/* Contador */}
+                    <div className="flex items-center gap-4 mb-3">
+                      <button
+                        onClick={() => setChildrenAges((a) => a.slice(0, -1))}
+                        className="w-10 h-10 rounded-lg bg-white/5 border border-white/10 text-cream hover:bg-white/10 transition flex items-center justify-center font-bold text-lg"
+                      >
+                        −
+                      </button>
+                      <span className="text-cream font-display text-2xl font-bold w-10 text-center">{childrenAges.length}</span>
+                      <button
+                        onClick={() => setChildrenAges((a) => [...a, 0])}
+                        className="w-10 h-10 rounded-lg bg-white/5 border border-white/10 text-cream hover:bg-white/10 transition flex items-center justify-center font-bold text-lg"
+                      >
+                        +
+                      </button>
+                      <span className="text-white/25 text-xs font-body">criança(s)</span>
+                    </div>
+                    {/* Campos de idade */}
+                    {childrenAges.length > 0 && (
+                      <div className="space-y-2 mb-3">
+                        {childrenAges.map((age, idx) => (
+                          <div key={idx} className="flex items-center gap-3 bg-white/[0.02] border border-white/8 rounded-xl px-4 py-2.5">
+                            <span className="text-white/40 text-xs font-body w-20 shrink-0">
+                              Criança {idx + 1}
+                            </span>
+                            <div className="flex items-center gap-2 flex-1">
+                              <button
+                                onClick={() => setChildrenAges((a) => a.map((v, i) => i === idx ? Math.max(0, v - 1) : v))}
+                                className="w-7 h-7 rounded-md bg-white/5 border border-white/10 text-cream hover:bg-white/10 transition flex items-center justify-center font-bold"
+                              >
+                                −
+                              </button>
+                              <span className="text-cream font-display text-base font-bold w-8 text-center">{age}</span>
+                              <button
+                                onClick={() => setChildrenAges((a) => a.map((v, i) => i === idx ? Math.min(17, v + 1) : v))}
+                                className="w-7 h-7 rounded-md bg-white/5 border border-white/10 text-cream hover:bg-white/10 transition flex items-center justify-center font-bold"
+                              >
+                                +
+                              </button>
+                              <span className="text-white/30 text-xs font-body">anos</span>
+                            </div>
+                          </div>
+                        ))}
+                      </div>
+                    )}
+                    {/* Toggle paga/grátis */}
+                    {childrenAges.length > 0 && (
+                      <button
+                        onClick={() => setChildrenPay(!childrenPay)}
+                        className={`w-full flex items-center gap-3 px-4 py-3 rounded-xl border transition-all ${childrenPay ? "border-amber-500/40 bg-amber-500/8" : "border-white/8 bg-white/[0.02] hover:border-white/15"}`}
+                      >
+                        <div className={`w-10 h-5 rounded-full border transition-all relative shrink-0 ${childrenPay ? "bg-amber-500 border-amber-400" : "bg-white/10 border-white/15"}`}>
+                          <div className={`absolute top-0.5 w-4 h-4 rounded-full bg-white shadow transition-all ${childrenPay ? "left-[22px]" : "left-0.5"}`} />
+                        </div>
+                        <div className="text-left">
+                          <p className={`text-sm font-body font-medium ${childrenPay ? "text-amber-300" : "text-white/50"}`}>
+                            {childrenPay ? "Crianças pagam diária" : "Crianças não pagam"}
+                          </p>
+                          <p className="text-white/25 text-xs font-body mt-0.5">
+                            {childrenPay
+                              ? `+R$ ${extraPerPerson.toFixed(0)}/criança/noite será cobrado`
+                              : "Crianças incluídas sem custo adicional"}
+                          </p>
+                        </div>
+                      </button>
+                    )}
+                  </div>
+
                   <div>
                     <label className="flex items-center gap-1.5 text-[10px] text-white/35 font-body uppercase tracking-[0.15em] mb-3">
                       <BedDouble className="w-3.5 h-3.5" /> Quarto
@@ -901,7 +982,8 @@ const NewReservationDrawer = ({ open, onClose }: Props) => {
                       <p className="text-cream text-sm font-body font-semibold">{selectedRoom?.name || "—"}</p>
                       <p className="text-white/30 text-xs font-body">
                         {selectedRoom?.category ? `${selectedRoom.category} · ` : ""}
-                        {guestsCount} hóspede{guestsCount > 1 ? "s" : ""}
+                        {guestsCount} adulto{guestsCount > 1 ? "s" : ""}
+                        {childrenAges.length > 0 && ` · ${childrenAges.length} criança${childrenAges.length > 1 ? "s" : ""} (${childrenAges.join(", ")} anos) ${childrenPay ? "· paga" : "· grátis"}`}
                       </p>
                     </SummaryRow>
                     <SummaryRow label="Período">
