@@ -21,6 +21,7 @@ import Login from "./pages/Login";
 import Cadastro from "./pages/Cadastro";
 import Portal from "./pages/Portal";
 import Cardapio from "./pages/Cardapio";
+import Limpeza from "./pages/Limpeza";
 
 import AdminDashboard from "./pages/admin/AdminDashboard";
 import AdminReservas from "./pages/admin/AdminReservas";
@@ -84,6 +85,7 @@ const App = () => (
               <Route path="/login" element={<Login />} />
               <Route path="/cadastro" element={<Cadastro />} />
               <Route path="/portal" element={<Portal />} />
+              <Route path="/limpeza" element={<Limpeza />} />
 
               <Route path="/admin" element={<AdminLayout />}>
                 <Route index element={<AdminDashboard />} />
