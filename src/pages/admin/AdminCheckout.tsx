@@ -694,6 +694,9 @@ const AdminCheckout = () => {
               <div className="bg-yellow-500/10 border border-yellow-500/20 rounded-lg p-3 mb-6">
                 <p className="text-yellow-400 text-xs font-body">A reserva será concluída e consumos faturados.</p>
               </div>
+              {/* ── Tipo de limpeza ── */}
+              <div className="mb-6 text-left">
+              </div>
               <div className="flex gap-3">
                 <button
                   onClick={() => setConfirmModal(false)}
