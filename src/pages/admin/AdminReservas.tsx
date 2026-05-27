@@ -206,7 +206,7 @@ const AdminReservas = () => {
   const [editGuestsCount, setEditGuestsCount] = useState(1);
 
   // Desconto com PIN de supervisor
-  const [editDiscount, setEditDiscount] = useState<number>(0);
+  const [editDiscount, setEditDiscount] = useState<string>("");
   const [editDiscountType, setEditDiscountType] = useState<"percent" | "fixed">("percent");
   const [discountUnlocked, setDiscountUnlocked] = useState(false);
   const [pinDiscountOpen, setPinDiscountOpen] = useState(false);
@@ -396,7 +396,7 @@ const AdminReservas = () => {
     }
     setEditNotes(r.notes || "");
     setEditGuestsCount(r.guests_count || 1);
-    setEditDiscount(0);
+    setEditDiscount("");
     setEditDiscountType("percent");
     setDiscountUnlocked(false);
   };
@@ -411,10 +411,10 @@ const AdminReservas = () => {
     const guestsQty = Number(editGuestsCount || 1);
     const baseTotal = n2 * (basePrice + extraPerPerson * Math.max(0, guestsQty - 1));
     const discountAmount =
-      discountUnlocked && editDiscount > 0
+      discountUnlocked && Number(editDiscount) > 0
         ? editDiscountType === "percent"
-          ? baseTotal * (editDiscount / 100)
-          : editDiscount
+          ? baseTotal * (Number(editDiscount) / 100)
+          : Number(editDiscount)
         : 0;
     const total = Math.max(0, parseFloat((baseTotal - discountAmount).toFixed(2)));
     setEditSaving(true);
@@ -1138,17 +1138,17 @@ const AdminReservas = () => {
                           max={editDiscountType === "percent" ? 100 : undefined}
                           step={editDiscountType === "percent" ? 1 : 0.01}
                           value={editDiscount}
-                          onChange={(e) => setEditDiscount(Number(e.target.value))}
+                          onChange={(e) => setEditDiscount(e.target.value)}
                           className="flex-1 bg-black/30 border border-white/10 rounded-lg px-3 py-2 text-cream text-sm font-body focus:outline-none focus:border-amber-500/50 transition"
                         />
                       </div>
-                      {editDiscount > 0 && editCheckIn && editCheckOut && (() => {
+                      {Number(editDiscount) > 0 && editCheckIn && editCheckOut && (() => {
                         const n2 = nights(format(editCheckIn, "yyyy-MM-dd"), format(editCheckOut, "yyyy-MM-dd"));
                         const room = (rooms as any[]).find((r) => r.id === editRoomId);
                         const basePrice = Number(room?.price || 0);
                         const extra = room?.promotional_price ? Number(room.promotional_price) : 0;
                         const baseTotal = n2 * (basePrice + extra * Math.max(0, editGuestsCount - 1));
-                        const disc = editDiscountType === "percent" ? baseTotal * (editDiscount / 100) : editDiscount;
+                        const disc = editDiscountType === "percent" ? baseTotal * (Number(editDiscount) / 100) : Number(editDiscount);
                         const finalTotal = Math.max(0, baseTotal - disc);
                         return (
                           <div className="text-xs font-body space-y-0.5 pt-1 border-t border-white/5">
