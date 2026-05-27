@@ -2,13 +2,20 @@ import { useState, useEffect } from "react";
 import { useSearchParams } from "react-router-dom";
 import { supabase } from "@/integrations/supabase/client";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
-import { Loader2, RefreshCw, Sparkles } from "lucide-react";
+import { CheckCircle2, Loader2, RefreshCw } from "lucide-react";
 
 const SECRET_TOKEN = "sb2024";
+
+interface Room {
+  id: string;
+  name: string;
+  needs_cleaning: boolean;
+}
 
 const Limpeza = () => {
   const [searchParams] = useSearchParams();
   const [authorized, setAuthorized] = useState(false);
+  const [markedIds, setMarkedIds] = useState<Set<string>>(new Set());
   const qc = useQueryClient();
 
   useEffect(() => {
@@ -17,57 +24,47 @@ const Limpeza = () => {
     }
   }, [searchParams]);
 
-  const { data: quartos = [], isLoading, refetch, isFetching } = useQuery({
-    queryKey: ["limpeza-mapa"],
+  const { data: rooms = [], isLoading, refetch, isFetching } = useQuery<Room[]>({
+    queryKey: ["limpeza-rooms"],
     queryFn: async () => {
-      const { data: roomsData } = await supabase
+      const { data, error } = await supabase
         .from("rooms")
-        .select("id, name, category, needs_cleaning")
-        .eq("status", "active")
+        .select("id, name, needs_cleaning")
+        .eq("needs_cleaning", true)
         .order("name");
-
-      const { data: resData } = await supabase
-        .from("reservations")
-        .select(
-          "id, room_id, check_out, status, profile_id, guest_id, guests_count, profiles!reservations_profile_id_fkey(full_name), guests!reservations_guest_id_fkey(full_name)"
-        )
-        .eq("status", "checked_in");
-
-      return (roomsData || []).map((room: any) => {
-        const res = (resData || []).find((r: any) => r.room_id === room.id);
-        const guestName = res
-          ? (res.profiles as any)?.full_name || (res.guests as any)?.full_name || null
-          : null;
-        return {
-          ...room,
-          ocupado: !!res,
-          needs_cleaning: !!room.needs_cleaning,
-          hospede: guestName,
-          check_out: res?.check_out || null,
-          guests_count: res?.guests_count || null,
-        };
-      });
+      if (error) throw error;
+      return (data ?? []) as Room[];
     },
     enabled: authorized,
     refetchInterval: 30000,
   });
 
-  const marcarLimpoMutation = useMutation({
+  const markCleanMutation = useMutation({
     mutationFn: async (roomId: string) => {
-      const { error } = await supabase
-        .from("rooms")
-        .update({ needs_cleaning: false } as any)
-        .eq("id", roomId);
+      const { data, error } = await supabase.functions.invoke("marcar-limpo", {
+        body: { room_id: roomId },
+      });
       if (error) throw error;
+      if (data?.error) throw new Error(data.error);
+    },
+    onMutate: (roomId) => {
+      setMarkedIds((prev) => new Set(prev).add(roomId));
     },
     onSuccess: () => {
-      qc.invalidateQueries({ queryKey: ["limpeza-mapa"] });
+      qc.invalidateQueries({ queryKey: ["limpeza-rooms"] });
+    },
+    onError: (_, roomId) => {
+      setMarkedIds((prev) => {
+        const next = new Set(prev);
+        next.delete(roomId);
+        return next;
+      });
     },
   });
 
   if (!authorized) {
     return (
-      <div className="min-h-screen bg-[#0e0e11] flex items-center justify-center px-4">
+      <div className="min-h-screen bg-[#1a1a1a] flex items-center justify-center px-4">
         <div className="text-center">
           <div className="text-4xl mb-4">🔒</div>
           <p className="text-white/50 text-sm">Acesso não autorizado.</p>
@@ -77,118 +74,74 @@ const Limpeza = () => {
     );
   }
 
-  const emLimpeza = quartos.filter((q: any) => q.needs_cleaning).length;
+  const pendingRooms = rooms.filter((r) => !markedIds.has(r.id));
 
   return (
-    <div className="min-h-screen bg-[#0e0e11]">
-      {/* Header */}
-      <div className="sticky top-0 z-10 bg-[#0e0e11]/95 backdrop-blur border-b border-white/10 px-4 py-3 flex items-center justify-between">
+    <div className="min-h-screen bg-[#111] text-white">
+      <div className="sticky top-0 z-10 bg-[#111]/95 backdrop-blur border-b border-white/10 px-4 py-3 flex items-center justify-between">
         <div>
-          <h1 className="text-white font-bold text-lg flex items-center gap-2">
-            <Sparkles className="w-5 h-5 text-amber-400" /> Mapa de Quartos
-          </h1>
-          <p className="text-white/30 text-xs mt-0.5">
-            {emLimpeza > 0
-              ? `${emLimpeza} quarto${emLimpeza > 1 ? "s" : ""} aguardando limpeza`
-              : "Tudo limpo!"}
+          <h1 className="text-lg font-bold">🧹 Quartos para Limpar</h1>
+          <p className="text-white/40 text-xs">
+            {pendingRooms.length === 0
+              ? "Nenhum quarto pendente"
+              : `${pendingRooms.length} quarto${pendingRooms.length > 1 ? "s" : ""} pendente${pendingRooms.length > 1 ? "s" : ""}`}
           </p>
         </div>
         <button
           onClick={() => refetch()}
           disabled={isFetching}
-          className="p-2.5 rounded-xl border border-white/10 text-white/40 hover:text-white transition"
+          className="p-2 rounded-full bg-white/10 active:bg-white/20 transition"
         >
-          <RefreshCw className={`w-4 h-4 ${isFetching ? "animate-spin" : ""}`} />
+          <RefreshCw className={`w-5 h-5 text-white/60 ${isFetching ? "animate-spin" : ""}`} />
         </button>
       </div>
 
-      {/* Legenda */}
-      <div className="px-4 pt-4 pb-2 flex items-center gap-4 text-xs text-white/40">
-        <span className="flex items-center gap-1.5">
-          <span className="w-2.5 h-2.5 rounded-full bg-red-500/60 inline-block" /> Ocupado
-        </span>
-        <span className="flex items-center gap-1.5">
-          <span className="w-2.5 h-2.5 rounded-full bg-amber-500/60 inline-block" /> Em limpeza
-        </span>
-        <span className="flex items-center gap-1.5">
-          <span className="w-2.5 h-2.5 rounded-full bg-emerald-500/60 inline-block" /> Disponível
-        </span>
-      </div>
-
-      {/* Mapa */}
-      <div className="px-4 pb-8">
+      <div className="px-4 py-4 max-w-lg mx-auto space-y-3">
         {isLoading ? (
           <div className="flex items-center justify-center py-20">
-            <Loader2 className="w-7 h-7 animate-spin text-white/20" />
+            <Loader2 className="w-8 h-8 animate-spin text-white/30" />
+          </div>
+        ) : pendingRooms.length === 0 ? (
+          <div className="text-center py-20">
+            <div className="text-5xl mb-4">✅</div>
+            <p className="text-white/60 text-base font-medium">Tudo limpo!</p>
+            <p className="text-white/30 text-sm mt-1">Nenhum quarto pendente no momento.</p>
           </div>
         ) : (
-          <div className="grid grid-cols-2 gap-3">
-            {(quartos as any[]).map((q) => {
-              const isOcupado = q.ocupado;
-              const isLimpeza = !q.ocupado && q.needs_cleaning;
-              const isDisponivel = !q.ocupado && !q.needs_cleaning;
-              const isPending = marcarLimpoMutation.isPending && marcarLimpoMutation.variables === q.id;
-
-              return (
-                <div
-                  key={q.id}
-                  className={`rounded-xl px-3 py-3 border transition-all ${
-                    isOcupado
-                      ? "bg-red-500/10 border-red-500/20"
-                      : isLimpeza
-                      ? "bg-amber-500/10 border-amber-500/20"
-                      : "bg-emerald-500/10 border-emerald-500/20"
-                  }`}
-                >
-                  <p className={`text-sm font-bold ${
-                    isOcupado ? "text-red-300" : isLimpeza ? "text-amber-300" : "text-emerald-300"
-                  }`}>
-                    {q.name}
-                  </p>
-
-                  {isOcupado && (
-                    <>
-                      <p className="text-xs text-red-400/80 truncate mt-0.5">{q.hospede || "—"}</p>
-                      {q.guests_count && (
-                        <p className="text-[10px] text-red-400/50 mt-0.5">
-                          👤 {q.guests_count} adulto{q.guests_count > 1 ? "s" : ""}
-                        </p>
-                      )}
-                      <p className="text-[10px] text-red-400/50 mt-0.5">
-                        Saída: {q.check_out ? q.check_out.split("-").reverse().slice(0, 2).join("/") : "—"}
-                      </p>
-                    </>
-                  )}
-
-                  {isLimpeza && (
-                    <div className="mt-1.5">
-                      <p className="text-[10px] text-amber-400/70 flex items-center gap-1 mb-1.5">
-                        <Sparkles className="w-3 h-3" /> Em limpeza
-                      </p>
-                      <button
-                        onClick={() => marcarLimpoMutation.mutate(q.id)}
-                        disabled={isPending}
-                        className="w-full flex items-center justify-center gap-1 py-1.5 rounded-lg text-xs font-semibold text-black transition hover:brightness-110 disabled:opacity-50"
-                        style={{ background: "linear-gradient(135deg,#C9A84C,#E5C97A)" }}
-                      >
-                        {isPending ? <Loader2 className="w-3 h-3 animate-spin" /> : "✓ Pronto"}
-                      </button>
-                    </div>
-                  )}
-
-                  {isDisponivel && (
-                    <p className="text-[10px] text-emerald-400/60 mt-0.5">Disponível</p>
-                  )}
+          pendingRooms.map((room) => {
+            const isPending = markCleanMutation.isPending && markCleanMutation.variables === room.id;
+            return (
+              <div
+                key={room.id}
+                className="bg-white/5 border border-white/10 rounded-2xl p-4 flex items-center justify-between gap-3"
+              >
+                <div className="flex items-center gap-3 min-w-0">
+                  <span className="text-2xl flex-shrink-0">🧹</span>
+                  <p className="text-white font-semibold text-base truncate">{room.name}</p>
                 </div>
-              );
-            })}
-          </div>
+                <button
+                  onClick={() => markCleanMutation.mutate(room.id)}
+                  disabled={isPending}
+                  className="flex-shrink-0 flex items-center gap-1.5 bg-green-600/80 hover:bg-green-600 active:bg-green-700 text-white text-sm font-semibold px-3 py-2 rounded-xl transition disabled:opacity-50"
+                >
+                  {isPending ? (
+                    <Loader2 className="w-4 h-4 animate-spin" />
+                  ) : (
+                    <CheckCircle2 className="w-4 h-4" />
+                  )}
+                  Limpo
+                </button>
+              </div>
+            );
+          })
         )}
       </div>
 
-      <p className="text-center text-white/15 text-xs pb-6">
-        Atualiza automaticamente a cada 30s
-      </p>
+      {!isLoading && (
+        <p className="text-center text-white/20 text-xs pb-8 pt-2">
+          Atualiza automaticamente a cada 30s
+        </p>
+      )}
     </div>
   );
 };
