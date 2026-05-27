@@ -1,7 +1,7 @@
 import { Link } from "react-router-dom";
 import { motion } from "framer-motion";
-import { BedDouble, Users, LayoutDashboard, CalendarDays, LogIn, ArrowRight } from "lucide-react";
-import { useQuery } from "@tanstack/react-query";
+import { BedDouble, Users, LayoutDashboard, CalendarDays, LogIn, ArrowRight, Sparkles } from "lucide-react";
+import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 
 const statusLabels: Record<string, string> = {
@@ -38,12 +38,27 @@ const AdminDashboard = () => {
   const today = localToday();
 
   /* ── Quartos + ocupação ── */
+  const qc = useQueryClient();
+
+  const marcarLimpoMutation = useMutation({
+    mutationFn: async (roomId: string) => {
+      const { error } = await supabase
+        .from("rooms")
+        .update({ needs_cleaning: false } as any)
+        .eq("id", roomId);
+      if (error) throw error;
+    },
+    onSuccess: () => {
+      qc.invalidateQueries({ queryKey: ["dash-rooms-occupancy"] });
+    },
+  });
+
   const { data: quartos = [] } = useQuery({
     queryKey: ["dash-rooms-occupancy"],
     queryFn: async () => {
       const { data: roomsData } = await supabase
         .from("rooms")
-        .select("id, name, category")
+        .select("id, name, category, needs_cleaning")
         .eq("status", "active")
         .order("name");
       const { data: resData } = await supabase
@@ -64,6 +79,7 @@ const AdminDashboard = () => {
         return {
           ...room,
           ocupado: !!res,
+          needs_cleaning: !!room.needs_cleaning,
           hospede: guestName,
           check_out: res?.check_out || null,
           guests_count: res?.guests_count || null,
@@ -206,32 +222,60 @@ const AdminDashboard = () => {
             <p className="text-white/20 text-sm font-body">Nenhum quarto cadastrado</p>
           ) : (
             <div className="grid grid-cols-2 gap-2">
-              {(quartos as any[]).map((q) => (
-                <div
-                  key={q.id}
-                  className={`rounded-lg px-3 py-2.5 ${q.ocupado ? "bg-red-500/10 border border-red-500/20" : "bg-emerald-500/10 border border-emerald-500/20"}`}
-                >
-                  <p className={`text-sm font-semibold font-body ${q.ocupado ? "text-red-300" : "text-emerald-300"}`}>
-                    {q.name}
-                  </p>
-                  {q.ocupado ? (
-                    <>
-                      <p className="text-xs text-red-400/70 font-body truncate">{q.hospede || "—"}</p>
-                      {q.guests_count && (
-                        <p className="text-[10px] text-red-400/50 font-body mt-0.5">
-                          👤 {q.guests_count} adulto{q.guests_count > 1 ? "s" : ""}
-                          {q.childrenInfo ? ` · 🧒 ${q.childrenInfo}` : ""}
+              {(quartos as any[]).map((q) => {
+                const isOcupado = q.ocupado;
+                const isLimpeza = !q.ocupado && q.needs_cleaning;
+                const isDisponivel = !q.ocupado && !q.needs_cleaning;
+                return (
+                  <div
+                    key={q.id}
+                    className={`rounded-lg px-3 py-2.5 border transition-all ${
+                      isOcupado
+                        ? "bg-red-500/10 border-red-500/20"
+                        : isLimpeza
+                        ? "bg-amber-500/10 border-amber-500/20"
+                        : "bg-emerald-500/10 border-emerald-500/20"
+                    }`}
+                  >
+                    <p className={`text-sm font-semibold font-body ${
+                      isOcupado ? "text-red-300" : isLimpeza ? "text-amber-300" : "text-emerald-300"
+                    }`}>
+                      {q.name}
+                    </p>
+                    {isOcupado && (
+                      <>
+                        <p className="text-xs text-red-400/70 font-body truncate">{q.hospede || "—"}</p>
+                        {q.guests_count && (
+                          <p className="text-[10px] text-red-400/50 font-body mt-0.5">
+                            👤 {q.guests_count} adulto{q.guests_count > 1 ? "s" : ""}
+                            {q.childrenInfo ? ` · 🧒 ${q.childrenInfo}` : ""}
+                          </p>
+                        )}
+                        <p className="text-[10px] text-red-400/50 font-body">
+                          Saída: {q.check_out ? q.check_out.split("-").reverse().slice(0, 2).join("/") : "—"}
                         </p>
-                      )}
-                      <p className="text-[10px] text-red-400/50 font-body">
-                        Saída: {q.check_out ? q.check_out.split("-").reverse().slice(0, 2).join("/") : "—"}
-                      </p>
-                    </>
-                  ) : (
-                    <p className="text-xs text-emerald-400/70 font-body">Disponível</p>
-                  )}
-                </div>
-              ))}
+                      </>
+                    )}
+                    {isLimpeza && (
+                      <div className="flex items-center justify-between mt-0.5">
+                        <p className="text-xs text-amber-400/70 font-body flex items-center gap-1">
+                          <Sparkles className="w-3 h-3" /> Em limpeza
+                        </p>
+                        <button
+                          onClick={() => marcarLimpoMutation.mutate(q.id)}
+                          disabled={marcarLimpoMutation.isPending}
+                          className="text-[10px] text-amber-400 hover:text-emerald-400 border border-amber-500/30 hover:border-emerald-500/30 rounded px-1.5 py-0.5 font-body transition-colors"
+                        >
+                          Liberar ✓
+                        </button>
+                      </div>
+                    )}
+                    {isDisponivel && (
+                      <p className="text-xs text-emerald-400/70 font-body">Disponível</p>
+                    )}
+                  </div>
+                );
+              })}
             </div>
           )}
         </motion.div>
