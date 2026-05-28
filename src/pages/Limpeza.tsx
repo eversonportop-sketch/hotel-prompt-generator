@@ -65,13 +65,11 @@ const Limpeza = () => {
             .from("consumption_orders")
             .select("item_name, quantity")
             .eq("room_number", room.name)
-            .not("status", "in", '("canceled","cleaned")');
+            .not("status", "eq", "canceled");
 
-          // Se achou reserva, filtra a partir do check_in dela
-          // Senão, pega os pedidos dos últimos 30 dias como fallback
-          if (latest) {
-            query = query.gte("created_at", latest.checkIn);
-          } else {
+          // Se achou reserva, não filtra por data — pega todos os pedidos do quarto
+          // Senão, usa fallback de 30 dias para não trazer histórico muito antigo
+          if (!latest) {
             const fallback = new Date();
             fallback.setDate(fallback.getDate() - 30);
             query = query.gte("created_at", fallback.toISOString());
