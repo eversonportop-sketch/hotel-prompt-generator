@@ -34,46 +34,52 @@ const Limpeza = () => {
         .eq("status", "checked_in");
 
       // Busca última reserva checked_out por quarto (para consumo na limpeza)
-      const cleaningRoomIds = (roomsData || [])
-        .filter((r: any) => r.needs_cleaning)
-        .map((r: any) => r.id);
+      const cleaningRooms = (roomsData || []).filter((r: any) => r.needs_cleaning);
 
       let consumoMap: Record<string, { item_name: string; quantity: number }[]> = {};
 
-      if (cleaningRoomIds.length > 0) {
+      if (cleaningRooms.length > 0) {
+        const cleaningRoomIds = cleaningRooms.map((r: any) => r.id);
+
         const { data: checkoutRes } = await supabase
           .from("reservations")
-          .select("id, room_id, updated_at")
+          .select("id, room_id, check_in, updated_at")
           .eq("status", "checked_out")
           .in("room_id", cleaningRoomIds)
           .order("updated_at", { ascending: false });
 
-        // Pega a reserva mais recente por quarto
-        const latestPerRoom: Record<string, string> = {};
+        // Pega a reserva mais recente por quarto (check_in = início da última estadia)
+        const latestPerRoom: Record<string, { resId: string; checkIn: string }> = {};
         (checkoutRes || []).forEach((r: any) => {
           if (!latestPerRoom[r.room_id]) {
-            latestPerRoom[r.room_id] = r.id;
+            latestPerRoom[r.room_id] = { resId: r.id, checkIn: r.check_in };
           }
         });
 
-        const reservationIds = Object.values(latestPerRoom);
-        if (reservationIds.length > 0) {
+        // Busca pedidos por room_number (nome do quarto) + data >= check_in da última estadia
+        // Cobre pedidos com ou sem reservation_id
+        for (const room of cleaningRooms) {
+          const latest = latestPerRoom[room.id];
+          if (!latest) continue;
+
           const { data: ordersData } = await supabase
             .from("consumption_orders")
-            .select("reservation_id, item_name, quantity, room_number")
-            .in("reservation_id", reservationIds)
-            .in("status", ["delivered", "pending"]);
+            .select("item_name, quantity")
+            .eq("room_number", room.name)
+            .gte("created_at", latest.checkIn)
+            .not("status", "eq", "canceled");
 
-          // Agrupa por room_id
-          const idToRoom = Object.fromEntries(
-            Object.entries(latestPerRoom).map(([roomId, resId]) => [resId, roomId])
-          );
-          (ordersData || []).forEach((o: any) => {
-            const roomId = idToRoom[o.reservation_id];
-            if (!roomId) return;
-            if (!consumoMap[roomId]) consumoMap[roomId] = [];
-            consumoMap[roomId].push({ item_name: o.item_name, quantity: o.quantity });
-          });
+          if (ordersData && ordersData.length > 0) {
+            // Agrupa itens iguais somando quantidades
+            const grouped: Record<string, number> = {};
+            ordersData.forEach((o: any) => {
+              grouped[o.item_name] = (grouped[o.item_name] || 0) + o.quantity;
+            });
+            consumoMap[room.id] = Object.entries(grouped).map(([item_name, quantity]) => ({
+              item_name,
+              quantity,
+            }));
+          }
         }
       }
 
