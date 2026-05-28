@@ -207,7 +207,7 @@ const AdminReservas = () => {
 
   // Desconto com PIN de supervisor
   const [editDiscount, setEditDiscount] = useState<string>("");
-  const [editDiscountType, setEditDiscountType] = useState<"percent" | "fixed">("percent");
+  const [editDiscountType, setEditDiscountType] = useState<"percent" | "fixed" | "manual">("percent");
   const [discountUnlocked, setDiscountUnlocked] = useState(false);
   const [pinDiscountOpen, setPinDiscountOpen] = useState(false);
 
@@ -411,12 +411,14 @@ const AdminReservas = () => {
     const guestsQty = Number(editGuestsCount || 1);
     const baseTotal = n2 * (basePrice + extraPerPerson * Math.max(0, guestsQty - 1));
     const discountAmount =
-      discountUnlocked && Number(editDiscount) > 0
+      discountUnlocked && Number(editDiscount) > 0 && editDiscountType !== "manual"
         ? editDiscountType === "percent"
           ? baseTotal * (Number(editDiscount) / 100)
           : Number(editDiscount)
         : 0;
-    const total = Math.max(0, parseFloat((baseTotal - discountAmount).toFixed(2)));
+    const total = discountUnlocked && editDiscountType === "manual" && Number(editDiscount) > 0
+      ? parseFloat(Number(editDiscount).toFixed(2))
+      : Math.max(0, parseFloat((baseTotal - discountAmount).toFixed(2)));
     setEditSaving(true);
 
     // Monta o checked_in_at com a data e hora editadas (só se já fez check-in)
@@ -1127,6 +1129,13 @@ const AdminReservas = () => {
                         >
                           R$ Valor fixo
                         </button>
+                        <button
+                          type="button"
+                          onClick={() => setEditDiscountType("manual")}
+                          className={`flex-1 py-1.5 rounded-lg text-xs font-body border transition-colors ${editDiscountType === "manual" ? "border-blue-500/50 bg-blue-500/10 text-blue-300" : "border-white/8 text-white/30 hover:border-white/20"}`}
+                        >
+                          ✎ Preço manual
+                        </button>
                       </div>
                       <div className="flex items-center gap-2">
                         <span className="text-white/30 text-sm font-body">
@@ -1137,6 +1146,7 @@ const AdminReservas = () => {
                           min={0}
                           max={editDiscountType === "percent" ? 100 : undefined}
                           step={editDiscountType === "percent" ? 1 : 0.01}
+                          placeholder={editDiscountType === "manual" ? "Digite o valor total" : ""}
                           value={editDiscount}
                           onChange={(e) => setEditDiscount(e.target.value)}
                           className="flex-1 bg-black/30 border border-white/10 rounded-lg px-3 py-2 text-cream text-sm font-body focus:outline-none focus:border-amber-500/50 transition"
@@ -1148,18 +1158,26 @@ const AdminReservas = () => {
                         const basePrice = Number(room?.price || 0);
                         const extra = room?.promotional_price ? Number(room.promotional_price) : 0;
                         const baseTotal = n2 * (basePrice + extra * Math.max(0, editGuestsCount - 1));
-                        const disc = editDiscountType === "percent" ? baseTotal * (Number(editDiscount) / 100) : Number(editDiscount);
-                        const finalTotal = Math.max(0, baseTotal - disc);
+                        const isManual = editDiscountType === "manual";
+                        const disc = isManual ? 0 : editDiscountType === "percent" ? baseTotal * (Number(editDiscount) / 100) : Number(editDiscount);
+                        const finalTotal = isManual ? Number(editDiscount) : Math.max(0, baseTotal - disc);
                         return (
                           <div className="text-xs font-body space-y-0.5 pt-1 border-t border-white/5">
                             <div className="flex justify-between text-white/30">
                               <span>Total base</span>
                               <span>R$ {baseTotal.toLocaleString("pt-BR", { minimumFractionDigits: 2 })}</span>
                             </div>
-                            <div className="flex justify-between text-red-400">
-                              <span>Desconto</span>
-                              <span>− R$ {disc.toLocaleString("pt-BR", { minimumFractionDigits: 2 })}</span>
-                            </div>
+                            {isManual ? (
+                              <div className="flex justify-between text-blue-300">
+                                <span>Ajuste manual</span>
+                                <span>{finalTotal >= baseTotal ? "+" : "−"} R$ {Math.abs(finalTotal - baseTotal).toLocaleString("pt-BR", { minimumFractionDigits: 2 })}</span>
+                              </div>
+                            ) : (
+                              <div className="flex justify-between text-red-400">
+                                <span>Desconto</span>
+                                <span>− R$ {disc.toLocaleString("pt-BR", { minimumFractionDigits: 2 })}</span>
+                              </div>
+                            )}
                             <div className="flex justify-between text-amber-300 font-semibold">
                               <span>Total final</span>
                               <span>R$ {finalTotal.toLocaleString("pt-BR", { minimumFractionDigits: 2 })}</span>
