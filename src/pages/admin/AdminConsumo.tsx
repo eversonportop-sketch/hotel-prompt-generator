@@ -220,18 +220,15 @@ const AdminConsumo = () => {
   const { data: quartosOcupados = [] } = useQuery({
     queryKey: ["consumo-quartos-ocupados"],
     queryFn: async () => {
-      const today = new Date().toISOString().split("T")[0];
       const { data } = await supabase
         .from("reservations")
-        .select("id, room_id, rooms(name), profiles!reservations_profile_id_fkey(full_name)")
-        .in("status", ["confirmed", "pending", "checked_in"])
-        .lte("check_in", today)
-        .gte("check_out", today);
+        .select("id, room_id, rooms(name), profiles!reservations_profile_id_fkey(full_name), guests!reservations_guest_id_fkey(full_name)")
+        .eq("status", "checked_in");
       return (data || []).map((r: any) => ({
         reservation_id: r.id,
         room_id: r.room_id,
         room_name: r.rooms?.name || "—",
-        guest_name: (r.profiles as any)?.full_name || "Hóspede",
+        guest_name: (r.profiles as any)?.full_name || (r.guests as any)?.full_name || "Hóspede",
       }));
     },
   });
