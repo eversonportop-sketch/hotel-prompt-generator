@@ -64,6 +64,21 @@ const maskPhone = (v: string) => {
   return d.replace(/(\d{2})(\d{5})(\d{0,4})/, "($1) $2-$3").replace(/-$/, "");
 };
 
+const maskCNPJ = (v: string) =>
+  v
+    .replace(/\D/g, "")
+    .slice(0, 14)
+    .replace(/(\d{2})(\d)/, "$1.$2")
+    .replace(/(\d{3})(\d)/, "$1.$2")
+    .replace(/(\d{3})(\d)/, "$1/$2")
+    .replace(/(\d{4})(\d{1,2})$/, "$1-$2");
+
+const maskCEP = (v: string) =>
+  v
+    .replace(/\D/g, "")
+    .slice(0, 8)
+    .replace(/(\d{5})(\d{1,3})$/, "$1-$2");
+
 const Field = ({
   label,
   placeholder,
@@ -109,28 +124,55 @@ const AdminClientes = () => {
     full_name: "",
     phone: "",
     cpf: "",
+    cnpj: "",
     rg: "",
     email: "",
     nationality: "Brasileira",
+    zip_code: "",
     address: "",
     city: "",
     state: "",
   });
   const [newSaving, setNewSaving] = useState(false);
+  const [cepLoading, setCepLoading] = useState(false);
 
   const openNewModal = () => {
     setNewData({
       full_name: "",
       phone: "",
       cpf: "",
+      cnpj: "",
       rg: "",
       email: "",
       nationality: "Brasileira",
+      zip_code: "",
       address: "",
       city: "",
       state: "",
     });
     setNewModal(true);
+  };
+
+  const fetchCEP = async (cep: string) => {
+    const digits = cep.replace(/\D/g, "");
+    if (digits.length !== 8) return;
+    setCepLoading(true);
+    try {
+      const res = await fetch(`https://viacep.com.br/ws/${digits}/json/`);
+      const data = await res.json();
+      if (!data.erro) {
+        setNewData((d) => ({
+          ...d,
+          address: data.logradouro ? `${data.logradouro}${data.bairro ? ", " + data.bairro : ""}` : d.address,
+          city: data.localidade || d.city,
+          state: data.uf || d.state,
+        }));
+      }
+    } catch {
+      // silencia erro de CEP
+    } finally {
+      setCepLoading(false);
+    }
   };
 
   const saveNew = async () => {
@@ -141,9 +183,11 @@ const AdminClientes = () => {
         full_name: newData.full_name.trim(),
         phone: newData.phone || null,
         cpf: newData.cpf || null,
+        cnpj: newData.cnpj || null,
         rg: newData.rg || null,
         email: newData.email || null,
         nationality: newData.nationality || null,
+        zip_code: newData.zip_code || null,
         address: newData.address || null,
         city: newData.city || null,
         state: newData.state || null,
@@ -626,6 +670,12 @@ const AdminClientes = () => {
                     onChange={(v) => setNewData((d) => ({ ...d, rg: maskRG(v) }))}
                   />
                 </div>
+                <Field
+                  label="CNPJ (opcional)"
+                  placeholder="00.000.000/0000-00"
+                  value={newData.cnpj}
+                  onChange={(v) => setNewData((d) => ({ ...d, cnpj: maskCNPJ(v) }))}
+                />
                 <div className="grid grid-cols-2 gap-3">
                   <Field
                     label="Telefone"
@@ -646,6 +696,24 @@ const AdminClientes = () => {
                   value={newData.nationality}
                   onChange={(v) => setNewData((d) => ({ ...d, nationality: v }))}
                 />
+                <div>
+                  <label className="text-[10px] text-white/30 font-body uppercase tracking-widest block mb-1.5">CEP</label>
+                  <div className="relative">
+                    <input
+                      placeholder="00000-000"
+                      value={newData.zip_code}
+                      onChange={(e) => {
+                        const v = maskCEP(e.target.value);
+                        setNewData((d) => ({ ...d, zip_code: v }));
+                        if (v.replace(/\D/g, "").length === 8) fetchCEP(v);
+                      }}
+                      className="w-full bg-white/[0.03] border border-white/8 rounded-lg px-3.5 py-2.5 text-cream text-sm font-body focus:outline-none focus:border-primary/40 transition placeholder:text-white/15"
+                    />
+                    {cepLoading && (
+                      <Loader2 className="absolute right-3 top-1/2 -translate-y-1/2 w-4 h-4 animate-spin text-white/30" />
+                    )}
+                  </div>
+                </div>
                 <Field
                   label="Endereço"
                   placeholder="Rua, número"
