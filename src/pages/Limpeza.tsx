@@ -65,7 +65,7 @@ const Limpeza = () => {
             .from("consumption_orders")
             .select("item_name, quantity")
             .eq("room_number", room.name)
-            .not("status", "eq", "canceled");
+            .not("status", "in", '("canceled","cleaned")');
 
           // Se achou reserva, filtra a partir do check_in dela
           // Senão, pega os pedidos dos últimos 30 dias como fallback
