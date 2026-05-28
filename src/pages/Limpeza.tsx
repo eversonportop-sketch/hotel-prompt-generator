@@ -60,14 +60,24 @@ const Limpeza = () => {
         // Cobre pedidos com ou sem reservation_id
         for (const room of cleaningRooms) {
           const latest = latestPerRoom[room.id];
-          if (!latest) continue;
 
-          const { data: ordersData } = await supabase
+          let query = supabase
             .from("consumption_orders")
             .select("item_name, quantity")
             .eq("room_number", room.name)
-            .gte("created_at", latest.checkIn)
             .not("status", "eq", "canceled");
+
+          // Se achou reserva, filtra a partir do check_in dela
+          // Senão, pega os pedidos dos últimos 30 dias como fallback
+          if (latest) {
+            query = query.gte("created_at", latest.checkIn);
+          } else {
+            const fallback = new Date();
+            fallback.setDate(fallback.getDate() - 30);
+            query = query.gte("created_at", fallback.toISOString());
+          }
+
+          const { data: ordersData } = await query;
 
           if (ordersData && ordersData.length > 0) {
             // Agrupa itens iguais somando quantidades
