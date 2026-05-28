@@ -102,6 +102,65 @@ const AdminClientes = () => {
     state: "",
   });
   const [editSaving, setEditSaving] = useState(false);
+
+  // ── Novo Cliente ──────────────────────────────────────────────────────────
+  const [newModal, setNewModal] = useState(false);
+  const [newData, setNewData] = useState({
+    full_name: "",
+    phone: "",
+    cpf: "",
+    rg: "",
+    email: "",
+    nationality: "Brasileira",
+    address: "",
+    city: "",
+    state: "",
+  });
+  const [newSaving, setNewSaving] = useState(false);
+
+  const openNewModal = () => {
+    setNewData({
+      full_name: "",
+      phone: "",
+      cpf: "",
+      rg: "",
+      email: "",
+      nationality: "Brasileira",
+      address: "",
+      city: "",
+      state: "",
+    });
+    setNewModal(true);
+  };
+
+  const saveNew = async () => {
+    if (!newData.full_name.trim()) return toast.error("Nome é obrigatório.");
+    setNewSaving(true);
+    try {
+      const payload = {
+        full_name: newData.full_name.trim(),
+        phone: newData.phone || null,
+        cpf: newData.cpf || null,
+        rg: newData.rg || null,
+        email: newData.email || null,
+        nationality: newData.nationality || null,
+        address: newData.address || null,
+        city: newData.city || null,
+        state: newData.state || null,
+      } as any;
+      const { error } = await supabase.from("guests").insert(payload);
+      if (error) throw error;
+      toast.success("Cliente cadastrado com sucesso!");
+      qc.invalidateQueries({ queryKey: ["clientes-lista"] });
+      setNewModal(false);
+    } catch (e: any) {
+      toast.error(e.message || "Erro ao cadastrar cliente.");
+    } finally {
+      setNewSaving(false);
+    }
+  };
+  // ─────────────────────────────────────────────────────────────────────────
+
   const [deleteId, setDeleteId] = useState<{ id: string; source: "guest" | "profile"; name: string } | null>(null);
   const [expandedId, setExpandedId] = useState<string | null>(null);
   const [sortBy, setSortBy] = useState<"date" | "name">("date");
@@ -290,16 +349,17 @@ const AdminClientes = () => {
             <p className="text-white/30 text-xs mt-0.5 font-body">{clientes.length} cadastrados</p>
           </div>
         </div>
+        <button
+          onClick={openNewModal}
+          className="flex items-center gap-2 px-4 py-2.5 rounded-xl text-black text-sm font-semibold hover:brightness-110 transition-all"
+          style={goldBg}
+        >
+          <UserPlus className="w-4 h-4" />
+          Novo Cliente
+        </button>
       </div>
 
-      {/* Info */}
-      <div className="bg-blue-500/8 border border-blue-500/20 rounded-xl px-4 py-3 flex items-start gap-3">
-        <UserPlus className="w-4 h-4 text-blue-400 mt-0.5 shrink-0" />
-        <p className="text-blue-300/80 text-xs font-body">
-          Para cadastrar um novo cliente, use <strong className="text-blue-300">+ Nova Reserva</strong> na aba Reservas
-          — o cliente é criado automaticamente na ficha do hóspede.
-        </p>
-      </div>
+
 
       {/* Busca + Ordenação */}
       <div className="flex gap-2">
@@ -522,6 +582,111 @@ const AdminClientes = () => {
             );
           })}
         </div>
+      )}
+
+      {/* ══ MODAL NOVO CLIENTE ══ */}
+      {newModal && (
+        <>
+          <div className="fixed inset-0 z-50 bg-black/70 backdrop-blur-sm" onClick={() => setNewModal(false)} />
+          <div className="fixed inset-0 z-50 flex items-center justify-center p-4 pointer-events-none">
+            <div
+              className="bg-[#111114] border border-white/10 rounded-2xl w-full max-w-lg shadow-2xl pointer-events-auto flex flex-col max-h-[90vh]"
+              onClick={(e) => e.stopPropagation()}
+            >
+              <div className="flex items-center justify-between px-6 py-5 border-b border-white/5 shrink-0">
+                <div className="flex items-center gap-2">
+                  <UserPlus className="w-4 h-4 text-primary" />
+                  <h2 className="font-display text-lg font-semibold text-cream">Novo Cliente</h2>
+                </div>
+                <button
+                  onClick={() => setNewModal(false)}
+                  className="text-white/25 hover:text-cream transition-colors"
+                >
+                  <X className="w-5 h-5" />
+                </button>
+              </div>
+              <div className="px-6 py-5 space-y-4 overflow-y-auto flex-1">
+                <Field
+                  label="Nome completo *"
+                  placeholder="Nome do hóspede"
+                  value={newData.full_name}
+                  onChange={(v) => setNewData((d) => ({ ...d, full_name: v }))}
+                />
+                <div className="grid grid-cols-2 gap-3">
+                  <Field
+                    label="CPF"
+                    placeholder="000.000.000-00"
+                    value={newData.cpf}
+                    onChange={(v) => setNewData((d) => ({ ...d, cpf: maskCPF(v) }))}
+                  />
+                  <Field
+                    label="RG"
+                    placeholder="00.000.000-0"
+                    value={newData.rg}
+                    onChange={(v) => setNewData((d) => ({ ...d, rg: maskRG(v) }))}
+                  />
+                </div>
+                <div className="grid grid-cols-2 gap-3">
+                  <Field
+                    label="Telefone"
+                    placeholder="(51) 99999-0000"
+                    value={newData.phone}
+                    onChange={(v) => setNewData((d) => ({ ...d, phone: maskPhone(v) }))}
+                  />
+                  <Field
+                    label="E-mail"
+                    placeholder="email@exemplo.com"
+                    value={newData.email}
+                    onChange={(v) => setNewData((d) => ({ ...d, email: v }))}
+                  />
+                </div>
+                <Field
+                  label="Nacionalidade"
+                  placeholder="Brasileira"
+                  value={newData.nationality}
+                  onChange={(v) => setNewData((d) => ({ ...d, nationality: v }))}
+                />
+                <Field
+                  label="Endereço"
+                  placeholder="Rua, número"
+                  value={newData.address}
+                  onChange={(v) => setNewData((d) => ({ ...d, address: v }))}
+                />
+                <div className="grid grid-cols-2 gap-3">
+                  <Field
+                    label="Cidade"
+                    placeholder="Cidade"
+                    value={newData.city}
+                    onChange={(v) => setNewData((d) => ({ ...d, city: v }))}
+                  />
+                  <Field
+                    label="Estado"
+                    placeholder="RS"
+                    value={newData.state}
+                    onChange={(v) => setNewData((d) => ({ ...d, state: v }))}
+                  />
+                </div>
+              </div>
+              <div className="flex items-center justify-end gap-3 px-6 py-4 border-t border-white/5 shrink-0">
+                <button
+                  onClick={() => setNewModal(false)}
+                  className="px-4 py-2 text-sm text-white/40 hover:text-cream font-body transition-colors"
+                >
+                  Cancelar
+                </button>
+                <button
+                  onClick={saveNew}
+                  disabled={newSaving}
+                  className="flex items-center gap-2 px-5 py-2.5 rounded-lg text-black text-sm font-semibold hover:brightness-110 transition-all disabled:opacity-50"
+                  style={goldBg}
+                >
+                  {newSaving ? <Loader2 className="w-4 h-4 animate-spin" /> : <CheckCircle2 className="w-4 h-4" />}
+                  {newSaving ? "Salvando..." : "Cadastrar"}
+                </button>
+              </div>
+            </div>
+          </div>
+        </>
       )}
 
       {/* ══ MODAL EDITAR ══ */}
