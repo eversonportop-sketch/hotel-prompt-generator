@@ -64,15 +64,6 @@ const maskPhone = (v: string) => {
   return d.replace(/(\d{2})(\d{5})(\d{0,4})/, "($1) $2-$3").replace(/-$/, "");
 };
 
-const maskCNPJ = (v: string) =>
-  v
-    .replace(/\D/g, "")
-    .slice(0, 14)
-    .replace(/(\d{2})(\d)/, "$1.$2")
-    .replace(/(\d{3})(\d)/, "$1.$2")
-    .replace(/(\d{3})(\d)/, "$1/$2")
-    .replace(/(\d{4})(\d{1,2})$/, "$1-$2");
-
 const maskCEP = (v: string) =>
   v
     .replace(/\D/g, "")
@@ -124,7 +115,6 @@ const AdminClientes = () => {
     full_name: "",
     phone: "",
     cpf: "",
-    cnpj: "",
     rg: "",
     email: "",
     nationality: "Brasileira",
@@ -141,7 +131,6 @@ const AdminClientes = () => {
       full_name: "",
       phone: "",
       cpf: "",
-      cnpj: "",
       rg: "",
       email: "",
       nationality: "Brasileira",
@@ -183,7 +172,6 @@ const AdminClientes = () => {
         full_name: newData.full_name.trim(),
         phone: newData.phone || null,
         cpf: newData.cpf || null,
-        cnpj: newData.cnpj || null,
         rg: newData.rg || null,
         email: newData.email || null,
         nationality: newData.nationality || null,
@@ -670,12 +658,6 @@ const AdminClientes = () => {
                     onChange={(v) => setNewData((d) => ({ ...d, rg: maskRG(v) }))}
                   />
                 </div>
-                <Field
-                  label="CNPJ (opcional)"
-                  placeholder="00.000.000/0000-00"
-                  value={newData.cnpj}
-                  onChange={(v) => setNewData((d) => ({ ...d, cnpj: maskCNPJ(v) }))}
-                />
                 <div className="grid grid-cols-2 gap-3">
                   <Field
                     label="Telefone"
