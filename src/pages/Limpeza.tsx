@@ -33,6 +33,50 @@ const Limpeza = () => {
         )
         .eq("status", "checked_in");
 
+      // Busca última reserva checked_out por quarto (para consumo na limpeza)
+      const cleaningRoomIds = (roomsData || [])
+        .filter((r: any) => r.needs_cleaning)
+        .map((r: any) => r.id);
+
+      let consumoMap: Record<string, { item_name: string; quantity: number }[]> = {};
+
+      if (cleaningRoomIds.length > 0) {
+        const { data: checkoutRes } = await supabase
+          .from("reservations")
+          .select("id, room_id, updated_at")
+          .eq("status", "checked_out")
+          .in("room_id", cleaningRoomIds)
+          .order("updated_at", { ascending: false });
+
+        // Pega a reserva mais recente por quarto
+        const latestPerRoom: Record<string, string> = {};
+        (checkoutRes || []).forEach((r: any) => {
+          if (!latestPerRoom[r.room_id]) {
+            latestPerRoom[r.room_id] = r.id;
+          }
+        });
+
+        const reservationIds = Object.values(latestPerRoom);
+        if (reservationIds.length > 0) {
+          const { data: ordersData } = await supabase
+            .from("consumption_orders")
+            .select("reservation_id, item_name, quantity, room_number")
+            .in("reservation_id", reservationIds)
+            .in("status", ["delivered", "pending"]);
+
+          // Agrupa por room_id
+          const idToRoom = Object.fromEntries(
+            Object.entries(latestPerRoom).map(([roomId, resId]) => [resId, roomId])
+          );
+          (ordersData || []).forEach((o: any) => {
+            const roomId = idToRoom[o.reservation_id];
+            if (!roomId) return;
+            if (!consumoMap[roomId]) consumoMap[roomId] = [];
+            consumoMap[roomId].push({ item_name: o.item_name, quantity: o.quantity });
+          });
+        }
+      }
+
       return (roomsData || []).map((room: any) => {
         const res = (resData || []).find((r: any) => r.room_id === room.id);
         const guestName = res
@@ -45,6 +89,7 @@ const Limpeza = () => {
           hospede: guestName,
           check_out: res?.check_out || null,
           guests_count: res?.guests_count || null,
+          consumo: consumoMap[room.id] || [],
         };
       });
     },
@@ -164,6 +209,24 @@ const Limpeza = () => {
                       <p className="text-[10px] text-amber-400/70 flex items-center gap-1 mb-1.5">
                         <Sparkles className="w-3 h-3" /> Em limpeza
                       </p>
+
+                      {/* Itens consumidos para repor */}
+                      {q.consumo && q.consumo.length > 0 && (
+                        <div className="mb-2 bg-amber-500/10 border border-amber-500/20 rounded-lg px-2.5 py-2">
+                          <p className="text-[10px] text-amber-300/60 uppercase tracking-wider mb-1.5 font-semibold">
+                            🛒 Repor no quarto
+                          </p>
+                          <ul className="space-y-0.5">
+                            {q.consumo.map((item: any, i: number) => (
+                              <li key={i} className="flex items-center justify-between text-[11px]">
+                                <span className="text-amber-200/70 truncate pr-2">{item.item_name}</span>
+                                <span className="text-amber-400 font-bold shrink-0">×{item.quantity}</span>
+                              </li>
+                            ))}
+                          </ul>
+                        </div>
+                      )}
+
                       <button
                         onClick={() => marcarLimpoMutation.mutate(q.id)}
                         disabled={isPending}
