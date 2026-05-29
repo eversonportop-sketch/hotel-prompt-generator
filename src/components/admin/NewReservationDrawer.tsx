@@ -50,13 +50,14 @@ const todayDate = () => {
   d.setHours(0, 0, 0, 0);
   return d;
 };
-const TABS = [
+const TABS_BASE = [
   { id: "hospede", label: "Hóspede", icon: User },
   { id: "estadia", label: "Estadia", icon: BedDouble },
   { id: "geral", label: "Info Geral", icon: FileText },
+  { id: "acompanhantes", label: "Acompanhantes", icon: Users },
   { id: "confirmar", label: "Confirmar", icon: CheckCircle2 },
 ] as const;
-type TabId = (typeof TABS)[number]["id"];
+type TabId = "hospede" | "estadia" | "geral" | "acompanhantes" | "confirmar";
 
 interface Props {
   open: boolean;
@@ -195,6 +196,8 @@ const NewReservationDrawer = ({ open, onClose }: Props) => {
   const [paymentMethod, setPaymentMethod] = useState("dinheiro");
   // Confirmar
   const [doCheckin, setDoCheckin] = useState(false);
+  // Acompanhantes
+  const [companions, setCompanions] = useState<{ full_name: string; document: string }[]>([]);
 
   // ─── Busca CEP via ViaCEP ─────────────────────────────────────────────
   const fetchCEP = async (cep: string) => {
@@ -340,6 +343,7 @@ const NewReservationDrawer = ({ open, onClose }: Props) => {
     setNotes("");
     setPaymentMethod("dinheiro");
     setDoCheckin(false);
+    setCompanions([]);
   };
   const handleClose = () => {
     reset();
@@ -389,6 +393,22 @@ const NewReservationDrawer = ({ open, onClose }: Props) => {
         ...(doCheckin ? { checked_in_at: new Date().toISOString() } : {}),
       } as any);
       if (error) throw error;
+      // Salva acompanhantes se houver
+      if (companions.filter(c => c.full_name.trim()).length > 0) {
+        const resQuery = await supabase
+          .from("reservations")
+          .select("id")
+          .eq("room_id", roomId)
+          .order("created_at", { ascending: false })
+          .limit(1)
+          .single();
+        if (resQuery.data?.id) {
+          const companionsToInsert = companions
+            .filter(c => c.full_name.trim())
+            .map(c => ({ reservation_id: resQuery.data.id, full_name: c.full_name.trim(), document: c.document || null }));
+          await supabase.from("reservation_guests").insert(companionsToInsert as any);
+        }
+      }
       toast.success(doCheckin ? "Reserva criada e check-in realizado!" : "Reserva criada com sucesso!");
       [
         "reservas-lista",
@@ -406,6 +426,10 @@ const NewReservationDrawer = ({ open, onClose }: Props) => {
       setSaving(false);
     }
   };
+
+  const TABS = guestsCount > 1
+    ? TABS_BASE
+    : TABS_BASE.filter(t => t.id !== "acompanhantes");
 
   const goToTab = (dir: 1 | -1) => {
     if (dir === 1 && activeTab === "hospede" && !hospedeOk) return toast.error("Selecione ou cadastre um hóspede.");
@@ -1050,6 +1074,48 @@ const NewReservationDrawer = ({ open, onClose }: Props) => {
                       <p className="text-white/50 text-sm font-body">{notes}</p>
                     </div>
                   )}
+                </div>
+              )}
+              {/* ── ACOMPANHANTES ── */}
+              {activeTab === "acompanhantes" && (
+                <div className="p-6 space-y-4">
+                  <div>
+                    <p className="text-sm text-cream font-body font-semibold mb-1">Acompanhantes</p>
+                    <p className="text-xs text-white/30 font-body">Cadastre os dados dos demais hóspedes do quarto.</p>
+                  </div>
+                  {Array.from({ length: guestsCount - 1 }).map((_, i) => {
+                    const comp = companions[i] || { full_name: "", document: "" };
+                    const update = (field: "full_name" | "document", val: string) => {
+                      setCompanions(prev => {
+                        const next = [...prev];
+                        next[i] = { ...comp, [field]: val };
+                        return next;
+                      });
+                    };
+                    return (
+                      <div key={i} className="bg-white/[0.03] border border-white/8 rounded-xl p-4 space-y-3">
+                        <p className="text-[10px] text-primary/60 uppercase tracking-widest font-body">Acompanhante {i + 1}</p>
+                        <div>
+                          <label className="text-[10px] text-white/30 font-body uppercase tracking-widest block mb-1.5">Nome completo *</label>
+                          <input
+                            placeholder="Nome do acompanhante"
+                            value={comp.full_name}
+                            onChange={e => update("full_name", e.target.value)}
+                            className="w-full bg-white/[0.03] border border-white/8 rounded-lg px-3.5 py-2.5 text-cream text-sm font-body focus:outline-none focus:border-primary/40 transition placeholder:text-white/15"
+                          />
+                        </div>
+                        <div>
+                          <label className="text-[10px] text-white/30 font-body uppercase tracking-widest block mb-1.5">Documento (RG ou CPF)</label>
+                          <input
+                            placeholder="000.000.000-00"
+                            value={comp.document}
+                            onChange={e => update("document", e.target.value)}
+                            className="w-full bg-white/[0.03] border border-white/8 rounded-lg px-3.5 py-2.5 text-cream text-sm font-body focus:outline-none focus:border-primary/40 transition placeholder:text-white/15"
+                          />
+                        </div>
+                      </div>
+                    );
+                  })}
                 </div>
               )}
             </div>
