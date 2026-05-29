@@ -327,7 +327,22 @@ const AdminClientes = () => {
         .select("id, check_in, check_out, total_price, status, checked_in_at, checked_out_at, rooms(name, category)")
         .eq(field, clienteId)
         .order("check_in", { ascending: false });
-      setHistoryData((prev) => ({ ...prev, [clienteId]: data || [] }));
+      const reservations = data || [];
+      // Busca acompanhantes de cada reserva
+      if (reservations.length > 0) {
+        const ids = reservations.map((r: any) => r.id);
+        const { data: companions } = await supabase
+          .from("reservation_guests")
+          .select("reservation_id, full_name, document")
+          .in("reservation_id", ids);
+        const compMap: Record<string, any[]> = {};
+        (companions || []).forEach((c: any) => {
+          if (!compMap[c.reservation_id]) compMap[c.reservation_id] = [];
+          compMap[c.reservation_id].push(c);
+        });
+        reservations.forEach((r: any) => { r._companions = compMap[r.id] || []; });
+      }
+      setHistoryData((prev) => ({ ...prev, [clienteId]: reservations }));
     } catch {
       setHistoryData((prev) => ({ ...prev, [clienteId]: [] }));
     } finally {
@@ -600,6 +615,20 @@ const AdminClientes = () => {
                                       </td>
                                       <td className={`px-3 py-2.5 font-body ${st.color}`}>{st.label}</td>
                                     </tr>
+                                    {r._companions && r._companions.length > 0 && (
+                                      <tr className="border-b border-white/5 last:border-0 bg-white/[0.01]">
+                                        <td colSpan={5} className="px-3 py-2">
+                                          <p className="text-[10px] text-white/25 uppercase tracking-widest mb-1 font-body">Acompanhantes</p>
+                                          <div className="flex flex-wrap gap-2">
+                                            {r._companions.map((c: any, ci: number) => (
+                                              <span key={ci} className="text-[11px] text-white/50 font-body bg-white/[0.04] border border-white/8 rounded px-2 py-0.5">
+                                                {c.full_name}{c.document ? ` · ${c.document}` : ""}
+                                              </span>
+                                            ))}
+                                          </div>
+                                        </td>
+                                      </tr>
+                                    )}
                                   );
                                 })}
                               </tbody>
