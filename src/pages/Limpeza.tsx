@@ -48,11 +48,27 @@ const Limpeza = () => {
           .in("room_id", cleaningRoomIds)
           .order("updated_at", { ascending: false });
 
-        // Pega a reserva mais recente por quarto (check_in = início da última estadia)
-        const latestPerRoom: Record<string, { resId: string; checkIn: string }> = {};
+        // Pega as 2 reservas mais recentes por quarto:
+        // - latest: a que acabou de sair (define o fim)
+        // - prev: a anterior (define o início — quando o hóspede anterior saiu)
+        const latestPerRoom: Record<string, {
+          resId: string;
+          checkIn: string;
+          checkedOutAt: string;
+          prevCheckedOutAt: string | null;
+        }> = {};
+
         (checkoutRes || []).forEach((r: any) => {
           if (!latestPerRoom[r.room_id]) {
-            latestPerRoom[r.room_id] = { resId: r.id, checkIn: r.check_in };
+            latestPerRoom[r.room_id] = {
+              resId: r.id,
+              checkIn: r.check_in,
+              checkedOutAt: r.updated_at,
+              prevCheckedOutAt: null,
+            };
+          } else if (!latestPerRoom[r.room_id].prevCheckedOutAt) {
+            // Segunda reserva mais recente = checkout anterior
+            latestPerRoom[r.room_id].prevCheckedOutAt = r.updated_at;
           }
         });
 
@@ -67,9 +83,15 @@ const Limpeza = () => {
             .eq("room_number", room.name)
             .not("status", "eq", "canceled");
 
-          // Se achou reserva, não filtra por data — pega todos os pedidos do quarto
-          // Senão, usa fallback de 30 dias para não trazer histórico muito antigo
-          if (!latest) {
+          // Define início da busca:
+          // - Se tem checkout anterior: usa esse como ponto de corte (hóspede anterior saiu)
+          // - Se é a primeira reserva do quarto: usa check_in - 3 dias (buffer para registro antecipado)
+          // - Se não achou reserva nenhuma: fallback 30 dias
+          if (latest) {
+            const startDate = latest.prevCheckedOutAt ||
+              new Date(new Date(latest.checkIn).getTime() - 3 * 24 * 60 * 60 * 1000).toISOString();
+            query = query.gte("created_at", startDate);
+          } else {
             const fallback = new Date();
             fallback.setDate(fallback.getDate() - 30);
             query = query.gte("created_at", fallback.toISOString());
