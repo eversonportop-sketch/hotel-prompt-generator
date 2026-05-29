@@ -951,6 +951,8 @@ const AdminReservas = () => {
                 <p className="text-white/40 text-sm font-body">
                   Hóspede: <span className="text-cream">{editRes.guestName}</span>
                 </p>
+                {/* Acompanhantes */}
+                <CompanionsList reservationId={editRes.id} />
                 <div>
                   <label className="text-[10px] text-white/40 font-body uppercase tracking-widest block mb-2">
                     <BedDouble className="w-3 h-3 inline mr-1" />
@@ -1707,6 +1709,41 @@ const AdminReservas = () => {
           </div>
         </>
       )}
+    </div>
+  );
+};
+
+// ── Componente de acompanhantes ──────────────────────────────────────────────
+const CompanionsList = ({ reservationId }: { reservationId: string }) => {
+  const [companions, setCompanions] = React.useState<any[]>([]);
+  const [loading, setLoading] = React.useState(true);
+
+  React.useEffect(() => {
+    setLoading(true);
+    supabase
+      .from("reservation_guests")
+      .select("full_name, document")
+      .eq("reservation_id", reservationId)
+      .then(({ data }) => {
+        setCompanions(data || []);
+        setLoading(false);
+      });
+  }, [reservationId]);
+
+  if (loading) return null;
+  if (companions.length === 0) return null;
+
+  return (
+    <div className="bg-white/[0.03] border border-white/8 rounded-xl p-3">
+      <p className="text-[10px] text-white/30 font-body uppercase tracking-widest mb-2">Acompanhantes</p>
+      <ul className="space-y-1.5">
+        {companions.map((c, i) => (
+          <li key={i} className="flex items-center justify-between text-xs font-body">
+            <span className="text-cream/80">{c.full_name}</span>
+            {c.document && <span className="text-white/30">{c.document}</span>}
+          </li>
+        ))}
+      </ul>
     </div>
   );
 };
