@@ -1,4 +1,4 @@
-import { useState } from "react";
+import React, { useState } from "react";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import {
@@ -601,7 +601,8 @@ const AdminClientes = () => {
                                   };
                                   const st = statusMap[r.status] || { label: r.status, color: "text-white/40" };
                                   return (
-                                    <tr key={r.id} className="border-b border-white/5 last:border-0 hover:bg-white/[0.02] transition-colors">
+                                    <React.Fragment key={r.id}>
+                                    <tr className="border-b border-white/5 last:border-0 hover:bg-white/[0.02] transition-colors">
                                       <td className="px-3 py-2.5">
                                         <p className="text-cream/80 font-body">{r.rooms?.name ?? "—"}</p>
                                         <p className="text-white/25 text-[10px] font-body">{r.rooms?.category}</p>
@@ -629,6 +630,7 @@ const AdminClientes = () => {
                                         </td>
                                       </tr>
                                     )}
+                                    </React.Fragment>
                                   );
                                 })}
                               </tbody>
