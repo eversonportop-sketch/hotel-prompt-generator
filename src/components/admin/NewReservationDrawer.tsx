@@ -1109,7 +1109,13 @@ const NewReservationDrawer = ({ open, onClose }: Props) => {
                           <input
                             placeholder="000.000.000-00"
                             value={comp.document}
-                            onChange={e => update("document", e.target.value)}
+                            onChange={e => {
+                              const raw = e.target.value.replace(/\D/g, "").slice(0, 11);
+                              const masked = raw.length <= 9
+                                ? raw.replace(/(\d{2})(\d)/, "$1.$2").replace(/(\d{3})(\d)/, "$1.$2").replace(/(\d{3})(\d{1,2})$/, "$1-$2")
+                                : raw.replace(/(\d{3})(\d)/, "$1.$2").replace(/(\d{3})(\d)/, "$1.$2").replace(/(\d{3})(\d{1,2})$/, "$1-$2");
+                              update("document", masked);
+                            }}
                             className="w-full bg-white/[0.03] border border-white/8 rounded-lg px-3.5 py-2.5 text-cream text-sm font-body focus:outline-none focus:border-primary/40 transition placeholder:text-white/15"
                           />
                         </div>
