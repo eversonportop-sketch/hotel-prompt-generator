@@ -180,6 +180,26 @@ const AdminReservas = () => {
   const [customDateEnd, setCustomDateEnd] = useState<Date | undefined>(undefined);
   const [customPickerOpen, setCustomPickerOpen] = useState<"start" | "end" | null>(null);
   const [relatorioOpen, setRelatorioOpen] = useState(false);
+  const [relatorioConsumos, setRelatorioConsumos] = useState<Record<string, number>>({});
+  const [relatorioConsumosLoading, setRelatorioConsumosLoading] = useState(false);
+
+  React.useEffect(() => {
+    if (!relatorioOpen) return;
+    setRelatorioConsumosLoading(true);
+    supabase
+      .from("consumption_orders")
+      .select("reservation_id, total")
+      .in("status", ["pending", "delivered", "billed"])
+      .then(({ data }) => {
+        const map: Record<string, number> = {};
+        (data || []).forEach((c: any) => {
+          map[c.reservation_id] = (map[c.reservation_id] || 0) + Number(c.total);
+        });
+        setRelatorioConsumos(map);
+        setRelatorioConsumosLoading(false);
+      });
+  }, [relatorioOpen]);
+
   React.useEffect(() => {
     return () => {
       setRelatorioOpen(false);
@@ -727,7 +747,7 @@ const AdminReservas = () => {
                                   R$ {(Number(r.total_price) + ((r as any)._consumoTotal || 0)).toLocaleString("pt-BR", { minimumFractionDigits: 2 })}
                                 </span>
                                 {(r as any)._consumoTotal > 0 && (
-                                  <p className="text-white/30 text-[10px] font-body mt-0.5">
+                                  <p style={{fontSize:"10px",color:"#888",marginTop:"2px",fontWeight:"normal"}}>
                                     diárias {Number(r.total_price).toLocaleString("pt-BR",{minimumFractionDigits:2})} + cons. {((r as any)._consumoTotal).toLocaleString("pt-BR",{minimumFractionDigits:2})}
                                   </p>
                                 )}
@@ -1377,7 +1397,7 @@ const AdminReservas = () => {
           const resPeriodoRel = finalizadas
             .filter((r) => { const d = new Date(r.checked_out_at!); return d >= desde && d <= ateRel; })
             .sort((a, b) => new Date(b.checked_out_at!).getTime() - new Date(a.checked_out_at!).getTime());
-          const totalRel = resPeriodoRel.reduce((s, r) => s + Number(r.total_price) + ((r as any)._consumoTotal || 0), 0);
+          const totalRel = resPeriodoRel.reduce((s, r) => s + Number(r.total_price) + (relatorioConsumos[r.id] || 0), 0);
           const ticketMedioRel = resPeriodoRel.length > 0 ? totalRel / resPeriodoRel.length : 0;
 
           const periodoLabel =
@@ -1402,7 +1422,7 @@ const AdminReservas = () => {
             if (!porQuarto[nome]) porQuarto[nome] = { nome, categoria: cat, reservas: 0, noites: 0, total: 0 };
             porQuarto[nome].reservas += 1;
             porQuarto[nome].noites += n2;
-            porQuarto[nome].total += Number(r.total_price) + ((r as any)._consumoTotal || 0);
+            porQuarto[nome].total += Number(r.total_price) + (relatorioConsumos[r.id] || 0);
           });
           const quartosList = Object.values(porQuarto).sort((a, b) => b.total - a.total);
 
@@ -1424,9 +1444,15 @@ const AdminReservas = () => {
                       <h3 className="font-display text-base font-semibold text-cream">
                         Relatório de Faturamento — {periodoLabel}
                       </h3>
+                      {relatorioConsumosLoading && (
+                        <span className="text-xs text-white/40 font-body ml-2 flex items-center gap-1">
+                          <Loader2 className="w-3 h-3 animate-spin" /> Carregando consumos...
+                        </span>
+                      )}
                     </div>
                     <div className="flex items-center gap-2">
                       <button
+                        disabled={relatorioConsumosLoading}
                         onClick={() => {
                           const conteudo = document.getElementById("relatorio-print");
                           if (!conteudo) return;
@@ -1450,10 +1476,11 @@ const AdminReservas = () => {
                                 .report-card { border: 1px solid #ddd; border-radius: 6px; padding: 12px; background: #f9f9f9; }
                                 .report-label { font-size: 11px; color: #666; margin-bottom: 4px; }
                                 .report-value { font-size: 18px; font-weight: bold; color: #000; }
-                                * { color: #000 !important; background: #fff !important; box-shadow: none !important; border-color: #ddd !important; }
-                                .report-card { background: #f9f9f9 !important; }
-                                th { background: #eee !important; }
-                                tfoot td { background: #f0f0f0 !important; }
+                                body, table, td, th, p, span, div, h1, h4 { color: #000; background: transparent; box-shadow: none; }
+                                .report-card { background: #f9f9f9; border-color: #ddd; }
+                                th { background: #eee; border-color: #ccc; }
+                                tfoot td { background: #f0f0f0; }
+                                .consumo-detalhe { color: #888 !important; font-size: 10px !important; margin-top: 2px; font-weight: normal; }
                               </style>
                             </head>
                             <body>${conteudo.innerHTML}</body>
@@ -1481,10 +1508,10 @@ const AdminReservas = () => {
                   </div>
 
                   <div className="overflow-y-auto p-6 space-y-6 print-scroll">
-                    <div className="hidden print-only">
-                      <h1 className="text-xl font-bold">Hotel SB — Relatório de Faturamento</h1>
-                      <p>Período: {periodoLabel}</p>
-                      <p>Gerado em: {format(now, "dd/MM/yyyy 'às' HH:mm", { locale: ptBR })}</p>
+                    <div style={{display:"block",marginBottom:"16px"}}>
+                      <h1 style={{fontSize:"20px",fontWeight:"bold",margin:"0 0 4px"}}>Hotel SB — Relatório de Faturamento</h1>
+                      <p style={{margin:"2px 0",fontSize:"13px"}}>Período: {periodoLabel}</p>
+                      <p style={{margin:"2px 0",fontSize:"13px"}}>Gerado em: {format(now, "dd/MM/yyyy 'às' HH:mm", { locale: ptBR })}</p>
                     </div>
 
                     <div>
@@ -1637,10 +1664,10 @@ const AdminReservas = () => {
                                       {format(new Date(r.checked_out_at!), "dd/MM/yyyy HH:mm", { locale: ptBR })}
                                     </td>
                                     <td className="py-2 px-3 text-cream font-semibold font-body">
-                                      R$ {(Number(r.total_price) + ((r as any)._consumoTotal || 0)).toLocaleString("pt-BR", { minimumFractionDigits: 2 })}
-                                      {(r as any)._consumoTotal > 0 && (
-                                        <p className="text-white/30 text-[10px] font-body font-normal mt-0.5">
-                                          diárias {Number(r.total_price).toLocaleString("pt-BR",{minimumFractionDigits:2})} + cons. {((r as any)._consumoTotal).toLocaleString("pt-BR",{minimumFractionDigits:2})}
+                                      R$ {(Number(r.total_price) + (relatorioConsumos[r.id] || 0)).toLocaleString("pt-BR", { minimumFractionDigits: 2 })}
+                                      {(relatorioConsumos[r.id] || 0) > 0 && (
+                                        <p style={{fontSize:"10px",color:"#888",marginTop:"2px",fontWeight:"normal"}}>
+                                          diárias {Number(r.total_price).toLocaleString("pt-BR",{minimumFractionDigits:2})} + cons. {(relatorioConsumos[r.id] || 0).toLocaleString("pt-BR",{minimumFractionDigits:2})}
                                         </p>
                                       )}
                                     </td>
