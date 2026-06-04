@@ -1465,22 +1465,33 @@ const AdminReservas = () => {
                               <meta charset="UTF-8"/>
                               <title>Relatório Hotel SB</title>
                               <style>
+                                * { box-sizing: border-box; margin: 0; padding: 0; }
                                 body { font-family: Arial, sans-serif; padding: 2rem; color: #000; background: #fff; }
+                                h1 { font-size: 20px; font-weight: bold; margin-bottom: 4px; color: #000; }
+                                h3 { font-size: 16px; font-weight: bold; color: #000; }
+                                h4 { font-size: 11px; text-transform: uppercase; letter-spacing: 2px; color: #555; margin: 20px 0 8px; }
+                                p, span, div, td, th, li { color: #000; }
                                 table { width: 100%; border-collapse: collapse; margin-bottom: 20px; font-size: 13px; }
-                                th { background: #eee; font-weight: bold; text-align: left; padding: 6px 8px; border: 1px solid #ccc; }
-                                td { padding: 6px 8px; border: 1px solid #ddd; vertical-align: top; }
-                                tfoot td { font-weight: bold; background: #f0f0f0; }
-                                h1 { font-size: 20px; } h4 { font-size: 11px; text-transform: uppercase; letter-spacing: 2px; color: #555; margin: 20px 0 8px; }
+                                th { background: #eee !important; font-weight: bold; text-align: left; padding: 6px 8px; border: 1px solid #ccc; color: #333; }
+                                td { padding: 6px 8px; border: 1px solid #ddd; vertical-align: top; color: #000; }
+                                tfoot td { font-weight: bold; background: #f0f0f0 !important; color: #000; }
                                 .no-print { display: none !important; }
-                                .grid { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; margin-bottom: 16px; }
-                                .report-card { border: 1px solid #ddd; border-radius: 6px; padding: 12px; background: #f9f9f9; }
-                                .report-label { font-size: 11px; color: #666; margin-bottom: 4px; }
-                                .report-value { font-size: 18px; font-weight: bold; color: #000; }
-                                body, table, td, th, p, span, div, h1, h4 { color: #000; background: transparent; box-shadow: none; }
-                                .report-card { background: #f9f9f9; border-color: #ddd; }
-                                th { background: #eee; border-color: #ccc; }
-                                tfoot td { background: #f0f0f0; }
-                                .consumo-detalhe { color: #888 !important; font-size: 10px !important; margin-top: 2px; font-weight: normal; }
+                                .rounded-full { display: none !important; }
+                                .report-card { border: 1px solid #ddd !important; border-radius: 6px; padding: 12px !important; background: #f9f9f9 !important; }
+                                .report-label { font-size: 11px; color: #666 !important; margin-bottom: 4px; }
+                                .report-value { font-weight: bold; color: #000 !important; }
+                                .text-cream, .text-white, [class*="text-white"], [class*="text-cream"] { color: #000 !important; }
+                                [class*="text-primary"] { color: #B8860B !important; }
+                                [class*="text-white/40"], [class*="text-white/60"], [class*="text-white/30"], [class*="text-white/25"] { color: #666 !important; }
+                                [class*="bg-primary"], [class*="bg-white"], [class*="bg-black"], [class*="backdrop"] { background: transparent !important; }
+                                [class*="border-white"] { border-color: #ddd !important; }
+                                .font-semibold, .font-bold { font-weight: bold; }
+                                .text-xs { font-size: 11px; }
+                                .text-sm { font-size: 12px; }
+                                .uppercase { text-transform: uppercase; }
+                                .tracking-wider { letter-spacing: 1px; }
+                                .text-right { text-align: right; }
+                                .animate-spin { display: none !important; }
                               </style>
                             </head>
                             <body>${conteudo.innerHTML}</body>
@@ -1515,58 +1526,43 @@ const AdminReservas = () => {
                     </div>
 
                     <div>
-                      <h4 className="text-xs font-semibold uppercase tracking-widest text-white/40 mb-3 font-body">
+                      <h4 style={{fontSize:"11px",fontWeight:"600",textTransform:"uppercase",letterSpacing:"2px",color:"#555",margin:"20px 0 8px"}}>
                         Resumo Executivo
                       </h4>
-                      <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
-                        <div
-                          className="report-card rounded-lg p-4"
-                          style={{ background: "rgba(255,255,255,0.04)", border: "1px solid rgba(255,255,255,0.08)" }}
-                        >
-                          <p className="report-label text-xs font-body mb-1" style={{ color: "rgba(255,255,255,0.4)" }}>
+                      <div style={{display:"grid",gridTemplateColumns:"1fr 1fr 1fr 1fr",gap:"10px",marginBottom:"16px"}}>
+                        <div style={{border:"1px solid #ddd",borderRadius:"6px",padding:"12px",background:"#f9f9f9"}}>
+                          <p style={{fontSize:"11px",color:"#666",marginBottom:"4px"}}>
                             Total Faturado
                           </p>
-                          <p className="report-value text-lg font-display font-semibold" style={{ color: "#E5C97A" }}>
+                          <p style={{fontSize:"18px",fontWeight:"bold",color:"#B8860B"}}>
                             R$ {totalRel.toLocaleString("pt-BR", { minimumFractionDigits: 2 })}
                           </p>
                         </div>
-                        <div
-                          className="report-card rounded-lg p-4"
-                          style={{ background: "rgba(255,255,255,0.04)", border: "1px solid rgba(255,255,255,0.08)" }}
-                        >
-                          <p className="report-label text-xs font-body mb-1" style={{ color: "rgba(255,255,255,0.4)" }}>
+                        <div style={{border:"1px solid #ddd",borderRadius:"6px",padding:"12px",background:"#f9f9f9"}}>
+                          <p style={{fontSize:"11px",color:"#666",marginBottom:"4px"}}>
                             Checkouts
                           </p>
-                          <p className="report-value text-lg font-display font-semibold" style={{ color: "#f5f0e8" }}>
+                          <p style={{fontSize:"18px",fontWeight:"bold",color:"#000"}}>
                             {resPeriodoRel.length}
                           </p>
                         </div>
-                        <div
-                          className="report-card rounded-lg p-4"
-                          style={{ background: "rgba(255,255,255,0.04)", border: "1px solid rgba(255,255,255,0.08)" }}
-                        >
-                          <p className="report-label text-xs font-body mb-1" style={{ color: "rgba(255,255,255,0.4)" }}>
+                        <div style={{border:"1px solid #ddd",borderRadius:"6px",padding:"12px",background:"#f9f9f9"}}>
+                          <p style={{fontSize:"11px",color:"#666",marginBottom:"4px"}}>
                             Ticket Médio
                           </p>
-                          <p className="report-value text-lg font-display font-semibold" style={{ color: "#f5f0e8" }}>
+                          <p style={{fontSize:"18px",fontWeight:"bold",color:"#000"}}>
                             R$ {ticketMedioRel.toLocaleString("pt-BR", { minimumFractionDigits: 2 })}
                           </p>
                         </div>
                         {quartosList[0] && (
-                          <div
-                            className="report-card rounded-lg p-4"
-                            style={{ background: "rgba(255,255,255,0.04)", border: "1px solid rgba(255,255,255,0.08)" }}
-                          >
-                            <p
-                              className="report-label text-xs font-body mb-1"
-                              style={{ color: "rgba(255,255,255,0.4)" }}
-                            >
+                          <div style={{border:"1px solid #ddd",borderRadius:"6px",padding:"12px",background:"#f9f9f9"}}>
+                            <p style={{fontSize:"11px",color:"#666",marginBottom:"4px"}}>
                               Melhor Quarto
                             </p>
-                            <p className="report-value text-sm font-display font-semibold" style={{ color: "#f5f0e8" }}>
+                            <p style={{fontSize:"14px",fontWeight:"bold",color:"#000"}}>
                               {quartosList[0].nome}
                             </p>
-                            <p className="report-value text-xs font-body mt-1" style={{ color: "#E5C97A" }}>
+                            <p style={{fontSize:"12px",fontWeight:"bold",color:"#B8860B",marginTop:"4px"}}>
                               R$ {quartosList[0].total.toLocaleString("pt-BR", { minimumFractionDigits: 2 })}
                             </p>
                           </div>
