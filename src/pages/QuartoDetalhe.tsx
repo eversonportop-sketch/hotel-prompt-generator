@@ -20,7 +20,6 @@ import {
   Images,
   ZoomIn,
   QrCode,
-  Smartphone,
   Copy,
   CheckCheck,
   MessageCircle,
@@ -353,27 +352,12 @@ const QuartoDetalhe = () => {
     }
   }, [pendingAvailCheck, room, checkIn, checkOut]);
 
-  // Auto-reservar após login: cliente já clicou "Reservar" antes, agora tá logado e disponível
-  // CORRIGIDO: verifica telefone antes de abrir o modal PIX (igual ao fluxo do botão)
+  // Auto-reservar após login: cliente acabou de criar conta ou fez login
+  // Phone já foi validado no Cadastro — abre modal PIX direto
   useEffect(() => {
     if (autoReserve && user && categoryAvail?.freeRoomId && available && !reservationMutation.isPending) {
       setAutoReserve(false);
-      supabase
-        .from("profiles")
-        .select("phone")
-        .eq("id", user.id)
-        .single()
-        .then(({ data: profileData }) => {
-          if (!profileData?.phone || profileData.phone.replace(/\D/g, "").length < 10) {
-            toast.error(
-              "Para reservar, é necessário cadastrar um telefone de contato. Atualize seu perfil.",
-              { duration: 5000 }
-            );
-            navigate("/cadastro?redirect=/quartos/" + id);
-            return;
-          }
-          setShowPixModal(true);
-        });
+      setShowPixModal(true);
     }
   }, [autoReserve, user, categoryAvail, available]);
 
@@ -438,20 +422,8 @@ const QuartoDetalhe = () => {
       navigate(`/cadastro?redirect=/quartos/${id}`);
       return;
     }
-    // Verifica se o cliente tem telefone cadastrado antes de prosseguir
-    const { data: profileData } = await supabase
-      .from("profiles")
-      .select("phone")
-      .eq("id", user.id)
-      .single();
-    if (!profileData?.phone || profileData.phone.replace(/\D/g, "").length < 10) {
-      toast.error(
-        "Para reservar, é necessário cadastrar um telefone de contato. Atualize seu perfil.",
-        { duration: 5000 }
-      );
-      navigate("/cadastro?redirect=/quartos/" + id);
-      return;
-    }
+    // Usuário logado — abre modal PIX direto
+    // (telefone já foi validado no momento do cadastro)
     setShowPixModal(true);
   };
 
