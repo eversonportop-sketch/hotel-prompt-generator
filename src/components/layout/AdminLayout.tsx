@@ -28,6 +28,7 @@ import {
   Home,
   MessageSquareHeart,
   BarChart3,
+  QrCode,
 } from "lucide-react";
 import hotelLogo from "@/assets/hotel-sb-logo.png";
 import { useAuth } from "@/hooks/useAuth";
@@ -38,6 +39,7 @@ const sidebarGroups = [
     label: "Operacional",
     items: [
       { icon: CalendarDays, label: "Reservas", href: "/admin/reservas" },
+      { icon: QrCode, label: "PIX", href: "/admin/pix" },
       { icon: LogIn, label: "Check-in", href: "/admin/checkin" },
       { icon: LogOutIcon, label: "Checkout", href: "/admin/checkout" },
       { icon: UtensilsCrossed, label: "Consumo", href: "/admin/consumo" },
@@ -76,12 +78,14 @@ const SidebarContent = ({
   adminName,
   onSignOut,
   unreadAvaliacoes,
+  pixPendente,
 }: {
   collapsed: boolean;
   onClose?: () => void;
   adminName: string;
   onSignOut: () => void;
   unreadAvaliacoes: number;
+  pixPendente: number;
 }) => {
   const location = useLocation();
 
@@ -138,7 +142,12 @@ const SidebarContent = ({
                     {!collapsed && (
                       <span className="truncate flex-1">{item.label}</span>
                     )}
-                    {!collapsed && item.href === "/admin/avaliacoes" && unreadAvaliacoes > 0 && (
+                    {!collapsed && item.href === "/admin/pix" && pixPendente > 0 && (
+                          <span className="ml-auto bg-amber-500 text-black text-[10px] font-bold px-1.5 py-0.5 rounded-full animate-pulse">
+                            {pixPendente}
+                          </span>
+                        )}
+                        {!collapsed && item.href === "/admin/avaliacoes" && unreadAvaliacoes > 0 && (
                       <span className="ml-auto bg-primary text-charcoal text-[10px] font-bold min-w-[18px] h-[18px] flex items-center justify-center rounded-full px-1">
                         {unreadAvaliacoes}
                       </span>
@@ -183,6 +192,7 @@ const AdminLayout = () => {
   const [checking, setChecking] = useState(true);
   const [adminName, setAdminName] = useState("");
   const [unreadAvaliacoes, setUnreadAvaliacoes] = useState(0);
+  const [pixPendente, setPixPendente] = useState(0);
   const { user, loading, signOut } = useAuth();
   const navigate = useNavigate();
 
@@ -194,6 +204,21 @@ const AdminLayout = () => {
       .then(({ count }) => {
         setUnreadAvaliacoes(count ?? 0);
       });
+  }, []);
+
+  useEffect(() => {
+    const fetchPixPendente = () => {
+      supabase
+        .from("reservations")
+        .select("id", { count: "exact", head: true })
+        .eq("status", "pending_payment")
+        .then(({ count }) => {
+          setPixPendente(count ?? 0);
+        });
+    };
+    fetchPixPendente();
+    const interval = setInterval(fetchPixPendente, 30000);
+    return () => clearInterval(interval);
   }, []);
 
   useEffect(() => {
@@ -245,7 +270,7 @@ const AdminLayout = () => {
           collapsed ? "w-[68px]" : "w-60"
         }`}
       >
-        <SidebarContent collapsed={collapsed} adminName={adminName} onSignOut={handleSignOut} unreadAvaliacoes={unreadAvaliacoes} />
+        <SidebarContent collapsed={collapsed} adminName={adminName} onSignOut={handleSignOut} unreadAvaliacoes={unreadAvaliacoes} pixPendente={pixPendente} />
         <button
           onClick={() => setCollapsed(!collapsed)}
           className="flex-shrink-0 border-t border-white/5 p-3 flex items-center justify-end text-white/20 hover:text-cream transition-colors"
@@ -283,6 +308,7 @@ const AdminLayout = () => {
                 adminName={adminName}
                 onSignOut={handleSignOut}
                 unreadAvaliacoes={unreadAvaliacoes}
+              pixPendente={pixPendente}
               />
             </motion.aside>
           </>
