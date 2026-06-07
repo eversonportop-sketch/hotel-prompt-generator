@@ -130,9 +130,9 @@ const Portal = () => {
     queryFn: async () => {
       const { data } = await supabase
         .from("reservations")
-        .select("id, room_id, check_in, check_out, rooms(name)")
+        .select("id, room_id, check_in, check_out, status, rooms(name)")
         .or(`profile_id.eq.${user!.id},client_id.eq.${user!.id}`)
-        .in("status", ["pending", "confirmed", "checked_in"])
+        .in("status", ["pending", "pending_payment", "confirmed", "checked_in"])
         .lte("check_in", today)
         .gte("check_out", today)
         .limit(1)
@@ -141,9 +141,9 @@ const Portal = () => {
 
       const { data: fallback } = await supabase
         .from("reservations")
-        .select("id, room_id, check_in, check_out, rooms(name)")
+        .select("id, room_id, check_in, check_out, status, rooms(name)")
         .or(`profile_id.eq.${user!.id},client_id.eq.${user!.id}`)
-        .in("status", ["pending", "confirmed", "checked_in"])
+        .in("status", ["pending", "pending_payment", "confirmed", "checked_in"])
         .order("check_in", { ascending: false })
         .limit(1)
         .maybeSingle();
@@ -260,9 +260,19 @@ const Portal = () => {
                       </div>
                     )}
                     <div className="ml-auto">
-                      <span className="px-3 py-1 rounded-full text-xs font-body font-semibold bg-green-500/20 text-green-400 border border-green-500/30">
-                        Check-in ativo
-                      </span>
+                      {reservation?.status === "pending_payment" ? (
+                        <span className="px-3 py-1 rounded-full text-xs font-body font-semibold bg-amber-500/20 text-amber-400 border border-amber-500/30 animate-pulse">
+                          ⏳ Aguardando pagamento PIX
+                        </span>
+                      ) : reservation?.status === "checked_in" ? (
+                        <span className="px-3 py-1 rounded-full text-xs font-body font-semibold bg-green-500/20 text-green-400 border border-green-500/30">
+                          Check-in ativo
+                        </span>
+                      ) : (
+                        <span className="px-3 py-1 rounded-full text-xs font-body font-semibold bg-blue-500/20 text-blue-400 border border-blue-500/30">
+                          Confirmada
+                        </span>
+                      )}
                     </div>
                   </div>
                 </div>
