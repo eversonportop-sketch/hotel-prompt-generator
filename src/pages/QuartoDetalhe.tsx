@@ -241,7 +241,7 @@ const QuartoDetalhe = () => {
   // Preenche datas ao chegar da busca (sem precisar estar logado)
   useEffect(() => {
     if (!user) {
-      const raw = sessionStorage.getItem("reserva_intent");
+      const raw = localStorage.getItem("reserva_intent");
       if (raw) {
         try {
           const intent = JSON.parse(raw);
@@ -251,7 +251,7 @@ const QuartoDetalhe = () => {
             setGuestsCount(intent.guestsCount);
             setGuestsInput(String(intent.guestsCount));
           }
-          // NÃO remove do sessionStorage aqui — o fluxo de login ainda precisa dele
+          // NÃO remove do localStorage aqui — o fluxo de login ainda precisa dele
         } catch {
           /* ignora */
         }
@@ -262,7 +262,7 @@ const QuartoDetalhe = () => {
   // Restaura intenção de reserva após login
   useEffect(() => {
     if (user) {
-      const raw = sessionStorage.getItem("reserva_intent");
+      const raw = localStorage.getItem("reserva_intent");
       if (raw) {
         try {
           const intent = JSON.parse(raw);
@@ -272,11 +272,11 @@ const QuartoDetalhe = () => {
             setGuestsCount(intent.guestsCount);
             setGuestsInput(String(intent.guestsCount));
           }
-          sessionStorage.removeItem("reserva_intent");
+          localStorage.removeItem("reserva_intent");
           setPendingAvailCheck(true);
           setAutoReserve(true); // Cliente já clicou "Reservar" → criar automaticamente
         } catch {
-          sessionStorage.removeItem("reserva_intent");
+          localStorage.removeItem("reserva_intent");
         }
       }
     }
@@ -427,7 +427,7 @@ const QuartoDetalhe = () => {
 
   const handleReservarClick = async () => {
     if (!user) {
-      sessionStorage.setItem(
+      localStorage.setItem(
         "reserva_intent",
         JSON.stringify({
           checkIn: checkIn ? format(checkIn, "yyyy-MM-dd") : null,
@@ -759,7 +759,7 @@ const QuartoDetalhe = () => {
                       Já tem conta?{" "}
                       <button
                         onClick={() => {
-                          sessionStorage.setItem(
+                          localStorage.setItem(
                             "reserva_intent",
                             JSON.stringify({
                               checkIn: checkIn ? format(checkIn, "yyyy-MM-dd") : null,
