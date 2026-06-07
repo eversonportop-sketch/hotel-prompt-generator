@@ -1,5 +1,4 @@
 import { useState, useEffect } from "react";
-import { QRCodeSVG } from "qrcode.react";
 import { useParams, useNavigate } from "react-router-dom";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
@@ -355,11 +354,26 @@ const QuartoDetalhe = () => {
   }, [pendingAvailCheck, room, checkIn, checkOut]);
 
   // Auto-reservar após login: cliente já clicou "Reservar" antes, agora tá logado e disponível
+  // CORRIGIDO: verifica telefone antes de abrir o modal PIX (igual ao fluxo do botão)
   useEffect(() => {
     if (autoReserve && user && categoryAvail?.freeRoomId && available && !reservationMutation.isPending) {
       setAutoReserve(false);
-      // Não chama mutate diretamente — abre o modal PIX primeiro
-      setShowPixModal(true);
+      supabase
+        .from("profiles")
+        .select("phone")
+        .eq("id", user.id)
+        .single()
+        .then(({ data: profileData }) => {
+          if (!profileData?.phone || profileData.phone.replace(/\D/g, "").length < 10) {
+            toast.error(
+              "Para reservar, é necessário cadastrar um telefone de contato. Atualize seu perfil.",
+              { duration: 5000 }
+            );
+            navigate("/cadastro?redirect=/quartos/" + id);
+            return;
+          }
+          setShowPixModal(true);
+        });
     }
   }, [autoReserve, user, categoryAvail, available]);
 
@@ -846,12 +860,12 @@ const QuartoDetalhe = () => {
                 {/* QR Code */}
                 <div className="flex flex-col items-center mt-4 mb-1">
                   <div className="bg-white p-3 rounded-xl shadow-lg">
-                    <QRCodeSVG
-                      value={pixKey}
-                      size={150}
-                      bgColor="#ffffff"
-                      fgColor="#000000"
-                      level="M"
+                    <img
+                      src={`https://api.qrserver.com/v1/create-qr-code/?size=150x150&data=${encodeURIComponent(pixKey)}`}
+                      alt="QR Code PIX"
+                      width={150}
+                      height={150}
+                      className="rounded"
                     />
                   </div>
                   <p className="text-xs text-cream/30 font-body mt-2">Escaneie com o app do seu banco</p>
