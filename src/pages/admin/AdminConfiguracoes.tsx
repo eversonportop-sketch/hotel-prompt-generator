@@ -21,6 +21,8 @@ const KEYS = [
   "instagram",
   "facebook",
   "google_maps_url",
+  "pix_key",
+  "pix_name",
 ];
 
 const DEFAULT_SETTINGS: Record<string, string> = {
@@ -38,6 +40,8 @@ const DEFAULT_SETTINGS: Record<string, string> = {
   instagram: "",
   facebook: "",
   google_maps_url: "",
+  pix_key: "",
+  pix_name: "",
 };
 
 const AdminConfiguracoes = () => {
@@ -194,6 +198,18 @@ const AdminConfiguracoes = () => {
             <div className="grid grid-cols-2 gap-4">
               {field("Check-in", "check_in_time", "14:00", undefined, "time")}
               {field("Check-out", "check_out_time", "12:00", undefined, "time")}
+            </div>
+          </div>
+
+          {/* PIX */}
+          <div className="bg-charcoal-light border border-gold/10 rounded-xl p-6">
+            <h2 className="font-display text-base font-semibold text-cream mb-2 pb-3 border-b border-gold/10 flex items-center gap-2">
+              <span className="text-primary">⬡</span> Pagamento via PIX
+            </h2>
+            <p className="text-xs text-cream/40 font-body mb-4">Estas informações aparecem para o cliente no momento da reserva online.</p>
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+              {field("Chave PIX", "pix_key", "CPF, CNPJ, e-mail ou telefone")}
+              {field("Nome do recebedor (PIX)", "pix_name", "Nome que aparece no app do cliente")}
             </div>
           </div>
 
