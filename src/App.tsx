@@ -43,6 +43,7 @@ import AdminHomeDestaque from "./pages/admin/AdminHomeDestaque";
 import AdminGaleria from "./pages/admin/AdminGaleria";
 import AdminAvaliacoes from "./pages/admin/AdminAvaliacoes";
 import AdminVisitantes from "./pages/admin/AdminVisitantes";
+import AdminPix from "./pages/admin/AdminPix";
 import NotFound from "./pages/NotFound";
 
 const queryClient = new QueryClient();
@@ -109,6 +110,7 @@ const App = () => (
                 <Route path="galeria" element={<AdminGaleria />} />
                 <Route path="avaliacoes" element={<AdminAvaliacoes />} />
                 <Route path="visitantes" element={<AdminVisitantes />} />
+                <Route path="pix" element={<AdminPix />} />
               </Route>
 
               <Route path="*" element={<NotFound />} />
