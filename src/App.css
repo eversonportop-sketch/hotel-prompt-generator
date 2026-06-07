@@ -1,42 +1,125 @@
-#root {
-  max-width: 1280px;
-  margin: 0 auto;
-  padding: 2rem;
-  text-align: center;
-}
+import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
+import { BrowserRouter, Route, Routes, useLocation } from "react-router-dom";
+import { Toaster as Sonner } from "@/components/ui/sonner";
+import { Toaster } from "@/components/ui/toaster";
+import { TooltipProvider } from "@/components/ui/tooltip";
+import { AuthProvider } from "@/hooks/useAuth";
+import { LangProvider } from "@/contexts/LangContext";
+import AdminLayout from "@/components/layout/AdminLayout";
+import { useEffect } from "react";
+import { supabase } from "@/integrations/supabase/client";
 
-.logo {
-  height: 6em;
-  padding: 1.5em;
-  will-change: filter;
-  transition: filter 300ms;
-}
-.logo:hover {
-  filter: drop-shadow(0 0 2em #646cffaa);
-}
-.logo.react:hover {
-  filter: drop-shadow(0 0 2em #61dafbaa);
-}
+import Index from "./pages/Index";
+import Quartos from "./pages/Quartos";
+import QuartoDetalhe from "./pages/QuartoDetalhe";
+import Salao from "./pages/Salao";
+import Piscina from "./pages/Piscina";
+import Promocoes from "./pages/Promocoes";
+import Galeria from "./pages/Galeria";
+import Contato from "./pages/Contato";
+import Login from "./pages/Login";
+import Cadastro from "./pages/Cadastro";
+import Portal from "./pages/Portal";
+import Cardapio from "./pages/Cardapio";
+import Limpeza from "./pages/Limpeza";
 
-@keyframes logo-spin {
-  from {
-    transform: rotate(0deg);
-  }
-  to {
-    transform: rotate(360deg);
-  }
-}
+import AdminDashboard from "./pages/admin/AdminDashboard";
+import AdminReservas from "./pages/admin/AdminReservas";
+import AdminCheckin from "./pages/admin/AdminCheckin";
+import AdminCheckout from "./pages/admin/AdminCheckout";
+import AdminQuartos from "./pages/admin/AdminQuartos";
+import AdminClientes from "./pages/admin/AdminClientes";
+import AdminPromocoes from "./pages/admin/AdminPromocoes";
+import AdminConfiguracoes from "./pages/admin/AdminConfiguracoes";
+import AdminBanners from "./pages/admin/AdminBanners";
+import AdminSalao from "./pages/admin/AdminSalao";
+import AdminPiscina from "./pages/admin/AdminPiscina";
+import AdminConsumo from "./pages/admin/AdminConsumo";
+import AdminMidia from "./pages/admin/AdminMidia";
+import AdminInformacoes from "./pages/admin/AdminInformacoes";
+import AdminPopup from "./pages/admin/AdminPopup";
+import AdminEstoque from "./pages/admin/AdminEstoque";
+import AdminHomeDestaque from "./pages/admin/AdminHomeDestaque";
+import AdminGaleria from "./pages/admin/AdminGaleria";
+import AdminAvaliacoes from "./pages/admin/AdminAvaliacoes";
+import AdminVisitantes from "./pages/admin/AdminVisitantes";
+import AdminPix from "./pages/admin/AdminPix";
+import NotFound from "./pages/NotFound";
 
-@media (prefers-reduced-motion: no-preference) {
-  a:nth-of-type(2) .logo {
-    animation: logo-spin infinite 20s linear;
-  }
-}
+const queryClient = new QueryClient();
 
-.card {
-  padding: 2em;
-}
+const ScrollToTop = () => {
+  const { pathname } = useLocation();
+  useEffect(() => {
+    window.scrollTo(0, 0);
+    if (!pathname.startsWith("/admin")) {
+      supabase
+        .from("page_views" as any)
+        .insert({ page: pathname, user_agent: navigator.userAgent })
+        .then(({ error }) => {
+          if (error) console.error("[page_views] insert error:", error.message);
+        });
+    }
+  }, [pathname]);
+  return null;
+};
 
-.read-the-docs {
-  color: #888;
-}
+const App = () => (
+  <QueryClientProvider client={queryClient}>
+    <AuthProvider>
+      <LangProvider>
+        <TooltipProvider>
+          <Toaster />
+          <Sonner />
+          <BrowserRouter>
+            <ScrollToTop />
+            <Routes>
+              <Route path="/" element={<Index />} />
+              <Route path="/quartos" element={<Quartos />} />
+              <Route path="/quartos/:id" element={<QuartoDetalhe />} />
+              <Route path="/salao" element={<Salao />} />
+              <Route path="/piscina" element={<Piscina />} />
+              <Route path="/promocoes" element={<Promocoes />} />
+              <Route path="/galeria" element={<Galeria />} />
+              <Route path="/contato" element={<Contato />} />
+              <Route path="/cardapio" element={<Cardapio />} />
+              <Route path="/login" element={<Login />} />
+              <Route path="/cadastro" element={<Cadastro />} />
+              <Route path="/portal" element={<Portal />} />
+
+              <Route path="/limpeza" element={<Limpeza />} />
+
+              <Route path="/admin" element={<AdminLayout />}>
+                <Route index element={<AdminDashboard />} />
+                <Route path="reservas" element={<AdminReservas />} />
+                <Route path="checkin" element={<AdminCheckin />} />
+                <Route path="checkout" element={<AdminCheckout />} />
+                <Route path="quartos" element={<AdminQuartos />} />
+                <Route path="clientes" element={<AdminClientes />} />
+                <Route path="promocoes" element={<AdminPromocoes />} />
+                <Route path="configuracoes" element={<AdminConfiguracoes />} />
+                <Route path="banners" element={<AdminBanners />} />
+                <Route path="salao" element={<AdminSalao />} />
+                <Route path="piscina" element={<AdminPiscina />} />
+                <Route path="consumo" element={<AdminConsumo />} />
+                <Route path="midia" element={<AdminMidia />} />
+                <Route path="informacoes" element={<AdminInformacoes />} />
+                <Route path="popup" element={<AdminPopup />} />
+                <Route path="estoque" element={<AdminEstoque />} />
+                <Route path="home-destaques" element={<AdminHomeDestaque />} />
+                <Route path="galeria" element={<AdminGaleria />} />
+                <Route path="avaliacoes" element={<AdminAvaliacoes />} />
+                <Route path="visitantes" element={<AdminVisitantes />} />
+                <Route path="pix" element={<AdminPix />} />
+              </Route>
+
+              <Route path="*" element={<NotFound />} />
+            </Routes>
+          </BrowserRouter>
+        </TooltipProvider>
+      </LangProvider>
+    </AuthProvider>
+  </QueryClientProvider>
+);
+
+export default App;
