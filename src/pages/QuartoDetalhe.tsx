@@ -1,5 +1,5 @@
 import { useState, useEffect } from "react";
-import { useParams, useNavigate } from "react-router-dom";
+import { useParams, useNavigate, useSearchParams } from "react-router-dom";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/hooks/useAuth";
@@ -213,6 +213,7 @@ const RoomGallery = ({ images, name }: { images: string[]; name: string }) => {
 const QuartoDetalhe = () => {
   const { id } = useParams<{ id: string }>();
   const navigate = useNavigate();
+  const [searchParams] = useSearchParams();
   const { user } = useAuth();
   const queryClient = useQueryClient();
 
@@ -238,6 +239,16 @@ const QuartoDetalhe = () => {
   const [pixName, setPixName] = useState("");
   const [pixCopied, setPixCopied] = useState(false);
   const [pixConfirming, setPixConfirming] = useState(false);
+
+  // Preenche datas vindas direto da URL (?checkin=...&checkout=...&guests=...)
+  useEffect(() => {
+    const ci = searchParams.get("checkin");
+    const co = searchParams.get("checkout");
+    const g  = searchParams.get("guests");
+    if (ci) setCheckIn(new Date(ci + "T12:00:00"));
+    if (co) setCheckOut(new Date(co + "T12:00:00"));
+    if (g)  { setGuestsCount(Number(g)); setGuestsInput(g); }
+  }, []);
 
   // Preenche datas ao chegar da busca (sem precisar estar logado)
   useEffect(() => {
@@ -334,7 +345,7 @@ const QuartoDetalhe = () => {
         .from("reservations")
         .select("room_id")
         .in("room_id", allIds)
-        .in("status", ["confirmed", "pending", "checked_in"])
+        .in("status", ["confirmed", "pending", "pending_payment", "checked_in"])
         .lt("check_in", co)
         .gt("check_out", ci);
 
@@ -416,31 +427,24 @@ const QuartoDetalhe = () => {
   });
 
   // ── Gera payload BR Code oficial do PIX (EMV/CPI) ──
-  const gerarBRCode = (key: string, name: string, city: string, value: number): string => {
-    const fmt = (id: string, val: string) => {
+  const gerarBRCode = (chave: string, nome: string, cidade: string, valor: number): string => {
+    const emv = (id: string, val: string) => {
       const len = val.length.toString().padStart(2, "0");
       return `${id}${len}${val}`;
     };
-    const pixKey   = fmt("01", key);
-    const merchant = fmt("26", fmt("00", "BR.GOV.BCB.PIX") + fmt("01", key));
-    const nameClean = name.normalize("NFD").replace(/[̀-ͯ]/g, "").slice(0, 25).toUpperCase();
-    const cityClean = city.normalize("NFD").replace(/[̀-ͯ]/g, "").slice(0, 15).toUpperCase();
-    const amount   = value > 0 ? fmt("54", value.toFixed(2)) : "";
-    const txid     = fmt("05", "***");
+    const nomeClean   = nome.normalize("NFD").replace(/[\u0300-\u036f]/g, "").slice(0, 25).toUpperCase();
+    const cidadeClean = cidade.normalize("NFD").replace(/[\u0300-\u036f]/g, "").slice(0, 15).toUpperCase();
 
     const payload =
-      fmt("00", "01") +           // Payload Format
-      fmt("26",                    // Merchant Account Info
-        fmt("00", "BR.GOV.BCB.PIX") +
-        fmt("01", key)
-      ) +
-      fmt("52", "0000") +          // Merchant Category Code
-      fmt("53", "986") +           // Transaction Currency (BRL)
-      (amount ? fmt("54", value.toFixed(2)) : "") +
-      fmt("58", "BR") +            // Country Code
-      fmt("59", nameClean) +       // Merchant Name
-      fmt("60", cityClean) +       // Merchant City
-      fmt("62", fmt("05", "***")); // Additional Data (txid)
+      emv("00", "01") +
+      emv("26", emv("00", "BR.GOV.BCB.PIX") + emv("01", chave)) +
+      emv("52", "0000") +
+      emv("53", "986") +
+      (valor > 0 ? emv("54", valor.toFixed(2)) : "") +
+      emv("58", "BR") +
+      emv("59", nomeClean) +
+      emv("60", cidadeClean) +
+      emv("62", emv("05", "***"));
 
     // CRC16-CCITT
     const str = payload + "6304";
