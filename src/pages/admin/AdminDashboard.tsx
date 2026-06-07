@@ -1,6 +1,6 @@
 import { Link } from "react-router-dom";
 import { motion } from "framer-motion";
-import { BedDouble, Users, LayoutDashboard, CalendarDays, LogIn, ArrowRight, Sparkles } from "lucide-react";
+import { BedDouble, Users, LayoutDashboard, CalendarDays, LogIn, ArrowRight, Sparkles, QrCode } from "lucide-react";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 
@@ -114,6 +114,19 @@ const AdminDashboard = () => {
     },
   });
 
+  /* ── PIX pendente ── */
+  const { data: pixPendente = 0 } = useQuery({
+    queryKey: ["dash-pix-pendente"],
+    queryFn: async () => {
+      const { count } = await supabase
+        .from("reservations")
+        .select("id", { count: "exact", head: true })
+        .eq("status", "pending_payment");
+      return count || 0;
+    },
+    refetchInterval: 30000,
+  });
+
   const totalRooms = quartos.length;
   const occupiedRooms = quartos.filter((q: any) => q.ocupado).length;
   const freeRooms = totalRooms - occupiedRooms;
@@ -167,6 +180,18 @@ const AdminDashboard = () => {
     },
   ];
 
+  const pixKpi = {
+    label: "PIX Pendente",
+    value: pixPendente,
+    total: "aguardando confirmação",
+    icon: QrCode,
+    color: pixPendente > 0 ? "text-amber-400" : "text-cream/30",
+    bg: pixPendente > 0 ? "bg-amber-500/10" : "bg-white/5",
+    border: pixPendente > 0 ? "border-amber-500/30" : "border-white/5",
+    href: "/admin/pix",
+    pulse: pixPendente > 0,
+  };
+
   return (
     <div className="p-6 md:p-8 space-y-6 text-cream">
       {/* Cabeçalho */}
@@ -183,12 +208,12 @@ const AdminDashboard = () => {
       </motion.div>
 
       {/* KPIs */}
-      <div className="grid grid-cols-2 xl:grid-cols-3 gap-4">
-        {kpis.map((kpi, i) => (
+      <div className="grid grid-cols-2 xl:grid-cols-4 gap-4">
+        {[...kpis, pixKpi].map((kpi, i) => (
           <motion.div key={kpi.label} {...fadeUp(0.05 * i)}>
             <Link
               to={kpi.href}
-              className={`block relative overflow-hidden rounded-xl bg-charcoal-light border ${kpi.border} p-5 hover:brightness-110 transition-all duration-200 group`}
+              className={`block relative overflow-hidden rounded-xl bg-charcoal-light border ${kpi.border} p-5 hover:brightness-110 transition-all duration-200 group ${"pulse" in kpi && kpi.pulse ? "ring-1 ring-amber-500/30" : ""}`}
             >
               <div className={`w-9 h-9 rounded-lg ${kpi.bg} flex items-center justify-center mb-4`}>
                 <kpi.icon className={`w-4 h-4 ${kpi.color}`} />
