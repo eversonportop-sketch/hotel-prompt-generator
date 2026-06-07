@@ -133,6 +133,11 @@ interface Reservation {
 
 // ─── Status config ────────────────────────────────────────────────────────────
 const STATUS = {
+  pending_payment: {
+    label: "Aguard. PIX",
+    color: "bg-amber-500/15 text-amber-300 border-amber-500/25",
+    icon: <Clock className="w-3 h-3" />,
+  },
   confirmed: {
     label: "Confirmada",
     color: "bg-emerald-500/15 text-emerald-300 border-emerald-500/25",
@@ -346,6 +351,7 @@ const AdminReservas = () => {
   const groupedReservations: Array<{ key: string; label: string; items: Reservation[] }> = [];
   if (statusFilter === "all") {
     const groups = [
+      { key: "pending_payment", label: "⏳ Aguardando PIX" },
       { key: "checked_in", label: "🏨 Hospedados" },
       { key: "confirmed",  label: "✅ Confirmadas" },
       { key: "checked_out", label: "📋 Finalizadas" },
@@ -359,6 +365,7 @@ const AdminReservas = () => {
     const items = [...filtered].sort(sortByCheckIn);
     const labelMap: Record<string, string> = {
       checked_in: "🏨 Hospedados",
+      pending_payment: "⏳ Aguardando PIX",
       confirmed:  "✅ Confirmadas",
       checked_out: "📋 Finalizadas",
       canceled:   "❌ Canceladas",
@@ -798,6 +805,7 @@ const AdminReservas = () => {
             className="appearance-none bg-charcoal-light border border-white/5 rounded-xl pl-4 pr-10 py-2.5 text-cream text-sm font-body focus:outline-none focus:border-primary/40 transition cursor-pointer"
           >
             <option value="all">Todos os status</option>
+            <option value="pending_payment">⏳ Aguardando PIX</option>
             <option value="confirmed">Confirmada</option>
             <option value="checked_in">Hospedado</option>
             <option value="checked_out">Finalizada</option>
