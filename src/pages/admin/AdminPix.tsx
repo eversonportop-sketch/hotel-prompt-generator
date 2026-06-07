@@ -95,8 +95,10 @@ const AdminPix = () => {
         .update({ status: "confirmed" })
         .eq("id", reservaId);
       if (error) throw error;
-
-      // Enviar WhatsApp de confirmação para o cliente
+      return { phone };
+    },
+    onSuccess: ({ phone }) => {
+      // Abre WhatsApp diretamente no onSuccess — evita bloqueio de popup
       if (phone && pixSettings?.whatsapp) {
         const wa = phone.replace(/\D/g, "");
         const msg = encodeURIComponent(
@@ -104,8 +106,6 @@ const AdminPix = () => {
         );
         window.open(`https://wa.me/55${wa}?text=${msg}`, "_blank");
       }
-    },
-    onSuccess: () => {
       toast.success("Pagamento confirmado! Mensagem de confirmação enviada ao cliente.");
       qc.invalidateQueries({ queryKey: ["pix-reservas"] });
       qc.invalidateQueries({ queryKey: ["dash-reservations-all"] });
