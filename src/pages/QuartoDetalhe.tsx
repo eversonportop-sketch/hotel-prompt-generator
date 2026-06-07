@@ -770,7 +770,7 @@ const QuartoDetalhe = () => {
             animate={{ opacity: 1, scale: 1, y: 0 }}
             exit={{ opacity: 0, scale: 0.95, y: 20 }}
             transition={{ duration: 0.25 }}
-            className="relative w-full max-w-md bg-charcoal border border-gold/20 rounded-2xl p-6 shadow-2xl"
+            className="relative w-full max-w-md bg-charcoal border border-gold/20 rounded-2xl p-4 shadow-2xl max-h-[90vh] overflow-y-auto"
             onClick={(e) => e.stopPropagation()}
           >
             <button
@@ -781,7 +781,7 @@ const QuartoDetalhe = () => {
             </button>
 
             {/* Header */}
-            <div className="flex items-center gap-3 mb-5">
+            <div className="flex items-center gap-3 mb-3">
               <div className="w-10 h-10 rounded-xl bg-primary/15 border border-primary/25 flex items-center justify-center">
                 <QrCode className="w-5 h-5 text-primary" />
               </div>
@@ -792,7 +792,7 @@ const QuartoDetalhe = () => {
             </div>
 
             {/* Resumo */}
-            <div className="bg-charcoal-light border border-gold/10 rounded-xl p-4 mb-4 space-y-2 text-sm font-body">
+            <div className="bg-charcoal-light border border-gold/10 rounded-xl p-3 mb-3 space-y-1.5 text-sm font-body">
               <div className="flex justify-between text-cream/60">
                 <span>Quarto</span>
                 <span className="text-cream font-semibold">{room.name}</span>
@@ -817,7 +817,7 @@ const QuartoDetalhe = () => {
 
             {/* Chave PIX + QR Code */}
             {pixKey ? (
-              <div className="mb-4">
+              <div className="mb-3">
                 <p className="text-xs uppercase tracking-widest text-primary/60 mb-2 font-body">Chave PIX</p>
                 <div className="flex items-center gap-2 bg-charcoal-light border border-gold/20 rounded-xl px-4 py-3">
                   <span className="flex-1 text-cream font-body text-sm font-semibold tracking-wide">{pixKey}</span>
@@ -830,13 +830,13 @@ const QuartoDetalhe = () => {
                   </button>
                 </div>
                 {/* QR Code */}
-                <div className="flex flex-col items-center mt-4 mb-1">
-                  <div className="bg-white p-3 rounded-xl shadow-lg">
+                <div className="flex flex-col items-center mt-3 mb-1">
+                  <div className="bg-white p-2 rounded-xl shadow-lg">
                     <img
-                      src={`https://api.qrserver.com/v1/create-qr-code/?size=150x150&data=${encodeURIComponent(pixKey)}`}
+                      src={`https://api.qrserver.com/v1/create-qr-code/?size=120x120&data=${encodeURIComponent(pixKey)}`}
                       alt="QR Code PIX"
-                      width={150}
-                      height={150}
+                      width={120}
+                      height={120}
                       className="rounded"
                     />
                   </div>
@@ -850,7 +850,7 @@ const QuartoDetalhe = () => {
             )}
 
             {/* Instruções */}
-            <div className="bg-primary/5 border border-primary/15 rounded-xl p-4 mb-5 space-y-2">
+            <div className="bg-primary/5 border border-primary/15 rounded-xl p-3 mb-3 space-y-1.5">
               <p className="text-xs font-semibold text-primary/80 font-body uppercase tracking-wider mb-2">Como pagar:</p>
               {[
                 "Abra o app do seu banco",
@@ -865,7 +865,7 @@ const QuartoDetalhe = () => {
             </div>
 
             {/* Aviso */}
-            <div className="flex items-center gap-2 text-xs text-cream/30 font-body mb-4">
+            <div className="flex items-center gap-2 text-xs text-cream/30 font-body mb-3">
               <Clock className="w-3.5 h-3.5 flex-shrink-0" />
               <span>Sua reserva ficará <strong className="text-cream/50">aguardando pagamento</strong> até a confirmação manual pelo hotel.</span>
             </div>
@@ -874,7 +874,7 @@ const QuartoDetalhe = () => {
             <button
               onClick={handlePixConfirm}
               disabled={pixConfirming || reservationMutation.isPending || !pixKey}
-              className="w-full flex items-center justify-center gap-2.5 py-3.5 rounded-xl font-body font-semibold text-sm transition-all hover:scale-[1.01] disabled:opacity-50 disabled:hover:scale-100"
+              className="w-full flex items-center justify-center gap-2.5 py-3 rounded-xl font-body font-semibold text-sm transition-all hover:scale-[1.01] disabled:opacity-50 disabled:hover:scale-100"
               style={{ background: "linear-gradient(135deg,#25D366,#128C7E)", color: "#fff" }}
             >
               <MessageCircle className="w-4 h-4" />
