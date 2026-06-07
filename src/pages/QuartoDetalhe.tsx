@@ -1,4 +1,5 @@
 import { useState, useEffect } from "react";
+import { QRCodeSVG } from "qrcode.react";
 import { useParams, useNavigate } from "react-router-dom";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
@@ -19,6 +20,12 @@ import {
   X,
   Images,
   ZoomIn,
+  QrCode,
+  Smartphone,
+  Copy,
+  CheckCheck,
+  MessageCircle,
+  Clock,
 } from "lucide-react";
 import { format, differenceInDays, addDays } from "date-fns";
 import { ptBR } from "date-fns/locale";
@@ -225,6 +232,13 @@ const QuartoDetalhe = () => {
   const [pendingAvailCheck, setPendingAvailCheck] = useState(false);
   const [autoReserve, setAutoReserve] = useState(false);
 
+  // PIX
+  const [showPixModal, setShowPixModal] = useState(false);
+  const [pixKey, setPixKey] = useState("");
+  const [pixWhatsapp, setPixWhatsapp] = useState("");
+  const [pixCopied, setPixCopied] = useState(false);
+  const [pixConfirming, setPixConfirming] = useState(false);
+
   // Preenche datas ao chegar da busca (sem precisar estar logado)
   useEffect(() => {
     if (!user) {
@@ -268,6 +282,23 @@ const QuartoDetalhe = () => {
       }
     }
   }, [user]);
+
+  // Carregar configurações PIX do hotel
+  useEffect(() => {
+    const loadPixSettings = async () => {
+      const { data } = await supabase
+        .from("hotel_settings" as any)
+        .select("key, value")
+        .in("key", ["pix_key", "whatsapp"]);
+      if (data) {
+        const pix = data.find((d: any) => d.key === "pix_key");
+        const wa = data.find((d: any) => d.key === "whatsapp");
+        if (pix?.value) setPixKey(pix.value);
+        if (wa?.value) setPixWhatsapp(wa.value);
+      }
+    };
+    loadPixSettings();
+  }, []);
 
   const { data: room, isLoading } = useQuery({
     queryKey: ["room", id],
@@ -327,7 +358,8 @@ const QuartoDetalhe = () => {
   useEffect(() => {
     if (autoReserve && user && categoryAvail?.freeRoomId && available && !reservationMutation.isPending) {
       setAutoReserve(false);
-      reservationMutation.mutate();
+      // Não chama mutate diretamente — abre o modal PIX primeiro
+      setShowPixModal(true);
     }
   }, [autoReserve, user, categoryAvail, available]);
 
@@ -350,12 +382,13 @@ const QuartoDetalhe = () => {
         check_out: format(checkOut, "yyyy-MM-dd"),
         guests_count: guestsCount,
         total_price: nights * price,
-        status: "confirmed",
+        status: "pending_payment",
       });
       if (error) throw error;
     },
     onSuccess: () => {
-      toast.success("Reserva criada! Aguarde confirmação.");
+      toast.success("Reserva enviada! Aguardando confirmação do pagamento PIX.");
+      setShowPixModal(false);
       queryClient.invalidateQueries({ queryKey: ["checkin-confirmed"] });
       queryClient.invalidateQueries({ queryKey: ["reservas-lista"] });
       queryClient.invalidateQueries({ queryKey: ["reservations"] });
@@ -377,6 +410,82 @@ const QuartoDetalhe = () => {
       );
     },
   });
+
+  const handleReservarClick = async () => {
+    if (!user) {
+      sessionStorage.setItem(
+        "reserva_intent",
+        JSON.stringify({
+          checkIn: checkIn ? format(checkIn, "yyyy-MM-dd") : null,
+          checkOut: checkOut ? format(checkOut, "yyyy-MM-dd") : null,
+          guestsCount,
+        }),
+      );
+      navigate(`/cadastro?redirect=/quartos/${id}`);
+      return;
+    }
+    // Verifica se o cliente tem telefone cadastrado antes de prosseguir
+    const { data: profileData } = await supabase
+      .from("profiles")
+      .select("phone")
+      .eq("id", user.id)
+      .single();
+    if (!profileData?.phone || profileData.phone.replace(/\D/g, "").length < 10) {
+      toast.error(
+        "Para reservar, é necessário cadastrar um telefone de contato. Atualize seu perfil.",
+        { duration: 5000 }
+      );
+      navigate("/cadastro?redirect=/quartos/" + id);
+      return;
+    }
+    setShowPixModal(true);
+  };
+
+  const handlePixConfirm = async () => {
+    if (!user || !room || !checkIn || !checkOut || !categoryAvail?.freeRoomId) return;
+    setPixConfirming(true);
+    // Abre WhatsApp com mensagem pré-pronta
+    const nights = checkIn && checkOut ? differenceInDays(checkOut, checkIn) : 0;
+    const basePrice = room ? Number(room.price) : 0;
+    const extraPerPerson = room?.promotional_price ? Number(room.promotional_price) : 0;
+    const effectivePrice = basePrice + extraPerPerson * Math.max(0, guestsCount - 1);
+    const totalValue = nights * effectivePrice;
+    const waNumber = pixWhatsapp.replace(/\D/g, "");
+    const msg = encodeURIComponent(
+      `Olá! Acabei de realizar o pagamento via PIX para minha reserva no Hotel SB.
+
+` +
+      `📋 *Dados da Reserva:*
+` +
+      `• Quarto: ${room.name}
+` +
+      `• Check-in: ${format(checkIn, "dd/MM/yyyy")}
+` +
+      `• Check-out: ${format(checkOut, "dd/MM/yyyy")}
+` +
+      `• Hóspedes: ${guestsCount}
+` +
+      `• Valor: R$ ${totalValue.toFixed(2)}
+
+` +
+      `Segue o comprovante do PIX. Aguardo confirmação!`
+    );
+    // Primeiro cria a reserva; ao confirmar (onSuccess), o WhatsApp é aberto
+    reservationMutation.mutate(undefined, {
+      onSuccess: () => {
+        if (waNumber) {
+          window.open(`https://wa.me/55${waNumber}?text=${msg}`, "_blank");
+        }
+      },
+    });
+    setPixConfirming(false);
+  };
+
+  const copyPixKey = () => {
+    navigator.clipboard.writeText(pixKey);
+    setPixCopied(true);
+    setTimeout(() => setPixCopied(false), 2000);
+  };
 
   const nights = checkIn && checkOut ? differenceInDays(checkOut, checkIn) : 0;
   const basePrice = room ? Number(room.price) : 0;
@@ -404,6 +513,7 @@ const QuartoDetalhe = () => {
   const images: string[] = room.gallery?.length ? room.gallery : room.image_url ? [room.image_url] : [];
 
   return (
+    <>
     <Layout>
       <section className="py-20 bg-charcoal">
         <div className="container-hotel">
@@ -613,7 +723,7 @@ const QuartoDetalhe = () => {
                       {checking ? "Verificando..." : "Ver Disponibilidade"}
                     </Button>
 
-                    {/* Reservar — exige login */}
+                    {/* Reservar — exige login, abre modal PIX */}
                     <Button
                       variant="gold"
                       className="flex-1"
@@ -624,24 +734,9 @@ const QuartoDetalhe = () => {
                         !categoryAvail?.freeRoomId ||
                         reservationMutation.isPending
                       }
-                      onClick={() => {
-                        if (!user) {
-                          // Salva intenção e redireciona para cadastro/login
-                          sessionStorage.setItem(
-                            "reserva_intent",
-                            JSON.stringify({
-                              checkIn: checkIn ? format(checkIn, "yyyy-MM-dd") : null,
-                              checkOut: checkOut ? format(checkOut, "yyyy-MM-dd") : null,
-                              guestsCount,
-                            }),
-                          );
-                          navigate(`/cadastro?redirect=/quartos/${id}`);
-                          return;
-                        }
-                        reservationMutation.mutate();
-                      }}
+                      onClick={handleReservarClick}
                     >
-                      {reservationMutation.isPending ? "Reservando..." : user ? "Reservar" : "Reservar (Criar conta)"}
+                      {reservationMutation.isPending ? "Reservando..." : user ? "Reservar via PIX" : "Reservar (Criar conta)"}
                     </Button>
                   </div>
 
@@ -673,6 +768,141 @@ const QuartoDetalhe = () => {
         </div>
       </section>
     </Layout>
+
+    {/* ── Modal PIX ── */}
+    <AnimatePresence>
+      {showPixModal && room && checkIn && checkOut && (
+        <motion.div
+          initial={{ opacity: 0 }}
+          animate={{ opacity: 1 }}
+          exit={{ opacity: 0 }}
+          className="fixed inset-0 z-50 bg-black/80 flex items-center justify-center px-4"
+          onClick={() => setShowPixModal(false)}
+        >
+          <motion.div
+            initial={{ opacity: 0, scale: 0.95, y: 20 }}
+            animate={{ opacity: 1, scale: 1, y: 0 }}
+            exit={{ opacity: 0, scale: 0.95, y: 20 }}
+            transition={{ duration: 0.25 }}
+            className="relative w-full max-w-md bg-charcoal border border-gold/20 rounded-2xl p-6 shadow-2xl"
+            onClick={(e) => e.stopPropagation()}
+          >
+            <button
+              onClick={() => setShowPixModal(false)}
+              className="absolute top-4 right-4 w-8 h-8 rounded-full bg-white/10 hover:bg-white/20 flex items-center justify-center transition-colors"
+            >
+              <X className="w-4 h-4 text-white" />
+            </button>
+
+            {/* Header */}
+            <div className="flex items-center gap-3 mb-5">
+              <div className="w-10 h-10 rounded-xl bg-primary/15 border border-primary/25 flex items-center justify-center">
+                <QrCode className="w-5 h-5 text-primary" />
+              </div>
+              <div>
+                <h2 className="font-display text-lg font-bold text-cream">Pagamento via PIX</h2>
+                <p className="text-xs text-cream/40 font-body">Finalize sua reserva</p>
+              </div>
+            </div>
+
+            {/* Resumo */}
+            <div className="bg-charcoal-light border border-gold/10 rounded-xl p-4 mb-4 space-y-2 text-sm font-body">
+              <div className="flex justify-between text-cream/60">
+                <span>Quarto</span>
+                <span className="text-cream font-semibold">{room.name}</span>
+              </div>
+              <div className="flex justify-between text-cream/60">
+                <span>Check-in</span>
+                <span className="text-cream">{format(checkIn, "dd/MM/yyyy")}</span>
+              </div>
+              <div className="flex justify-between text-cream/60">
+                <span>Check-out</span>
+                <span className="text-cream">{format(checkOut, "dd/MM/yyyy")}</span>
+              </div>
+              <div className="flex justify-between text-cream/60">
+                <span>Hóspedes</span>
+                <span className="text-cream">{guestsCount}</span>
+              </div>
+              <div className="border-t border-gold/10 pt-2 flex justify-between">
+                <span className="text-cream/60">Total</span>
+                <span className="text-primary font-bold text-base">R$ {(nights * effectivePrice).toFixed(2)}</span>
+              </div>
+            </div>
+
+            {/* Chave PIX + QR Code */}
+            {pixKey ? (
+              <div className="mb-4">
+                <p className="text-xs uppercase tracking-widest text-primary/60 mb-2 font-body">Chave PIX</p>
+                <div className="flex items-center gap-2 bg-charcoal-light border border-gold/20 rounded-xl px-4 py-3">
+                  <span className="flex-1 text-cream font-body text-sm font-semibold tracking-wide">{pixKey}</span>
+                  <button
+                    onClick={copyPixKey}
+                    className="text-primary hover:text-primary/70 transition-colors flex items-center gap-1 text-xs font-body"
+                  >
+                    {pixCopied ? <CheckCheck className="w-4 h-4 text-emerald-400" /> : <Copy className="w-4 h-4" />}
+                    {pixCopied ? "Copiado!" : "Copiar"}
+                  </button>
+                </div>
+                {/* QR Code */}
+                <div className="flex flex-col items-center mt-4 mb-1">
+                  <div className="bg-white p-3 rounded-xl shadow-lg">
+                    <QRCodeSVG
+                      value={pixKey}
+                      size={150}
+                      bgColor="#ffffff"
+                      fgColor="#000000"
+                      level="M"
+                    />
+                  </div>
+                  <p className="text-xs text-cream/30 font-body mt-2">Escaneie com o app do seu banco</p>
+                </div>
+              </div>
+            ) : (
+              <div className="mb-4 p-3 bg-amber-500/10 border border-amber-500/20 rounded-xl text-amber-400 text-xs font-body">
+                ⚠️ Chave PIX não configurada. Contate o hotel.
+              </div>
+            )}
+
+            {/* Instruções */}
+            <div className="bg-primary/5 border border-primary/15 rounded-xl p-4 mb-5 space-y-2">
+              <p className="text-xs font-semibold text-primary/80 font-body uppercase tracking-wider mb-2">Como pagar:</p>
+              {[
+                "Abra o app do seu banco",
+                `Transfira R$ ${(nights * effectivePrice).toFixed(2)} para a chave PIX acima`,
+                "Clique no botão abaixo para enviar o comprovante via WhatsApp",
+              ].map((step, i) => (
+                <div key={i} className="flex items-start gap-2.5">
+                  <span className="w-5 h-5 rounded-full bg-primary/20 text-primary text-[10px] font-bold flex items-center justify-center flex-shrink-0 mt-0.5">{i + 1}</span>
+                  <span className="text-cream/60 text-xs font-body">{step}</span>
+                </div>
+              ))}
+            </div>
+
+            {/* Aviso */}
+            <div className="flex items-center gap-2 text-xs text-cream/30 font-body mb-4">
+              <Clock className="w-3.5 h-3.5 flex-shrink-0" />
+              <span>Sua reserva ficará <strong className="text-cream/50">aguardando pagamento</strong> até a confirmação manual pelo hotel.</span>
+            </div>
+
+            {/* Botão principal */}
+            <button
+              onClick={handlePixConfirm}
+              disabled={pixConfirming || reservationMutation.isPending || !pixKey}
+              className="w-full flex items-center justify-center gap-2.5 py-3.5 rounded-xl font-body font-semibold text-sm transition-all hover:scale-[1.01] disabled:opacity-50 disabled:hover:scale-100"
+              style={{ background: "linear-gradient(135deg,#25D366,#128C7E)", color: "#fff" }}
+            >
+              <MessageCircle className="w-4 h-4" />
+              {reservationMutation.isPending ? "Enviando reserva..." : "Enviei o PIX — Enviar comprovante via WhatsApp"}
+            </button>
+
+            {!pixWhatsapp && (
+              <p className="text-center text-xs text-cream/20 font-body mt-2">WhatsApp do hotel não configurado.</p>
+            )}
+          </motion.div>
+        </motion.div>
+      )}
+    </AnimatePresence>
+    </>
   );
 };
 
