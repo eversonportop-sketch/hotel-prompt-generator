@@ -53,10 +53,10 @@ const AdminPix = () => {
       let query = supabase
         .from("reservations")
         .select(
-          `id, check_in, check_out, guests_count, total_price, status, created_at,
-           profiles!reservations_profile_id_fkey(full_name, phone, email),
-           guests!reservations_guest_id_fkey(full_name, phone, email),
-           rooms!reservations_room_id_fkey(name, category)`
+          `id, check_in, check_out, guests_count, total_price, status, created_at, profile_id,
+           profiles(full_name, phone, email),
+           guests(full_name, phone, email),
+           rooms(name, category)`
         )
         .order("created_at", { ascending: false });
 
