@@ -96,7 +96,15 @@ const Cadastro = () => {
     e.preventDefault();
     if (password.length < 6) return toast.error("A senha deve ter pelo menos 6 caracteres.");
     if (password !== confirmPassword) return toast.error("As senhas não coincidem.");
-    if (!phone) return toast.error("Telefone é obrigatório.");
+    const cpfDigits = cpf.replace(/\D/g, "");
+    if (cpfDigits.length !== 11) return toast.error("CPF obrigatório. Digite os 11 dígitos.");
+    const phoneDigits = phone.replace(/\D/g, "");
+    if (!phone || phoneDigits.length < 10) return toast.error("Telefone inválido. Digite DDD + número (ex: 51 99999-9999).");
+    const cepDigits = cep.replace(/\D/g, "");
+    if (cepDigits.length !== 8) return toast.error("CEP obrigatório. Digite o CEP de 8 dígitos.");
+    if (!address.trim()) return toast.error("Endereço é obrigatório.");
+    if (!city.trim()) return toast.error("Cidade é obrigatória.");
+    if (!uf.trim()) return toast.error("Estado é obrigatório.");
     setLoading(true);
 
     const { error, userId } = await signUp(email, password, name);
@@ -204,11 +212,11 @@ const Cadastro = () => {
               {/* CPF + RG */}
               <div className="grid grid-cols-2 gap-4">
                 <div>
-                  <label className={labelClass}>CPF</label>
+                  <label className={labelClass}>CPF *</label>
                   <div className="relative">
                     <FileText className="absolute left-3.5 top-1/2 -translate-y-1/2 w-4 h-4 text-cream/30" />
                     <input type="text" placeholder="000.000.000-00" className={inputClass}
-                      value={cpf} onChange={(e) => handleCpf(e.target.value)} autoComplete="off" />
+                      value={cpf} onChange={(e) => handleCpf(e.target.value)} autoComplete="off" required />
                   </div>
                 </div>
                 <div>
@@ -246,7 +254,7 @@ const Cadastro = () => {
 
               {/* CEP com busca automática */}
               <div>
-                <label className={labelClass}>CEP</label>
+                <label className={labelClass}>CEP *</label>
                 <div className="flex gap-2">
                   <div className="relative flex-1">
                     <MapPin className="absolute left-3.5 top-1/2 -translate-y-1/2 w-4 h-4 text-cream/30" />
@@ -265,30 +273,30 @@ const Cadastro = () => {
 
               {/* Endereço */}
               <div>
-                <label className={labelClass}>Endereço</label>
+                <label className={labelClass}>Endereço *</label>
                 <div className="relative">
                   <Building2 className="absolute left-3.5 top-1/2 -translate-y-1/2 w-4 h-4 text-cream/30" />
                   <input type="text" placeholder="Rua, número" className={inputClass}
-                    value={address} onChange={(e) => setAddress(e.target.value)} autoComplete="street-address" />
+                    value={address} onChange={(e) => setAddress(e.target.value)} autoComplete="street-address" required />
                 </div>
               </div>
 
               {/* Cidade + Estado */}
               <div className="grid grid-cols-2 gap-4">
                 <div>
-                  <label className={labelClass}>Cidade</label>
+                  <label className={labelClass}>Cidade *</label>
                   <div className="relative">
                     <MapPin className="absolute left-3.5 top-1/2 -translate-y-1/2 w-4 h-4 text-cream/30" />
                     <input type="text" placeholder="Sua cidade" className={inputClass}
-                      value={city} onChange={(e) => setCity(e.target.value)} autoComplete="address-level2" />
+                      value={city} onChange={(e) => setCity(e.target.value)} autoComplete="address-level2" required />
                   </div>
                 </div>
                 <div>
-                  <label className={labelClass}>Estado</label>
+                  <label className={labelClass}>Estado *</label>
                   <div className="relative">
                     <Map className="absolute left-3.5 top-1/2 -translate-y-1/2 w-4 h-4 text-cream/30" />
                     <input type="text" placeholder="RS" maxLength={2} className={inputClass}
-                      value={uf} onChange={(e) => setUf(e.target.value.toUpperCase())} autoComplete="address-level1" />
+                      value={uf} onChange={(e) => setUf(e.target.value.toUpperCase())} autoComplete="address-level1" required />
                   </div>
                 </div>
               </div>
