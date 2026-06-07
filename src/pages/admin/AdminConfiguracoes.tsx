@@ -23,6 +23,7 @@ const KEYS = [
   "google_maps_url",
   "pix_key",
   "pix_name",
+  "pix_city",
 ];
 
 const DEFAULT_SETTINGS: Record<string, string> = {
@@ -42,6 +43,7 @@ const DEFAULT_SETTINGS: Record<string, string> = {
   google_maps_url: "",
   pix_key: "",
   pix_name: "",
+  pix_city: "",
 };
 
 const AdminConfiguracoes = () => {
@@ -210,6 +212,7 @@ const AdminConfiguracoes = () => {
             <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
               {field("Chave PIX", "pix_key", "CPF, CNPJ, e-mail ou telefone")}
               {field("Nome do recebedor (PIX)", "pix_name", "Nome que aparece no app do cliente")}
+              {field("Cidade do recebedor (PIX)", "pix_city", "Ex: São Paulo")}
             </div>
           </div>
 
