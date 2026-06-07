@@ -107,7 +107,13 @@ const Cadastro = () => {
     if (!uf.trim()) return toast.error("Estado é obrigatório.");
     setLoading(true);
 
-    const { error, userId } = await signUp(email, password, name);
+    // Passa a URL do quarto como emailRedirectTo: se o Supabase exigir confirmação de e-mail,
+    // o link enviado já leva direto de volta ao quarto (não à homepage)
+    const quartoRedirectUrl = redirectTo
+      ? `${window.location.origin}${redirectTo}`
+      : undefined;
+
+    const { error, userId, session: newSession } = await signUp(email, password, name, quartoRedirectUrl);
     if (error) {
       toast.error(error.message || "Erro ao cadastrar.");
       setLoading(false);
@@ -146,12 +152,14 @@ const Cadastro = () => {
     }
 
     setLoading(false);
-    const { data: sessionData } = await supabase.auth.getSession();
-    if (sessionData?.session) {
+
+    // Usa a session retornada pelo próprio signUp (mais confiável que getSession() logo após)
+    if (newSession) {
       toast.success("Conta criada com sucesso!");
       navigate(redirectTo || "/portal");
     } else {
-      toast.success("Conta criada! Verifique seu e-mail para confirmar.");
+      // Confirmação de e-mail obrigatória — emailRedirectTo já está apontando para o quarto
+      toast.success("Conta criada! Verifique seu e-mail e clique no link para confirmar e continuar sua reserva.");
       navigate(redirectTo ? `/login?redirect=${encodeURIComponent(redirectTo)}` : "/login");
     }
   };
