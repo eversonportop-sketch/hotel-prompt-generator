@@ -234,6 +234,8 @@ const QuartoDetalhe = () => {
   const [showPixModal, setShowPixModal] = useState(false);
   const [pixKey, setPixKey] = useState("");
   const [pixWhatsapp, setPixWhatsapp] = useState("");
+  const [pixCity, setPixCity] = useState("");
+  const [pixName, setPixName] = useState("");
   const [pixCopied, setPixCopied] = useState(false);
   const [pixConfirming, setPixConfirming] = useState(false);
 
@@ -287,12 +289,16 @@ const QuartoDetalhe = () => {
       const { data } = await supabase
         .from("hotel_settings" as any)
         .select("key, value")
-        .in("key", ["pix_key", "whatsapp"]);
+        .in("key", ["pix_key", "whatsapp", "pix_name", "pix_city"]);
       if (data) {
         const pix = data.find((d: any) => d.key === "pix_key");
-        const wa = data.find((d: any) => d.key === "whatsapp");
+        const wa  = data.find((d: any) => d.key === "whatsapp");
+        const nm  = data.find((d: any) => d.key === "pix_name");
+        const ct  = data.find((d: any) => d.key === "pix_city");
         if (pix?.value) setPixKey(pix.value);
-        if (wa?.value) setPixWhatsapp(wa.value);
+        if (wa?.value)  setPixWhatsapp(wa.value);
+        if (nm?.value)  setPixName(nm.value);
+        if (ct?.value)  setPixCity(ct.value);
       }
     };
     loadPixSettings();
@@ -408,6 +414,46 @@ const QuartoDetalhe = () => {
       );
     },
   });
+
+  // ── Gera payload BR Code oficial do PIX (EMV/CPI) ──
+  const gerarBRCode = (key: string, name: string, city: string, value: number): string => {
+    const fmt = (id: string, val: string) => {
+      const len = val.length.toString().padStart(2, "0");
+      return `${id}${len}${val}`;
+    };
+    const pixKey   = fmt("01", key);
+    const merchant = fmt("26", fmt("00", "BR.GOV.BCB.PIX") + fmt("01", key));
+    const nameClean = name.normalize("NFD").replace(/[̀-ͯ]/g, "").slice(0, 25).toUpperCase();
+    const cityClean = city.normalize("NFD").replace(/[̀-ͯ]/g, "").slice(0, 15).toUpperCase();
+    const amount   = value > 0 ? fmt("54", value.toFixed(2)) : "";
+    const txid     = fmt("05", "***");
+
+    const payload =
+      fmt("00", "01") +           // Payload Format
+      fmt("26",                    // Merchant Account Info
+        fmt("00", "BR.GOV.BCB.PIX") +
+        fmt("01", key)
+      ) +
+      fmt("52", "0000") +          // Merchant Category Code
+      fmt("53", "986") +           // Transaction Currency (BRL)
+      (amount ? fmt("54", value.toFixed(2)) : "") +
+      fmt("58", "BR") +            // Country Code
+      fmt("59", nameClean) +       // Merchant Name
+      fmt("60", cityClean) +       // Merchant City
+      fmt("62", fmt("05", "***")); // Additional Data (txid)
+
+    // CRC16-CCITT
+    const str = payload + "6304";
+    let crc = 0xFFFF;
+    for (let i = 0; i < str.length; i++) {
+      crc ^= str.charCodeAt(i) << 8;
+      for (let j = 0; j < 8; j++) {
+        crc = (crc & 0x8000) ? ((crc << 1) ^ 0x1021) : (crc << 1);
+        crc &= 0xFFFF;
+      }
+    }
+    return payload + "6304" + crc.toString(16).toUpperCase().padStart(4, "0");
+  };
 
   const handleReservarClick = async () => {
     if (!user) {
@@ -833,7 +879,7 @@ const QuartoDetalhe = () => {
                 <div className="flex flex-col items-center mt-3 mb-1">
                   <div className="bg-white p-2 rounded-xl shadow-lg">
                     <img
-                      src={`https://api.qrserver.com/v1/create-qr-code/?size=120x120&data=${encodeURIComponent(pixKey)}`}
+                      src={`https://api.qrserver.com/v1/create-qr-code/?size=120x120&data=${encodeURIComponent(pixName && pixCity ? gerarBRCode(pixKey, pixName, pixCity, nights * effectivePrice) : pixKey)}`}
                       alt="QR Code PIX"
                       width={120}
                       height={120}
