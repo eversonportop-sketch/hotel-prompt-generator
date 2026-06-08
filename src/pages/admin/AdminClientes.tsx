@@ -209,7 +209,7 @@ const AdminClientes = () => {
           .order("created_at", { ascending: false }),
         supabase
           .from("profiles")
-          .select("id,full_name,phone,cpf,created_at")
+          .select("id,full_name,email,phone,cpf,rg,nationality,address,city,state,created_at")
           .neq("role", "admin")
           .order("created_at", { ascending: false }),
       ]);
@@ -235,12 +235,6 @@ const AdminClientes = () => {
         }));
       const profiles: Cliente[] = (p.data || []).map((x: any) => ({
         ...x,
-        email: null,
-        rg: null,
-        nationality: null,
-        address: null,
-        city: null,
-        state: null,
         source: "profile" as const,
         reservations_count: countMap[x.id] || 0,
       }));
