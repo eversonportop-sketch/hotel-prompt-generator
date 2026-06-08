@@ -481,6 +481,28 @@ const QuartoDetalhe = () => {
     setShowPixModal(true);
   };
 
+  // Monta a URL do WhatsApp para o botão — link direto, nunca bloqueado pelo browser
+  const buildWhatsAppUrl = (): string => {
+    if (!room || !checkIn || !checkOut || !pixWhatsapp) return "";
+    const basePrice = room ? Number(room.price) : 0;
+    const extraPerPerson = room?.promotional_price ? Number(room.promotional_price) : 0;
+    const effectivePrice = basePrice + extraPerPerson * Math.max(0, guestsCount - 1);
+    const totalValue = nights * effectivePrice;
+    const waNumber = pixWhatsapp.replace(/\D/g, "");
+    if (!waNumber) return "";
+    const msg = encodeURIComponent(
+      `Olá! Acabei de realizar o pagamento via PIX para minha reserva no Hotel SB.\n\n` +
+      `📋 *Dados da Reserva:*\n` +
+      `• Quarto: ${room.name}\n` +
+      `• Check-in: ${format(checkIn, "dd/MM/yyyy")}\n` +
+      `• Check-out: ${format(checkOut, "dd/MM/yyyy")}\n` +
+      `• Hóspedes: ${guestsCount}\n` +
+      `• Valor: R$ ${totalValue.toFixed(2)}\n\n` +
+      `Segue o comprovante do PIX. Aguardo confirmação!`
+    );
+    return `https://api.whatsapp.com/send?phone=55${waNumber}&text=${msg}`;
+  };
+
   const handlePixConfirm = async () => {
     if (!user || !room || !checkIn || !checkOut || !categoryAvail?.freeRoomId) return;
     if (nights <= 0) {
@@ -488,45 +510,10 @@ const QuartoDetalhe = () => {
       setShowPixModal(false);
       return;
     }
-    setPixConfirming(true);
-    // Abre WhatsApp com mensagem pré-pronta
-    const nights = checkIn && checkOut ? differenceInDays(checkOut, checkIn) : 0;
-    const basePrice = room ? Number(room.price) : 0;
-    const extraPerPerson = room?.promotional_price ? Number(room.promotional_price) : 0;
-    const effectivePrice = basePrice + extraPerPerson * Math.max(0, guestsCount - 1);
-    const totalValue = nights * effectivePrice;
-    const waNumber = pixWhatsapp.replace(/\D/g, "");
-    const msg = encodeURIComponent(
-      `Olá! Acabei de realizar o pagamento via PIX para minha reserva no Hotel SB.
-
-` +
-      `📋 *Dados da Reserva:*
-` +
-      `• Quarto: ${room.name}
-` +
-      `• Check-in: ${format(checkIn, "dd/MM/yyyy")}
-` +
-      `• Check-out: ${format(checkOut, "dd/MM/yyyy")}
-` +
-      `• Hóspedes: ${guestsCount}
-` +
-      `• Valor: R$ ${totalValue.toFixed(2)}
-
-` +
-      `Segue o comprovante do PIX. Aguardo confirmação!`
-    );
-    // Primeiro cria a reserva; ao confirmar (onSuccess), o WhatsApp é aberto
-    reservationMutation.mutate(undefined, {
-      onSuccess: () => {
-        if (waNumber) {
-          window.open(`https://wa.me/55${waNumber}?text=${msg}`, "_blank");
-        }
-      },
-    });
-    setPixConfirming(false);
+    reservationMutation.mutate();
   };
 
-  const copyPixKey = () => {
+    const copyPixKey = () => {
     navigator.clipboard.writeText(pixKey);
     setPixCopied(true);
     setTimeout(() => setPixCopied(false), 2000);
@@ -931,15 +918,29 @@ const QuartoDetalhe = () => {
             </div>
 
             {/* Botão principal */}
-            <button
-              onClick={handlePixConfirm}
-              disabled={pixConfirming || reservationMutation.isPending || !pixKey}
-              className="w-full flex items-center justify-center gap-2.5 py-3 rounded-xl font-body font-semibold text-sm transition-all hover:scale-[1.01] disabled:opacity-50 disabled:hover:scale-100"
-              style={{ background: "linear-gradient(135deg,#25D366,#128C7E)", color: "#fff" }}
-            >
-              <MessageCircle className="w-4 h-4" />
-              {reservationMutation.isPending ? "Enviando reserva..." : "Enviei o PIX — Enviar comprovante via WhatsApp"}
-            </button>
+            {/* Botão PIX: link direto <a> — nunca bloqueado pelo navegador */}
+            {reservationMutation.isSuccess ? (
+              <a
+                href={buildWhatsAppUrl()}
+                target="_blank"
+                rel="noopener noreferrer"
+                className="w-full flex items-center justify-center gap-2.5 py-3 rounded-xl font-body font-semibold text-sm transition-all hover:scale-[1.01]"
+                style={{ background: "linear-gradient(135deg,#25D366,#128C7E)", color: "#fff" }}
+              >
+                <MessageCircle className="w-4 h-4" />
+                Enviar comprovante via WhatsApp
+              </a>
+            ) : (
+              <button
+                onClick={handlePixConfirm}
+                disabled={reservationMutation.isPending || !pixKey}
+                className="w-full flex items-center justify-center gap-2.5 py-3 rounded-xl font-body font-semibold text-sm transition-all hover:scale-[1.01] disabled:opacity-50 disabled:hover:scale-100"
+                style={{ background: "linear-gradient(135deg,#25D366,#128C7E)", color: "#fff" }}
+              >
+                <MessageCircle className="w-4 h-4" />
+                {reservationMutation.isPending ? "Enviando reserva..." : "Enviei o PIX — Enviar comprovante via WhatsApp"}
+              </button>
+            )}
 
             {!pixWhatsapp && (
               <p className="text-center text-xs text-cream/20 font-body mt-2">WhatsApp do hotel não configurado.</p>
