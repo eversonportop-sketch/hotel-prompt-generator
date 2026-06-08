@@ -460,6 +460,10 @@ const QuartoDetalhe = () => {
   };
 
   const handleReservarClick = async () => {
+    if (nights <= 0) {
+      toast.error("Check-in e check-out não podem ser no mesmo dia.");
+      return;
+    }
     if (!user) {
       localStorage.setItem(
         "reserva_intent",
@@ -479,6 +483,11 @@ const QuartoDetalhe = () => {
 
   const handlePixConfirm = async () => {
     if (!user || !room || !checkIn || !checkOut || !categoryAvail?.freeRoomId) return;
+    if (nights <= 0) {
+      toast.error("Datas inválidas. Check-in e check-out não podem ser iguais.");
+      setShowPixModal(false);
+      return;
+    }
     setPixConfirming(true);
     // Abre WhatsApp com mensagem pré-pronta
     const nights = checkIn && checkOut ? differenceInDays(checkOut, checkIn) : 0;
@@ -766,6 +775,7 @@ const QuartoDetalhe = () => {
                       disabled={
                         !checkIn ||
                         !checkOut ||
+                        nights <= 0 ||
                         !available ||
                         !categoryAvail?.freeRoomId ||
                         reservationMutation.isPending
