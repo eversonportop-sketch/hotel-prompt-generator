@@ -38,6 +38,17 @@ const Login = () => {
     if (loggedUser) {
       const { data: prof } = await supabase.from("profiles").select("role").eq("id", loggedUser.id).single();
       role = prof?.role ?? "user";
+
+      // Salvar profile pendente caso o cadastro tenha sido feito sem sessão ativa
+      const pendingKey = `profile_pending_${loggedUser.id}`;
+      const pendingRaw = localStorage.getItem(pendingKey);
+      if (pendingRaw) {
+        try {
+          const pendingProfile = JSON.parse(pendingRaw);
+          await supabase.from("profiles").upsert(pendingProfile);
+          localStorage.removeItem(pendingKey);
+        } catch { /* ignora */ }
+      }
     }
     setLoading(false);
     toast.success("Login realizado com sucesso!");
