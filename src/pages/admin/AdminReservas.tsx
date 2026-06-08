@@ -866,7 +866,7 @@ const AdminReservas = () => {
                           <span className="text-cream/80 text-sm font-body">{r.guestName}</span>
                           {r.guestPhone && (
                             <a
-                              href={`https://wa.me/55${r.guestPhone.replace(/\D/g, "")}`}
+                              href={`https://api.whatsapp.com/send?phone=55${r.guestPhone.replace(/\D/g, "")}`}
                               target="_blank"
                               rel="noopener noreferrer"
                               title="Abrir no WhatsApp"
