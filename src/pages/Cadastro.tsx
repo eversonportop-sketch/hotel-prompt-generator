@@ -113,7 +113,15 @@ const Cadastro = () => {
       ? `${window.location.origin}${redirectTo}`
       : undefined;
 
-    const { error, userId, session: newSession } = await signUp(email, password, name, quartoRedirectUrl);
+    const { error, userId, session: newSession } = await signUp(email, password, name, quartoRedirectUrl, {
+      phone,
+      cpf,
+      rg: rg || "",
+      nationality,
+      address,
+      city,
+      state: uf,
+    });
     if (error) {
       toast.error(error.message || "Erro ao cadastrar.");
       setLoading(false);
@@ -121,7 +129,13 @@ const Cadastro = () => {
     }
 
     if (userId) {
-      await supabase.from("profiles").upsert({
+      // Salvar no localStorage como backup caso o upsert falhe por falta de sessão
+      localStorage.setItem(`profile_pending_${userId}`, JSON.stringify({
+        id: userId, full_name: name, email, cpf, rg, nationality,
+        phone, address, city, state: uf,
+      }));
+
+      const { error: upsertError } = await supabase.from("profiles").upsert({
         id: userId,
         full_name: name,
         email,
@@ -133,6 +147,9 @@ const Cadastro = () => {
         city,
         state: uf,
       });
+
+      // Se salvou com sucesso, limpa o backup
+      if (!upsertError) localStorage.removeItem(`profile_pending_${userId}`);
 
       try {
         const cleanCpf = cpf.replace(/\D/g, "");
