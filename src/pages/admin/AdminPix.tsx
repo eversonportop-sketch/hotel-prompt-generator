@@ -55,9 +55,9 @@ const AdminPix = () => {
         .from("reservations")
         .select(
           `id, check_in, check_out, guests_count, total_price, status, created_at, profile_id,
-           profiles(full_name, phone, email),
-           guests(full_name, phone, email),
-           rooms(name, category)`
+           profiles!reservations_profile_id_fkey(full_name, phone, email),
+           guests!reservations_guest_id_fkey(full_name, phone, email),
+           rooms!reservations_room_id_fkey(name, category)`
         )
         .order("created_at", { ascending: false });
 
@@ -229,9 +229,9 @@ Em caso de dúvidas, entre em contato conosco. Até breve! 🏨`
         <div className="space-y-3">
           {reservas.map((r: any) => {
             const guestName =
-              r.profiles?.full_name || r.guests?.full_name || "Cliente não identificado";
-            const guestPhone = r.profiles?.phone || r.guests?.phone || null;
-            const guestEmail = r.profiles?.email || r.guests?.email || null;
+              (Array.isArray(r.profiles) ? r.profiles[0]?.full_name : r.profiles?.full_name) || (Array.isArray(r.guests) ? r.guests[0]?.full_name : r.guests?.full_name) || "Cliente não identificado";
+            const guestPhone = (Array.isArray(r.profiles) ? r.profiles[0]?.phone : r.profiles?.phone) || (Array.isArray(r.guests) ? r.guests[0]?.phone : r.guests?.phone) || null;
+            const guestEmail = (Array.isArray(r.profiles) ? r.profiles[0]?.email : r.profiles?.email) || (Array.isArray(r.guests) ? r.guests[0]?.email : r.guests?.email) || null;
             const cfg = statusConfig[r.status] || statusConfig["pending_payment"];
             const isPending = r.status === "pending_payment";
 
@@ -266,10 +266,19 @@ Em caso de dúvidas, entre em contato conosco. Até breve! 🏨`
                       <span className="text-cream font-semibold font-body text-sm">{guestName}</span>
                     </div>
 
-                    {guestPhone && (
+                    {guestPhone ? (
                       <div className="flex items-center gap-2">
                         <Phone className="w-3.5 h-3.5 text-cream/25 flex-shrink-0" />
                         <span className="text-cream/50 font-body text-xs">{guestPhone}</span>
+                      </div>
+                    ) : guestEmail ? (
+                      <div className="flex items-center gap-2">
+                        <span className="text-cream/25 text-xs">✉</span>
+                        <span className="text-cream/50 font-body text-xs">{guestEmail}</span>
+                      </div>
+                    ) : (
+                      <div className="flex items-center gap-2">
+                        <span className="text-amber-500/60 font-body text-xs">⚠ Sem contato cadastrado</span>
                       </div>
                     )}
 
@@ -320,9 +329,9 @@ Em caso de dúvidas, entre em contato conosco. Até breve! 🏨`
                               Não
                             </button>
                           </div>
-                          {guestPhone && (
+                          {guestPhone ? (
                             <a
-                              href={`https://wa.me/55${guestPhone.replace(/\D/g, "")}?text=${buildMsgConfirmacao(guestName)}`}
+                              href={`https://api.whatsapp.com/send?phone=55${guestPhone.replace(/\D/g, "")}&text=${buildMsgConfirmacao(guestName)}`}
                               target="_blank"
                               rel="noopener noreferrer"
                               className="flex items-center gap-2 px-3 py-1.5 rounded-lg bg-[#25D366]/10 border border-[#25D366]/20 text-[#25D366] text-xs font-semibold font-body hover:bg-[#25D366]/20 transition-all"
@@ -330,13 +339,15 @@ Em caso de dúvidas, entre em contato conosco. Até breve! 🏨`
                               <MessageCircle className="w-3 h-3" />
                               Avisar cliente
                             </a>
+                          ) : (
+                            <span className="text-xs text-amber-400/70 font-body">⚠ Cliente sem telefone cadastrado</span>
                           )}
                         </div>
                       )}
 
-                      {guestPhone && (
+                      {guestPhone ? (
                         <a
-                          href={`https://wa.me/55${guestPhone.replace(/\D/g, "")}?text=${encodeURIComponent(`Olá ${guestName}! Precisamos confirmar seu pagamento PIX para a reserva do ${r.rooms?.name}. Você já realizou o pagamento?`)}`}
+                          href={`https://api.whatsapp.com/send?phone=55${guestPhone.replace(/\D/g, "")}&text=${encodeURIComponent(`Olá ${guestName}! Precisamos confirmar seu pagamento PIX para a reserva do ${r.rooms?.name}. Você já realizou o pagamento?`)}`}
                           target="_blank"
                           rel="noopener noreferrer"
                           className="flex items-center gap-2 px-4 py-2 rounded-lg bg-[#25D366]/10 border border-[#25D366]/20 text-[#25D366] text-xs font-semibold font-body hover:bg-[#25D366]/20 transition-all"
@@ -344,7 +355,9 @@ Em caso de dúvidas, entre em contato conosco. Até breve! 🏨`
                           <MessageCircle className="w-3.5 h-3.5" />
                           Contatar cliente
                         </a>
-                      )}
+                      ) : guestEmail ? (
+                        <span className="text-xs text-cream/30 font-body">Contato: {guestEmail}</span>
+                      ) : null}
 
                       <button
                         onClick={() => {
