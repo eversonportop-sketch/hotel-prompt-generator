@@ -402,17 +402,12 @@ const QuartoDetalhe = () => {
       if (error) throw error;
     },
     onSuccess: () => {
-      toast.success("Reserva enviada! Aguardando confirmação do pagamento PIX.");
-      setShowPixModal(false);
+      toast.success("Reserva criada! Agora envie o comprovante via WhatsApp.");
+      // NÃO fecha o modal — mostra o botão WhatsApp para o cliente clicar
       queryClient.invalidateQueries({ queryKey: ["checkin-confirmed"] });
       queryClient.invalidateQueries({ queryKey: ["reservas-lista"] });
       queryClient.invalidateQueries({ queryKey: ["reservations"] });
       queryClient.invalidateQueries({ queryKey: ["dash-reservations-all"] });
-      setCheckIn(undefined);
-      setCheckOut(undefined);
-      setAvailable(null);
-      setCategoryAvail(null);
-      setGuestsCount(1);
       setGuestsInput("1");
       setAutoReserve(false);
     },
@@ -810,7 +805,17 @@ const QuartoDetalhe = () => {
           animate={{ opacity: 1 }}
           exit={{ opacity: 0 }}
           className="fixed inset-0 z-50 bg-black/80 flex items-center justify-center px-4"
-          onClick={() => setShowPixModal(false)}
+          onClick={() => {
+            setShowPixModal(false);
+            if (reservationMutation.isSuccess) {
+              setCheckIn(undefined);
+              setCheckOut(undefined);
+              setAvailable(null);
+              setCategoryAvail(null);
+              setGuestsCount(1);
+              reservationMutation.reset();
+            }
+          }}
         >
           <motion.div
             initial={{ opacity: 0, scale: 0.95, y: 20 }}
@@ -821,7 +826,17 @@ const QuartoDetalhe = () => {
             onClick={(e) => e.stopPropagation()}
           >
             <button
-              onClick={() => setShowPixModal(false)}
+              onClick={() => {
+                setShowPixModal(false);
+                if (reservationMutation.isSuccess) {
+                  setCheckIn(undefined);
+                  setCheckOut(undefined);
+                  setAvailable(null);
+                  setCategoryAvail(null);
+                  setGuestsCount(1);
+                  reservationMutation.reset();
+                }
+              }}
               className="absolute top-4 right-4 w-8 h-8 rounded-full bg-white/10 hover:bg-white/20 flex items-center justify-center transition-colors"
             >
               <X className="w-4 h-4 text-white" />
