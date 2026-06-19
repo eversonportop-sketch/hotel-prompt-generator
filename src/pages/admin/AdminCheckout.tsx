@@ -114,6 +114,23 @@ const AdminCheckout = () => {
   const [receiptOrders, setReceiptOrders] = useState<ConsumptionOrder[]>([]);
   const printRef = useRef<HTMLDivElement>(null);
 
+  // Dados do hotel (endereço, telefone) para o cabeçalho do recibo
+  const { data: hotelInfo } = useQuery({
+    queryKey: ["hotel-settings-receipt"],
+    queryFn: async () => {
+      const { data } = await supabase
+        .from("hotel_settings" as any)
+        .select("key, value")
+        .in("key", ["address", "city", "phone", "whatsapp"]);
+      const map: Record<string, string> = {};
+      (data || []).forEach((row: any) => {
+        if (row.value) map[row.key] = row.value;
+      });
+      return map;
+    },
+    staleTime: 5 * 60 * 1000,
+  });
+
   // Contas abertas
   const { data: openReservations = [], isLoading } = useQuery({
     queryKey: ["checkout-open"],
@@ -348,7 +365,14 @@ const AdminCheckout = () => {
         {/* CABEÇALHO */}
         <div style={{ textAlign: "center", paddingBottom: 18, marginBottom: 18, borderBottom: `2px solid ${GOLD}` }}>
           <div style={{ fontSize: 26, fontWeight: "bold", letterSpacing: 4, color: "#111" }}>SB HOTEL</div>
-          <div style={{ fontSize: 10, color: GOLD, letterSpacing: 4, textTransform: "uppercase", marginTop: 4 }}>Sleep Better · Butiá, RS</div>
+          <div style={{ fontSize: 10, color: GOLD, letterSpacing: 4, textTransform: "uppercase", marginTop: 4 }}>Sleep Better · {hotelInfo?.city || "Butiá, RS"}</div>
+          {(hotelInfo?.address || hotelInfo?.phone) && (
+            <div style={{ fontSize: 10, color: "#999", marginTop: 5 }}>
+              {hotelInfo?.address}
+              {hotelInfo?.address && hotelInfo?.phone ? " · " : ""}
+              {hotelInfo?.phone}
+            </div>
+          )}
           <div style={{ fontSize: 12, color: "#666", marginTop: 8, letterSpacing: 1 }}>RECIBO DE HOSPEDAGEM</div>
           <div style={{ fontSize: 11, color: "#999", marginTop: 3 }}>{format(new Date(), "dd/MM/yyyy 'às' HH:mm", { locale: ptBR })}</div>
           <div style={{ fontSize: 10, color: "#bbb", marginTop: 3 }}>Nº {receiptId}</div>
@@ -475,7 +499,10 @@ const AdminCheckout = () => {
         {/* RODAPÉ */}
         <div style={{ textAlign: "center", marginTop: 24, paddingTop: 14, borderTop: "1px solid #eee" }}>
           <p style={{ fontSize: 12, color: "#999" }}>Obrigado pela sua estadia! Volte sempre.</p>
-          <p style={{ fontSize: 10, color: "#bbb", marginTop: 4 }}>SB Hotel · Sleep Better · Butiá, RS · sbhotel.com.br</p>
+          <p style={{ fontSize: 10, color: "#bbb", marginTop: 4 }}>
+            SB Hotel · Sleep Better · {hotelInfo?.address ? `${hotelInfo.address}, ` : ""}{hotelInfo?.city || "Butiá, RS"}
+            {hotelInfo?.phone ? ` · ${hotelInfo.phone}` : ""}
+          </p>
           <p style={{ fontSize: 10, color: "#ddd", marginTop: 2 }}>Nº {receiptId} · Emitido em {format(new Date(), "dd/MM/yyyy 'às' HH:mm", { locale: ptBR })}</p>
         </div>
       </>
