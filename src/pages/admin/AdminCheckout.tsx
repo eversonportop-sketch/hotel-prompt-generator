@@ -1,6 +1,6 @@
 // ─── AdminCheckout ─────────────────────────────────────────────────────────────
 // Checkout completo: conta do hóspede, histórico e recibo PDF
-import { useState, useRef } from "react";
+import React, { useState, useRef } from "react";
 import { Link } from "react-router-dom";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
@@ -336,46 +336,51 @@ const AdminCheckout = () => {
     const p = receiptRes?.profiles as any;
     const receiptId = receiptRes?.id?.slice(-8).toUpperCase() ?? "—";
     const hasAddress = p?.address || p?.city;
+    const GOLD = "#C9A84C";
+    const sectionLabel: React.CSSProperties = { fontSize: 10, letterSpacing: 2, textTransform: "uppercase", color: GOLD, marginBottom: 10, fontWeight: "bold", display: "block" };
+    const rowStyle: React.CSSProperties = { display: "flex", justifyContent: "space-between", alignItems: "flex-start", padding: "8px 0", borderBottom: "1px solid #eee", fontSize: 13, gap: 12 };
+    const rowValue: React.CSSProperties = { fontWeight: "bold", color: "#111", whiteSpace: "nowrap" };
+    const rowSub: React.CSSProperties = { color: "#888", fontSize: 11, marginTop: 2 };
+    const subtotalRow: React.CSSProperties = { display: "flex", justifyContent: "space-between", fontSize: 12, color: "#666", padding: "3px 0" };
+
     return (
       <>
         {/* CABEÇALHO */}
-        <div className="header">
-          <div className="header-logo">SB HOTEL</div>
-          <div className="header-sub">Sleep Better · Butiá, RS</div>
-          <div className="header-title">RECIBO DE HOSPEDAGEM</div>
-          <div className="header-date">
-            {format(new Date(), "dd/MM/yyyy 'às' HH:mm", { locale: ptBR })}
-          </div>
-          <div className="receipt-number">Nº {receiptId}</div>
+        <div style={{ textAlign: "center", paddingBottom: 18, marginBottom: 18, borderBottom: `2px solid ${GOLD}` }}>
+          <div style={{ fontSize: 26, fontWeight: "bold", letterSpacing: 4, color: "#111" }}>SB HOTEL</div>
+          <div style={{ fontSize: 10, color: GOLD, letterSpacing: 4, textTransform: "uppercase", marginTop: 4 }}>Sleep Better · Butiá, RS</div>
+          <div style={{ fontSize: 12, color: "#666", marginTop: 8, letterSpacing: 1 }}>RECIBO DE HOSPEDAGEM</div>
+          <div style={{ fontSize: 11, color: "#999", marginTop: 3 }}>{format(new Date(), "dd/MM/yyyy 'às' HH:mm", { locale: ptBR })}</div>
+          <div style={{ fontSize: 10, color: "#bbb", marginTop: 3 }}>Nº {receiptId}</div>
         </div>
 
         {/* HÓSPEDE */}
-        <div className="section">
-          <div className="section-label">Hóspede</div>
-          <div className="guest-block">
-            <div className="guest-name">{p?.full_name ?? "Hóspede"}</div>
-            <div className="guest-grid">
+        <div style={{ marginBottom: 18 }}>
+          <span style={sectionLabel}>Hóspede</span>
+          <div style={{ background: "#fafafa", border: "1px solid #eee", borderRadius: 6, padding: "12px 14px" }}>
+            <div style={{ fontSize: 15, fontWeight: "bold", color: "#111", marginBottom: 8 }}>{p?.full_name ?? "Hóspede"}</div>
+            <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: "4px 14px" }}>
               {p?.cpf && (
-                <div className="guest-field">
-                  <span>CPF</span>
+                <div style={{ fontSize: 12, color: "#555" }}>
+                  <span style={{ color: "#888", display: "block", fontSize: 10, textTransform: "uppercase", letterSpacing: 1, marginBottom: 1 }}>CPF</span>
                   {p.cpf}
                 </div>
               )}
               {p?.phone && (
-                <div className="guest-field">
-                  <span>Telefone</span>
+                <div style={{ fontSize: 12, color: "#555" }}>
+                  <span style={{ color: "#888", display: "block", fontSize: 10, textTransform: "uppercase", letterSpacing: 1, marginBottom: 1 }}>Telefone</span>
                   {p.phone}
                 </div>
               )}
               {p?.email && (
-                <div className="guest-field" style={{ gridColumn: "1 / -1" }}>
-                  <span>E-mail</span>
+                <div style={{ fontSize: 12, color: "#555", gridColumn: "1 / -1" }}>
+                  <span style={{ color: "#888", display: "block", fontSize: 10, textTransform: "uppercase", letterSpacing: 1, marginBottom: 1 }}>E-mail</span>
                   {p.email}
                 </div>
               )}
               {hasAddress && (
-                <div className="guest-field" style={{ gridColumn: "1 / -1" }}>
-                  <span>Endereço</span>
+                <div style={{ fontSize: 12, color: "#555", gridColumn: "1 / -1" }}>
+                  <span style={{ color: "#888", display: "block", fontSize: 10, textTransform: "uppercase", letterSpacing: 1, marginBottom: 1 }}>Endereço</span>
                   {[p.address, p.city, p.state].filter(Boolean).join(", ")}
                 </div>
               )}
@@ -384,100 +389,94 @@ const AdminCheckout = () => {
         </div>
 
         {/* HOSPEDAGEM */}
-        <div className="section">
-          <div className="section-label">Hospedagem</div>
-          <div className="row">
+        <div style={{ marginBottom: 18 }}>
+          <span style={sectionLabel}>Hospedagem</span>
+          <div style={rowStyle}>
             <div>
-              <div className="row-label" style={{ fontWeight: "bold" }}>{(receiptRes?.rooms as any)?.name}</div>
-              <div className="row-sub">
+              <div style={{ fontWeight: "bold", color: "#111", fontSize: 13 }}>{(receiptRes?.rooms as any)?.name}</div>
+              <div style={rowSub}>
                 {format(new Date(receiptRes!.check_in + "T12:00:00"), "dd/MM/yyyy", { locale: ptBR })} →{" "}
                 {format(new Date(receiptRes!.check_out + "T12:00:00"), "dd/MM/yyyy", { locale: ptBR })} ·{" "}
                 {receiptNights} {receiptNights === 1 ? "noite" : "noites"} · R$ {receiptRoomPrice.toFixed(2)}/noite
               </div>
             </div>
-            <div className="row-value">R$ {receiptRoomTotal.toFixed(2)}</div>
+            <div style={rowValue}>R$ {receiptRoomTotal.toFixed(2)}</div>
           </div>
         </div>
 
         {/* CONSUMOS */}
         {receiptOrders.length > 0 && (
-          <div className="section">
-            <div className="section-label">Consumos</div>
+          <div style={{ marginBottom: 18 }}>
+            <span style={sectionLabel}>Consumos</span>
             {receiptOrders.map((o) => (
-              <div key={o.id} className="row">
+              <div key={o.id} style={rowStyle}>
                 <div>
-                  <div className="row-label">{o.item_name} × {o.quantity}</div>
-                  <div className="row-sub">R$ {Number(o.unit_price).toFixed(2)}/un · {format(new Date(o.created_at), "dd/MM HH:mm", { locale: ptBR })}</div>
+                  <div style={{ color: "#333", fontSize: 13 }}>{o.item_name} × {o.quantity}</div>
+                  <div style={rowSub}>R$ {Number(o.unit_price).toFixed(2)}/un · {format(new Date(o.created_at), "dd/MM HH:mm", { locale: ptBR })}</div>
                 </div>
-                <div className="row-value">R$ {Number(o.total).toFixed(2)}</div>
+                <div style={rowValue}>R$ {Number(o.total).toFixed(2)}</div>
               </div>
             ))}
           </div>
         )}
 
-        {/* SUBTOTAIS + TOTAL */}
-        <div className="subtotals">
-          <div className="subtotal-row">
+        {/* SUBTOTAIS */}
+        <div style={{ background: "#fafafa", border: "1px solid #eee", borderRadius: 6, padding: "10px 14px", marginBottom: 8 }}>
+          <div style={subtotalRow}>
             <span>Hospedagem ({receiptNights} {receiptNights === 1 ? "noite" : "noites"})</span>
             <span>R$ {receiptRoomTotal.toFixed(2)}</span>
           </div>
           {receiptOrders.length > 0 && (
-            <div className="subtotal-row">
+            <div style={subtotalRow}>
               <span>Consumos ({receiptOrders.length} {receiptOrders.length === 1 ? "item" : "itens"})</span>
               <span>R$ {receiptConsumoTotal.toFixed(2)}</span>
             </div>
           )}
         </div>
-        <div className="total-row">
-          <span className="total-label">TOTAL</span>
-          <span className="total-value">R$ {receiptGrandTotal.toFixed(2)}</span>
+
+        {/* TOTAL */}
+        <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", padding: "14px 0 8px", borderTop: `2px solid ${GOLD}`, marginTop: 4 }}>
+          <span style={{ fontSize: 16, fontWeight: "bold", color: "#111" }}>TOTAL</span>
+          <span style={{ fontSize: 22, fontWeight: "bold", color: GOLD }}>R$ {receiptGrandTotal.toFixed(2)}</span>
         </div>
 
-        {/* FORMA DE PAGAMENTO */}
-        <div className="payment-section">
-          <div className="section-label" style={{ marginBottom: 8 }}>Pagamento</div>
-          <div className="payment-row">
+        {/* PAGAMENTO */}
+        <div style={{ marginTop: 16, padding: "10px 14px", background: "#fafafa", border: "1px solid #eee", borderRadius: 6 }}>
+          <span style={{ ...sectionLabel, marginBottom: 8 }}>Pagamento</span>
+          <div style={{ display: "flex", justifyContent: "space-between", fontSize: 12, color: "#555", padding: "3px 0" }}>
             <span>Forma de pagamento</span>
-            <span style={{ fontWeight: "bold" }}>______________________</span>
+            <span style={{ fontWeight: "bold", borderBottom: "1px solid #999", minWidth: 140, display: "inline-block" }}>&nbsp;</span>
           </div>
-          <div className="payment-row" style={{ marginTop: 4 }}>
+          <div style={{ display: "flex", justifyContent: "space-between", fontSize: 12, color: "#555", padding: "6px 0 3px" }}>
             <span>Data do pagamento</span>
             <span>{format(new Date(), "dd/MM/yyyy", { locale: ptBR })}</span>
           </div>
         </div>
 
         {/* ASSINATURA */}
-        <div className="signature-section">
-          <div className="signature-title">Declaração e Assinatura</div>
-          <p style={{ fontSize: 11, color: "#666", marginBottom: 18, lineHeight: 1.6 }}>
+        <div style={{ marginTop: 28, paddingTop: 18, borderTop: "1px dashed #ddd" }}>
+          <span style={{ ...sectionLabel, marginBottom: 12 }}>Declaração e Assinatura</span>
+          <p style={{ fontSize: 11, color: "#666", marginBottom: 24, lineHeight: 1.6 }}>
             Declaro que recebi os serviços acima descritos em conformidade e que as informações prestadas são verdadeiras.
           </p>
-          <div className="signature-block">
-            <div className="sig-line">
-              <div className="sig-line-bar"></div>
-              <div className="sig-line-label">Assinatura do Hóspede</div>
+          <div style={{ display: "flex", gap: 24 }}>
+            <div style={{ flex: 1 }}>
+              <div style={{ borderBottom: "1px solid #999", height: 40, marginBottom: 6 }} />
+              <div style={{ fontSize: 10, color: "#888", textAlign: "center" }}>Assinatura do Hóspede</div>
+              {p?.cpf && <div style={{ fontSize: 10, color: "#bbb", textAlign: "center", marginTop: 3 }}>CPF: {p.cpf}</div>}
             </div>
-            <div className="sig-line">
-              <div className="sig-line-bar"></div>
-              <div className="sig-line-label">Atendente / Carimbo</div>
+            <div style={{ flex: 1 }}>
+              <div style={{ borderBottom: "1px solid #999", height: 40, marginBottom: 6 }} />
+              <div style={{ fontSize: 10, color: "#888", textAlign: "center" }}>Atendente / Carimbo</div>
             </div>
           </div>
-          {p?.cpf && (
-            <p style={{ fontSize: 10, color: "#aaa", textAlign: "center", marginTop: 10 }}>
-              CPF: {p.cpf}
-            </p>
-          )}
         </div>
 
         {/* RODAPÉ */}
-        <div className="footer">
-          <p>Obrigado pela sua estadia! Volte sempre.</p>
-          <p style={{ marginTop: 4, color: "#bbb", fontSize: 10 }}>
-            SB Hotel · Sleep Better · Butiá, RS · sbhotel.com.br
-          </p>
-          <p style={{ color: "#ddd", fontSize: 10, marginTop: 2 }}>
-            Nº {receiptId} · Emitido em {format(new Date(), "dd/MM/yyyy 'às' HH:mm", { locale: ptBR })}
-          </p>
+        <div style={{ textAlign: "center", marginTop: 24, paddingTop: 14, borderTop: "1px solid #eee" }}>
+          <p style={{ fontSize: 12, color: "#999" }}>Obrigado pela sua estadia! Volte sempre.</p>
+          <p style={{ fontSize: 10, color: "#bbb", marginTop: 4 }}>SB Hotel · Sleep Better · Butiá, RS · sbhotel.com.br</p>
+          <p style={{ fontSize: 10, color: "#ddd", marginTop: 2 }}>Nº {receiptId} · Emitido em {format(new Date(), "dd/MM/yyyy 'às' HH:mm", { locale: ptBR })}</p>
         </div>
       </>
     );
