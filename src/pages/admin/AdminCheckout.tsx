@@ -301,7 +301,7 @@ const AdminCheckout = () => {
         .receipt-number { font-size: 10px; color: #bbb; margin-top: 4px; }
         @media print {
           body { margin: 10px auto; }
-          @page { size: A4; margin: 20mm; }
+          @page { size: A4; margin: 12mm; }
         }
       </style></head><body>${content}</body></html>
     `);
@@ -355,7 +355,7 @@ const AdminCheckout = () => {
     const hasAddress = p?.address || p?.city;
     const GOLD = "#C9A84C";
     const sectionLabel: React.CSSProperties = { fontSize: 10, letterSpacing: 2, textTransform: "uppercase", color: GOLD, marginBottom: 10, fontWeight: "bold", display: "block" };
-    const rowStyle: React.CSSProperties = { display: "flex", justifyContent: "space-between", alignItems: "flex-start", padding: "8px 0", borderBottom: "1px solid #eee", fontSize: 13, gap: 12 };
+    const rowStyle: React.CSSProperties = { display: "flex", justifyContent: "space-between", alignItems: "flex-start", padding: "8px 0", borderBottom: "1px solid #eee", fontSize: 13, gap: 12, breakInside: "avoid", pageBreakInside: "avoid" };
     const rowValue: React.CSSProperties = { fontWeight: "bold", color: "#111", whiteSpace: "nowrap" };
     const rowSub: React.CSSProperties = { color: "#888", fontSize: 11, marginTop: 2 };
     const subtotalRow: React.CSSProperties = { display: "flex", justifyContent: "space-between", fontSize: 12, color: "#666", padding: "3px 0" };
@@ -363,7 +363,7 @@ const AdminCheckout = () => {
     return (
       <>
         {/* CABEÇALHO */}
-        <div style={{ textAlign: "center", paddingBottom: 18, marginBottom: 18, borderBottom: `2px solid ${GOLD}` }}>
+        <div style={{ textAlign: "center", paddingBottom: 14, marginBottom: 14, borderBottom: `2px solid ${GOLD}`, breakInside: "avoid", pageBreakInside: "avoid" }}>
           <div style={{ fontSize: 26, fontWeight: "bold", letterSpacing: 4, color: "#111" }}>SB HOTEL</div>
           <div style={{ fontSize: 10, color: GOLD, letterSpacing: 4, textTransform: "uppercase", marginTop: 4 }}>Sleep Better · {hotelInfo?.city || "Butiá, RS"}</div>
           {(hotelInfo?.address || hotelInfo?.phone) && (
@@ -379,7 +379,7 @@ const AdminCheckout = () => {
         </div>
 
         {/* HÓSPEDE */}
-        <div style={{ marginBottom: 18 }}>
+        <div style={{ marginBottom: 14, breakInside: "avoid", pageBreakInside: "avoid" }}>
           <span style={sectionLabel}>Hóspede</span>
           <div style={{ background: "#fafafa", border: "1px solid #eee", borderRadius: 6, padding: "12px 14px" }}>
             <div style={{ fontSize: 15, fontWeight: "bold", color: "#111", marginBottom: 8 }}>{p?.full_name ?? "Hóspede"}</div>
@@ -413,7 +413,7 @@ const AdminCheckout = () => {
         </div>
 
         {/* HOSPEDAGEM */}
-        <div style={{ marginBottom: 18 }}>
+        <div style={{ marginBottom: 14 }}>
           <span style={sectionLabel}>Hospedagem</span>
           <div style={rowStyle}>
             <div>
@@ -430,7 +430,7 @@ const AdminCheckout = () => {
 
         {/* CONSUMOS */}
         {receiptOrders.length > 0 && (
-          <div style={{ marginBottom: 18 }}>
+          <div style={{ marginBottom: 14 }}>
             <span style={sectionLabel}>Consumos</span>
             {receiptOrders.map((o) => (
               <div key={o.id} style={rowStyle}>
@@ -445,7 +445,7 @@ const AdminCheckout = () => {
         )}
 
         {/* SUBTOTAIS */}
-        <div style={{ background: "#fafafa", border: "1px solid #eee", borderRadius: 6, padding: "10px 14px", marginBottom: 8 }}>
+        <div style={{ background: "#fafafa", border: "1px solid #eee", borderRadius: 6, padding: "10px 14px", marginBottom: 8, breakInside: "avoid", pageBreakInside: "avoid" }}>
           <div style={subtotalRow}>
             <span>Hospedagem ({receiptNights} {receiptNights === 1 ? "noite" : "noites"})</span>
             <span>R$ {receiptRoomTotal.toFixed(2)}</span>
@@ -459,13 +459,13 @@ const AdminCheckout = () => {
         </div>
 
         {/* TOTAL */}
-        <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", padding: "14px 0 8px", borderTop: `2px solid ${GOLD}`, marginTop: 4 }}>
+        <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", padding: "14px 0 8px", borderTop: `2px solid ${GOLD}`, marginTop: 4, breakInside: "avoid", pageBreakInside: "avoid" }}>
           <span style={{ fontSize: 16, fontWeight: "bold", color: "#111" }}>TOTAL</span>
           <span style={{ fontSize: 22, fontWeight: "bold", color: GOLD }}>R$ {receiptGrandTotal.toFixed(2)}</span>
         </div>
 
         {/* PAGAMENTO */}
-        <div style={{ marginTop: 16, padding: "10px 14px", background: "#fafafa", border: "1px solid #eee", borderRadius: 6 }}>
+        <div style={{ marginTop: 12, padding: "10px 14px", background: "#fafafa", border: "1px solid #eee", borderRadius: 6, breakInside: "avoid", pageBreakInside: "avoid" }}>
           <span style={{ ...sectionLabel, marginBottom: 8 }}>Pagamento</span>
           <div style={{ display: "flex", justifyContent: "space-between", fontSize: 12, color: "#555", padding: "3px 0" }}>
             <span>Forma de pagamento</span>
@@ -478,26 +478,26 @@ const AdminCheckout = () => {
         </div>
 
         {/* ASSINATURA */}
-        <div style={{ marginTop: 28, paddingTop: 18, borderTop: "1px dashed #ddd" }}>
+        <div style={{ marginTop: 20, paddingTop: 14, borderTop: "1px dashed #ddd", breakInside: "avoid", pageBreakInside: "avoid" }}>
           <span style={{ ...sectionLabel, marginBottom: 12 }}>Declaração e Assinatura</span>
-          <p style={{ fontSize: 11, color: "#666", marginBottom: 24, lineHeight: 1.6 }}>
+          <p style={{ fontSize: 11, color: "#666", marginBottom: 18, lineHeight: 1.6 }}>
             Declaro que recebi os serviços acima descritos em conformidade e que as informações prestadas são verdadeiras.
           </p>
           <div style={{ display: "flex", gap: 24 }}>
             <div style={{ flex: 1 }}>
-              <div style={{ borderBottom: "1px solid #999", height: 40, marginBottom: 6 }} />
+              <div style={{ borderBottom: "1px solid #999", height: 36, marginBottom: 6 }} />
               <div style={{ fontSize: 10, color: "#888", textAlign: "center" }}>Assinatura do Hóspede</div>
               {p?.cpf && <div style={{ fontSize: 10, color: "#bbb", textAlign: "center", marginTop: 3 }}>CPF: {p.cpf}</div>}
             </div>
             <div style={{ flex: 1 }}>
-              <div style={{ borderBottom: "1px solid #999", height: 40, marginBottom: 6 }} />
+              <div style={{ borderBottom: "1px solid #999", height: 36, marginBottom: 6 }} />
               <div style={{ fontSize: 10, color: "#888", textAlign: "center" }}>Atendente / Carimbo</div>
             </div>
           </div>
         </div>
 
         {/* RODAPÉ */}
-        <div style={{ textAlign: "center", marginTop: 24, paddingTop: 14, borderTop: "1px solid #eee" }}>
+        <div style={{ textAlign: "center", marginTop: 16, paddingTop: 10, borderTop: "1px solid #eee", breakInside: "avoid", pageBreakInside: "avoid" }}>
           <p style={{ fontSize: 12, color: "#999" }}>Obrigado pela sua estadia! Volte sempre.</p>
           <p style={{ fontSize: 10, color: "#bbb", marginTop: 4 }}>
             SB Hotel · Sleep Better · {hotelInfo?.address ? `${hotelInfo.address}, ` : ""}{hotelInfo?.city || "Butiá, RS"}
