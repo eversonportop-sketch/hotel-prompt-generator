@@ -119,21 +119,15 @@ function revenueInRange(bookings: HallBooking[], start: Date, end: Date) {
     .reduce((sum, b) => sum + Number(b.total_price), 0);
 }
 
-/* ── conflito de horário ─────────────────────────────────────────────────── */
-function timeToMin(t: string) {
-  const [h, m] = t.split(":").map(Number);
-  return h * 60 + m;
-}
+/* ── bloqueio de data ─────────────────────────────────────────────────────
+   Regra de negócio: o salão comporta apenas 1 evento por data (montagem e
+   desmontagem ocupam o espaço o dia todo). Por isso o bloqueio é por DATA,
+   não por sobreposição de horário. Agendamentos cancelados não contam. ── */
 function hasConflict(bookings: HallBooking[], form: Omit<HallBooking, "id" | "created_at">, editingId?: string) {
-  const fStart = timeToMin(form.start_time);
-  const fEnd = timeToMin(form.end_time);
   return bookings.some((b) => {
     if (b.id === editingId) return false;
     if (b.status === "canceled") return false;
-    if (b.event_date !== form.event_date) return false;
-    const bStart = timeToMin(b.start_time);
-    const bEnd = timeToMin(b.end_time);
-    return fStart < bEnd && fEnd > bStart;
+    return b.event_date === form.event_date;
   });
 }
 
@@ -164,7 +158,7 @@ const AdminSalao = () => {
     mutationFn: async () => {
       if (hasConflict(bookings, form, editing?.id)) {
         setConflictError(true);
-        throw new Error("Já existe um evento nesse horário.");
+        throw new Error("Não é possível agendar nessa data. Já existe um evento marcado para esse dia.");
       }
       setConflictError(false);
       const payload: any = {
@@ -536,8 +530,8 @@ const AdminSalao = () => {
                 {/* Conflict error */}
                 {conflictError && (
                   <div className="bg-red-500/10 border border-red-500/30 rounded-lg p-3 text-sm text-red-400 flex items-center gap-2">
-                    <Clock className="w-4 h-4 shrink-0" />
-                    Já existe um evento agendado nessa data e horário. Escolha outro horário.
+                    <CalendarDays className="w-4 h-4 shrink-0" />
+                    Não é possível agendar nessa data. Já existe um evento marcado para esse dia. Escolha outra data.
                   </div>
                 )}
                 <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
