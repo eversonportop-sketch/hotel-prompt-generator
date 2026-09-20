@@ -2,8 +2,9 @@ import { useState, useEffect } from "react";
 import { Link } from "react-router-dom";
 import { supabase } from "@/integrations/supabase/client";
 import { motion } from "framer-motion";
-import { ArrowLeft, Settings, Save, Phone, Mail, MapPin, Globe, Instagram, Facebook, Loader2 } from "lucide-react";
+import { ArrowLeft, Settings, Save, Phone, Mail, MapPin, Globe, Instagram, Facebook, Loader2, BedDouble } from "lucide-react";
 import { toast } from "sonner";
+import { Switch } from "@/components/ui/switch";
 import hotelLogo from "@/assets/hotel-sb-logo.png";
 
 const KEYS = [
@@ -24,6 +25,7 @@ const KEYS = [
   "pix_key",
   "pix_name",
   "pix_city",
+  "manual_sold_out",
 ];
 
 const DEFAULT_SETTINGS: Record<string, string> = {
@@ -44,6 +46,7 @@ const DEFAULT_SETTINGS: Record<string, string> = {
   pix_key: "",
   pix_name: "",
   pix_city: "",
+  manual_sold_out: "false",
 };
 
 const AdminConfiguracoes = () => {
@@ -157,6 +160,31 @@ const AdminConfiguracoes = () => {
           onSubmit={handleSave}
           className="space-y-8"
         >
+          {/* Disponibilidade */}
+          <div className="bg-charcoal-light border border-gold/10 rounded-xl p-6">
+            <h2 className="font-display text-base font-semibold text-cream mb-2 pb-3 border-b border-gold/10 flex items-center gap-2">
+              <BedDouble className="w-4 h-4 text-primary" /> Disponibilidade
+            </h2>
+            <p className="text-xs text-cream/40 font-body mb-4">
+              Use quando o hotel estiver com ocupação total e você quiser pausar novas reservas no site, independente
+              das datas escolhidas pelo cliente.
+            </p>
+            <div className="flex items-center justify-between gap-4 bg-black/30 border border-gold/10 rounded-lg px-4 py-3.5">
+              <div>
+                <p className="text-cream text-sm font-body font-medium">Marcar hotel como lotado</p>
+                <p className="text-cream/40 text-xs font-body mt-0.5">
+                  {form.manual_sold_out === "true"
+                    ? "Ativado: o site está exibindo aviso de hotel lotado e bloqueando novas reservas."
+                    : "Desativado: o site libera reservas normalmente conforme a disponibilidade real dos quartos."}
+                </p>
+              </div>
+              <Switch
+                checked={form.manual_sold_out === "true"}
+                onCheckedChange={(checked) => setForm({ ...form, manual_sold_out: checked ? "true" : "false" })}
+              />
+            </div>
+          </div>
+
           {/* Identidade */}
           <div className="bg-charcoal-light border border-gold/10 rounded-xl p-6">
             <h2 className="font-display text-base font-semibold text-cream mb-5 pb-3 border-b border-gold/10">
