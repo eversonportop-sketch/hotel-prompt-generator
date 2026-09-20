@@ -17,6 +17,7 @@ import {
   TrendingUp,
   Lock,
   CalendarPlus,
+  CalendarMinus,
   FileText,
   Printer,
 } from "lucide-react";
@@ -219,6 +220,11 @@ const AdminReservas = () => {
   const [extendRes, setExtendRes] = useState<Reservation | null>(null);
   const [extendCheckOut, setExtendCheckOut] = useState<Date | undefined>();
   const [extendSaving, setExtendSaving] = useState(false);
+
+  // Modal Antecipar Saída (checkout antecipado)
+  const [shortenRes, setShortenRes] = useState<Reservation | null>(null);
+  const [shortenCheckOut, setShortenCheckOut] = useState<Date | undefined>();
+  const [shortenSaving, setShortenSaving] = useState(false);
 
   // Modal Editar
   const [editRes, setEditRes] = useState<Reservation | null>(null);
@@ -509,6 +515,35 @@ const AdminReservas = () => {
       toast.error(e.message || "Erro ao estender estadia.");
     } finally {
       setExtendSaving(false);
+    }
+  };
+
+  const handleShortenSave = async () => {
+    if (!shortenRes || !shortenCheckOut) return;
+    const newCheckOut = format(shortenCheckOut, "yyyy-MM-dd");
+    const n2 = nights(shortenRes.check_in, newCheckOut);
+    if (n2 < 1) return toast.error("Nova data deve ser após o check-in.");
+    const currentNights = nights(shortenRes.check_in, shortenRes.check_out);
+    if (n2 >= currentNights) return toast.error("Nova data deve ser antes do checkout atual.");
+    const dailyRate = currentNights > 0 ? Number(shortenRes.total_price) / currentNights : Number(shortenRes.total_price);
+    const newTotal = parseFloat((dailyRate * n2).toFixed(2));
+    setShortenSaving(true);
+    try {
+      const { error } = await supabase
+        .from("reservations")
+        .update({ check_out: newCheckOut, total_price: newTotal })
+        .eq("id", shortenRes.id);
+      if (error) throw error;
+      toast.success(`Saída antecipada para ${format(shortenCheckOut, "dd/MM/yyyy")} · Novo valor: R$ ${newTotal.toFixed(2)}`);
+      qc.invalidateQueries({ queryKey: ["reservas-lista"] });
+      qc.invalidateQueries({ queryKey: ["checkout-open"] });
+      qc.invalidateQueries({ queryKey: ["admin-dashboard"] });
+      setShortenRes(null);
+      setShortenCheckOut(undefined);
+    } catch (e: any) {
+      toast.error(e.message || "Erro ao antecipar saída.");
+    } finally {
+      setShortenSaving(false);
     }
   };
 
@@ -930,6 +965,16 @@ const AdminReservas = () => {
                             >
                               <CalendarPlus className="w-3.5 h-3.5" />
                             </button>
+                            <button
+                              onClick={() => {
+                                setShortenRes(r);
+                                setShortenCheckOut(undefined);
+                              }}
+                              className="p-1.5 rounded-lg text-white/25 hover:text-amber-400 hover:bg-amber-500/10 transition-colors"
+                              title="Antecipar saída"
+                            >
+                              <CalendarMinus className="w-3.5 h-3.5" />
+                            </button>
                           </>
                         )}
                         <button
@@ -1330,6 +1375,108 @@ const AdminReservas = () => {
                 >
                   {extendSaving ? <Loader2 className="w-4 h-4 animate-spin" /> : <CalendarPlus className="w-4 h-4" />}
                   {extendSaving ? "Salvando..." : "Confirmar"}
+                </button>
+              </div>
+            </div>
+          </div>
+        </>
+      )}
+
+      {/* ═══ MODAL ANTECIPAR SAÍDA ═══ */}
+      {shortenRes && (
+        <>
+          <div className="fixed inset-0 z-50 bg-black/70 backdrop-blur-sm" onClick={() => setShortenRes(null)} />
+          <div className="fixed inset-0 z-50 flex items-center justify-center p-4 pointer-events-none">
+            <div
+              className="bg-[#111114] border border-white/10 rounded-2xl w-full max-w-sm shadow-2xl pointer-events-auto p-6 space-y-5"
+              onClick={(e) => e.stopPropagation()}
+            >
+              <div className="flex items-center justify-between">
+                <div className="flex items-center gap-2">
+                  <div className="p-2 rounded-xl bg-amber-500/10 border border-amber-500/20">
+                    <CalendarMinus className="w-4 h-4 text-amber-400" />
+                  </div>
+                  <div>
+                    <h3 className="font-display text-base font-semibold text-cream">Antecipar Saída</h3>
+                    <p className="text-white/30 text-xs font-body mt-0.5">{shortenRes.guestName}</p>
+                  </div>
+                </div>
+                <button onClick={() => setShortenRes(null)} className="text-white/25 hover:text-cream transition-colors">
+                  <X className="w-5 h-5" />
+                </button>
+              </div>
+
+              <div className="bg-white/[0.03] border border-white/5 rounded-xl px-4 py-3 text-sm font-body space-y-1">
+                <p className="text-white/40">
+                  Check-in: <span className="text-cream">{fmt(shortenRes.check_in)}</span>
+                </p>
+                <p className="text-white/40">
+                  Checkout atual: <span className="text-cream">{fmt(shortenRes.check_out)}</span>
+                </p>
+                <p className="text-white/40">
+                  Valor atual: <span className="text-cream">R$ {Number(shortenRes.total_price).toFixed(2)}</span>{" "}
+                  <span className="text-white/25">
+                    ({nights(shortenRes.check_in, shortenRes.check_out)} noites)
+                  </span>
+                </p>
+              </div>
+
+              <div>
+                <label className="text-[10px] text-white/40 font-body uppercase tracking-widest block mb-2">
+                  Nova data de saída
+                </label>
+                <Popover>
+                  <PopoverTrigger asChild>
+                    <button className="w-full flex items-center gap-2 px-3 py-2.5 bg-[#1a1a1f] border border-white/8 rounded-xl text-sm font-body hover:border-white/20 transition text-cream">
+                      <CalendarDays className="w-4 h-4 text-white/30" />
+                      {shortenCheckOut ? format(shortenCheckOut, "dd/MM/yyyy") : "Selecionar data"}
+                    </button>
+                  </PopoverTrigger>
+                  <PopoverContent className="w-auto p-0" align="start">
+                    <Calendar
+                      mode="single"
+                      selected={shortenCheckOut}
+                      initialFocus
+                      onSelect={(d) => d && setShortenCheckOut(d)}
+                      disabled={(date) =>
+                        date <= new Date(shortenRes.check_in + "T12:00:00") ||
+                        date >= new Date(shortenRes.check_out + "T12:00:00")
+                      }
+                      className="p-3 pointer-events-auto"
+                    />
+                  </PopoverContent>
+                </Popover>
+                {shortenCheckOut && (
+                  <div className="mt-3 bg-amber-500/10 border border-amber-500/20 rounded-lg px-3 py-2.5 space-y-1">
+                    <p className="text-xs text-amber-300/90 font-body">
+                      {nights(shortenRes.check_in, format(shortenCheckOut, "yyyy-MM-dd"))} noites no total
+                    </p>
+                    <p className="text-sm text-cream font-body font-semibold">
+                      Novo valor: R${" "}
+                      {(
+                        (Number(shortenRes.total_price) / Math.max(1, nights(shortenRes.check_in, shortenRes.check_out))) *
+                        nights(shortenRes.check_in, format(shortenCheckOut, "yyyy-MM-dd"))
+                      ).toFixed(2)}
+                    </p>
+                  </div>
+                )}
+              </div>
+
+              <div className="flex gap-3 pt-1">
+                <button
+                  onClick={() => setShortenRes(null)}
+                  className="flex-1 py-2.5 text-sm text-white/40 hover:text-cream font-body border border-white/10 rounded-xl transition-colors"
+                >
+                  Cancelar
+                </button>
+                <button
+                  onClick={handleShortenSave}
+                  disabled={shortenSaving || !shortenCheckOut}
+                  className="flex-1 py-2.5 text-sm font-semibold rounded-xl text-black transition-all hover:brightness-110 disabled:opacity-50 flex items-center justify-center gap-2"
+                  style={{ background: "linear-gradient(135deg,#C9A84C,#E5C97A)" }}
+                >
+                  {shortenSaving ? <Loader2 className="w-4 h-4 animate-spin" /> : <CalendarMinus className="w-4 h-4" />}
+                  {shortenSaving ? "Salvando..." : "Confirmar"}
                 </button>
               </div>
             </div>
@@ -1744,37 +1891,241 @@ const AdminReservas = () => {
   );
 };
 
-// ── Componente de acompanhantes ──────────────────────────────────────────────
-const CompanionsList = ({ reservationId }: { reservationId: string }) => {
-  const [companions, setCompanions] = React.useState<any[]>([]);
-  const [loading, setLoading] = React.useState(true);
+// ── Componente de acompanhantes (CRUD completo) ──────────────────────────────
+function maskDocumentCR(v: string) {
+  const raw = v.replace(/\D/g, "").slice(0, 11);
+  return raw.length <= 9
+    ? raw.replace(/(\d{2})(\d)/, "$1.$2").replace(/(\d{3})(\d)/, "$1.$2").replace(/(\d{3})(\d{1,2})$/, "$1-$2")
+    : raw.replace(/(\d{3})(\d)/, "$1.$2").replace(/(\d{3})(\d)/, "$1.$2").replace(/(\d{3})(\d{1,2})$/, "$1-$2");
+}
 
-  React.useEffect(() => {
+const CompanionsList = ({ reservationId }: { reservationId: string }) => {
+  const [companions, setCompanions] = React.useState<{ id: string; full_name: string; document: string | null }[]>([]);
+  const [loading, setLoading] = React.useState(true);
+  const [editingId, setEditingId] = React.useState<string | null>(null);
+  const [editName, setEditName] = React.useState("");
+  const [editDoc, setEditDoc] = React.useState("");
+  const [adding, setAdding] = React.useState(false);
+  const [newName, setNewName] = React.useState("");
+  const [newDoc, setNewDoc] = React.useState("");
+  const [saving, setSaving] = React.useState(false);
+  const [deletingId, setDeletingId] = React.useState<string | null>(null);
+
+  const loadCompanions = React.useCallback(() => {
     setLoading(true);
     supabase
       .from("reservation_guests")
-      .select("full_name, document")
+      .select("id, full_name, document")
       .eq("reservation_id", reservationId)
-      .then(({ data }) => {
-        setCompanions(data || []);
+      .order("full_name", { ascending: true })
+      .then(({ data, error }) => {
+        if (error) {
+          toast.error("Erro ao carregar acompanhantes.");
+        }
+        setCompanions((data as any) || []);
         setLoading(false);
       });
   }, [reservationId]);
 
-  if (loading) return null;
-  if (companions.length === 0) return null;
+  React.useEffect(() => {
+    loadCompanions();
+  }, [loadCompanions]);
+
+  const startEdit = (c: { id: string; full_name: string; document: string | null }) => {
+    setEditingId(c.id);
+    setEditName(c.full_name);
+    setEditDoc(c.document || "");
+    setAdding(false);
+  };
+
+  const cancelEdit = () => {
+    setEditingId(null);
+    setEditName("");
+    setEditDoc("");
+  };
+
+  const saveEdit = async () => {
+    if (!editingId || !editName.trim()) return toast.error("Informe o nome do acompanhante.");
+    setSaving(true);
+    try {
+      const { error } = await supabase
+        .from("reservation_guests")
+        .update({ full_name: editName.trim(), document: editDoc || null } as any)
+        .eq("id", editingId);
+      if (error) throw error;
+      toast.success("Acompanhante atualizado!");
+      cancelEdit();
+      loadCompanions();
+    } catch (e: any) {
+      toast.error(e.message || "Erro ao atualizar acompanhante.");
+    } finally {
+      setSaving(false);
+    }
+  };
+
+  const handleDelete = async (id: string) => {
+    setDeletingId(id);
+    try {
+      const { error } = await supabase.from("reservation_guests").delete().eq("id", id);
+      if (error) throw error;
+      toast.success("Acompanhante removido.");
+      setCompanions((prev) => prev.filter((c) => c.id !== id));
+    } catch (e: any) {
+      toast.error(e.message || "Erro ao remover acompanhante.");
+    } finally {
+      setDeletingId(null);
+    }
+  };
+
+  const saveNew = async () => {
+    if (!newName.trim()) return toast.error("Informe o nome do acompanhante.");
+    setSaving(true);
+    try {
+      const { error } = await supabase
+        .from("reservation_guests")
+        .insert({ reservation_id: reservationId, full_name: newName.trim(), document: newDoc || null } as any);
+      if (error) throw error;
+      toast.success("Acompanhante adicionado!");
+      setNewName("");
+      setNewDoc("");
+      setAdding(false);
+      loadCompanions();
+    } catch (e: any) {
+      toast.error(e.message || "Erro ao adicionar acompanhante.");
+    } finally {
+      setSaving(false);
+    }
+  };
+
+  if (loading) {
+    return (
+      <div className="bg-white/[0.03] border border-white/8 rounded-xl p-3 flex items-center justify-center py-4">
+        <Loader2 className="w-4 h-4 animate-spin text-primary/40" />
+      </div>
+    );
+  }
 
   return (
-    <div className="bg-white/[0.03] border border-white/8 rounded-xl p-3">
-      <p className="text-[10px] text-white/30 font-body uppercase tracking-widest mb-2">Acompanhantes</p>
+    <div className="bg-white/[0.03] border border-white/8 rounded-xl p-3 space-y-2">
+      <div className="flex items-center justify-between mb-1">
+        <p className="text-[10px] text-white/30 font-body uppercase tracking-widest">Acompanhantes</p>
+        {!adding && (
+          <button
+            onClick={() => {
+              setAdding(true);
+              cancelEdit();
+            }}
+            className="flex items-center gap-1 text-[11px] text-primary/80 hover:text-primary font-body transition-colors"
+          >
+            <Plus className="w-3 h-3" /> Adicionar
+          </button>
+        )}
+      </div>
+
+      {companions.length === 0 && !adding && (
+        <p className="text-xs text-white/25 font-body py-1">Nenhum acompanhante cadastrado.</p>
+      )}
+
       <ul className="space-y-1.5">
-        {companions.map((c, i) => (
-          <li key={i} className="flex items-center justify-between text-xs font-body">
-            <span className="text-cream/80">{c.full_name}</span>
-            {c.document && <span className="text-white/30">{c.document}</span>}
+        {companions.map((c) => (
+          <li key={c.id}>
+            {editingId === c.id ? (
+              <div className="bg-white/[0.04] border border-primary/20 rounded-lg p-2.5 space-y-2">
+                <input
+                  value={editName}
+                  onChange={(e) => setEditName(e.target.value)}
+                  placeholder="Nome completo"
+                  className="w-full bg-white/[0.03] border border-white/8 rounded-lg px-2.5 py-1.5 text-cream text-xs font-body focus:outline-none focus:border-primary/40 transition"
+                />
+                <input
+                  value={editDoc}
+                  onChange={(e) => setEditDoc(maskDocumentCR(e.target.value))}
+                  placeholder="Documento (RG ou CPF)"
+                  className="w-full bg-white/[0.03] border border-white/8 rounded-lg px-2.5 py-1.5 text-cream text-xs font-body focus:outline-none focus:border-primary/40 transition"
+                />
+                <div className="flex gap-2 justify-end">
+                  <button
+                    onClick={cancelEdit}
+                    className="px-2.5 py-1 text-[11px] text-white/40 hover:text-cream font-body transition-colors"
+                  >
+                    Cancelar
+                  </button>
+                  <button
+                    onClick={saveEdit}
+                    disabled={saving}
+                    className="px-3 py-1 text-[11px] font-semibold rounded-lg text-black transition-all disabled:opacity-50"
+                    style={goldBg}
+                  >
+                    {saving ? "Salvando..." : "Salvar"}
+                  </button>
+                </div>
+              </div>
+            ) : (
+              <div className="flex items-center justify-between text-xs font-body group/comp">
+                <div className="flex items-baseline gap-2 min-w-0">
+                  <span className="text-cream/80 truncate">{c.full_name}</span>
+                  {c.document && <span className="text-white/30 shrink-0">{c.document}</span>}
+                </div>
+                <div className="flex items-center gap-1 shrink-0 opacity-60 group-hover/comp:opacity-100 transition-opacity">
+                  <button
+                    onClick={() => startEdit(c)}
+                    title="Editar acompanhante"
+                    className="p-1 rounded text-white/30 hover:text-primary hover:bg-white/8 transition-colors"
+                  >
+                    <Pencil className="w-3 h-3" />
+                  </button>
+                  <button
+                    onClick={() => handleDelete(c.id)}
+                    disabled={deletingId === c.id}
+                    title="Excluir acompanhante"
+                    className="p-1 rounded text-white/30 hover:text-red-400 hover:bg-red-500/10 transition-colors disabled:opacity-40"
+                  >
+                    {deletingId === c.id ? <Loader2 className="w-3 h-3 animate-spin" /> : <Trash2 className="w-3 h-3" />}
+                  </button>
+                </div>
+              </div>
+            )}
           </li>
         ))}
       </ul>
+
+      {adding && (
+        <div className="bg-white/[0.04] border border-primary/20 rounded-lg p-2.5 space-y-2">
+          <input
+            autoFocus
+            value={newName}
+            onChange={(e) => setNewName(e.target.value)}
+            placeholder="Nome completo"
+            className="w-full bg-white/[0.03] border border-white/8 rounded-lg px-2.5 py-1.5 text-cream text-xs font-body focus:outline-none focus:border-primary/40 transition"
+          />
+          <input
+            value={newDoc}
+            onChange={(e) => setNewDoc(maskDocumentCR(e.target.value))}
+            placeholder="Documento (RG ou CPF)"
+            className="w-full bg-white/[0.03] border border-white/8 rounded-lg px-2.5 py-1.5 text-cream text-xs font-body focus:outline-none focus:border-primary/40 transition"
+          />
+          <div className="flex gap-2 justify-end">
+            <button
+              onClick={() => {
+                setAdding(false);
+                setNewName("");
+                setNewDoc("");
+              }}
+              className="px-2.5 py-1 text-[11px] text-white/40 hover:text-cream font-body transition-colors"
+            >
+              Cancelar
+            </button>
+            <button
+              onClick={saveNew}
+              disabled={saving}
+              className="px-3 py-1 text-[11px] font-semibold rounded-lg text-black transition-all disabled:opacity-50"
+              style={goldBg}
+            >
+              {saving ? "Salvando..." : "Adicionar"}
+            </button>
+          </div>
+        </div>
+      )}
     </div>
   );
 };
