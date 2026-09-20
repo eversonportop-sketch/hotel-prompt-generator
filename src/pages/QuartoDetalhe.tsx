@@ -325,8 +325,27 @@ const QuartoDetalhe = () => {
     enabled: !!id,
   });
 
+  // ── Trava manual do hotel (definida em Configurações pelo dono) ──
+  const { data: manualSoldOut = false } = useQuery({
+    queryKey: ["hotel-manual-sold-out"],
+    queryFn: async () => {
+      const { data } = await supabase
+        .from("hotel_settings" as any)
+        .select("value")
+        .eq("key", "manual_sold_out")
+        .maybeSingle();
+      return (data as any)?.value === "true";
+    },
+    staleTime: 60 * 1000,
+  });
+
   const checkAvailability = async () => {
     if (!checkIn || !checkOut || !room) return;
+    if (manualSoldOut) {
+      setAvailable(false);
+      setCategoryAvail({ free: 0, total: 0, freeRoomId: null });
+      return;
+    }
     setChecking(true);
     try {
       const ci = format(checkIn, "yyyy-MM-dd");
@@ -616,6 +635,18 @@ const QuartoDetalhe = () => {
                 <div className="bg-charcoal-light border border-gold/15 rounded-xl p-6 space-y-4">
                   <h3 className="font-display text-lg font-semibold text-cream">Verificar Disponibilidade</h3>
 
+                  {manualSoldOut ? (
+                    <div className="flex items-start gap-2 text-sm font-body p-4 rounded-lg text-destructive bg-destructive/10">
+                      <AlertCircle className="w-4 h-4 mt-0.5 shrink-0" />
+                      <span>
+                        <span className="block font-semibold">Estamos com o hotel lotado no momento.</span>
+                        <span className="block text-xs opacity-80 mt-0.5">
+                          No momento não estamos aceitando novas reservas. Entre em contato conosco para mais informações.
+                        </span>
+                      </span>
+                    </div>
+                  ) : (
+                    <>
                   <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                     <div className="space-y-2">
                       <label className="font-body text-sm text-cream/60">Check-in</label>
@@ -720,22 +751,29 @@ const QuartoDetalhe = () => {
                   {categoryAvail !== null && (
                     <div
                       className={cn(
-                        "flex items-center gap-2 text-sm font-body p-3 rounded-lg",
+                        "flex items-start gap-2 text-sm font-body p-3 rounded-lg",
                         categoryAvail.free > 0
                           ? "text-green-600 bg-green-50 dark:bg-green-900/20 dark:text-green-400"
                           : "text-destructive bg-destructive/10",
                       )}
                     >
                       {categoryAvail.free > 0 ? (
-                        <CheckCircle className="w-4 h-4" />
+                        <CheckCircle className="w-4 h-4 mt-0.5 shrink-0" />
                       ) : (
-                        <AlertCircle className="w-4 h-4" />
+                        <AlertCircle className="w-4 h-4 mt-0.5 shrink-0" />
                       )}
-                      {categoryAvail.free === 0
-                        ? "Indisponível nas datas selecionadas"
-                        : categoryAvail.free === 1
-                          ? "1 quarto disponível nesta categoria"
-                          : `${categoryAvail.free} quartos disponíveis nesta categoria`}
+                      {categoryAvail.free === 0 ? (
+                        <span>
+                          <span className="block font-semibold">Estamos lotados nesta data.</span>
+                          <span className="block text-xs opacity-80 mt-0.5">
+                            Por favor, tente outra data ou fale conosco para verificar novas opções.
+                          </span>
+                        </span>
+                      ) : categoryAvail.free === 1 ? (
+                        "1 quarto disponível nesta categoria"
+                      ) : (
+                        `${categoryAvail.free} quartos disponíveis nesta categoria`
+                      )}
                     </div>
                   )}
 
@@ -788,6 +826,8 @@ const QuartoDetalhe = () => {
                         Entrar
                       </button>
                     </p>
+                  )}
+                    </>
                   )}
                 </div>
               </div>
