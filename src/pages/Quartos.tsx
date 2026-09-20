@@ -190,12 +190,12 @@ const Quartos = () => {
                 <AlertTriangle className="w-5 h-5 text-destructive" />
               </div>
               <div>
-                <p className="text-cream font-body font-semibold text-sm">
+                <p className="text-destructive font-body font-semibold text-sm">
                   {manualSoldOut
                     ? "Estamos com o hotel lotado no momento."
                     : "Estamos com o hotel lotado nas datas selecionadas."}
                 </p>
-                <p className="text-cream/50 font-body text-xs mt-0.5">
+                <p className="text-destructive/80 font-body text-xs mt-0.5">
                   {manualSoldOut ? (
                     "No momento não estamos aceitando novas reservas. Entre em contato conosco para mais informações."
                   ) : (
