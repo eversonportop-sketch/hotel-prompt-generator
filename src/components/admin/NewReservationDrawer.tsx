@@ -380,34 +380,30 @@ const NewReservationDrawer = ({ open, onClose }: Props) => {
       const childrenNote = childrenAges.length > 0 ? `Crianças: ${childrenAges.length} (idades: ${childrenAges.join(", ")} anos) · ${childrenPay ? "paga" : "grátis"}` : "";
       const notesText = [notes, paymentMethod ? `Pagamento: ${paymentMethod}` : "", childrenNote].filter(Boolean).join(" | ") || null;
       const isProfile = selectedGuest?._source === "profile";
-      const { error } = await supabase.from("reservations").insert({
-        guest_id: isProfile ? null : guestId,
-        profile_id: isProfile ? guestId : null,
-        room_id: roomId,
-        check_in: format(checkIn!, "yyyy-MM-dd"),
-        check_out: format(checkOut!, "yyyy-MM-dd"),
-        guests_count: guestsCount,
-        total_price: totalPrice,
-        status,
-        notes: notesText,
-        ...(doCheckin ? { checked_in_at: new Date().toISOString() } : {}),
-      } as any);
+      const { data: newReservation, error } = await supabase
+        .from("reservations")
+        .insert({
+          guest_id: isProfile ? null : guestId,
+          profile_id: isProfile ? guestId : null,
+          room_id: roomId,
+          check_in: format(checkIn!, "yyyy-MM-dd"),
+          check_out: format(checkOut!, "yyyy-MM-dd"),
+          guests_count: guestsCount,
+          total_price: totalPrice,
+          status,
+          notes: notesText,
+          ...(doCheckin ? { checked_in_at: new Date().toISOString() } : {}),
+        } as any)
+        .select("id")
+        .single();
       if (error) throw error;
-      // Salva acompanhantes se houver
-      if (companions.filter(c => c.full_name.trim()).length > 0) {
-        const resQuery = await supabase
-          .from("reservations")
-          .select("id")
-          .eq("room_id", roomId)
-          .order("created_at", { ascending: false })
-          .limit(1)
-          .single();
-        if (resQuery.data?.id) {
-          const companionsToInsert = companions
-            .filter(c => c.full_name.trim())
-            .map(c => ({ reservation_id: resQuery.data.id, full_name: c.full_name.trim(), document: c.document || null }));
-          await supabase.from("reservation_guests").insert(companionsToInsert as any);
-        }
+      // Salva acompanhantes se houver (usa o id retornado pelo insert, nunca uma busca por quarto/data
+      // que poderia associar os acompanhantes à reserva errada em caso de reservas concorrentes)
+      if (newReservation?.id && companions.filter(c => c.full_name.trim()).length > 0) {
+        const companionsToInsert = companions
+          .filter(c => c.full_name.trim())
+          .map(c => ({ reservation_id: newReservation.id, full_name: c.full_name.trim(), document: c.document || null }));
+        await supabase.from("reservation_guests").insert(companionsToInsert as any);
       }
       toast.success(doCheckin ? "Reserva criada e check-in realizado!" : "Reserva criada com sucesso!");
       [
