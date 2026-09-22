@@ -1071,12 +1071,15 @@ const AdminReservas = () => {
                 <div className="grid grid-cols-2 gap-3">
                   {(
                     [
-                      ["Check-in", editCheckIn, setEditCheckIn, today()],
+                      // Editando reserva existente: check-in pode ser retroativo (ex.: hóspede não
+                      // conseguiu entrar ontem por falta de energia e o check-in real precisa ser
+                      // corrigido para a data correta, para gerar o recibo certinho).
+                      ["Check-in", editCheckIn, setEditCheckIn, undefined],
                       [
                         "Check-out",
                         editCheckOut,
                         setEditCheckOut,
-                        editCheckIn ? addDays(editCheckIn, 1) : addDays(today(), 1),
+                        editCheckIn ? addDays(editCheckIn, 1) : undefined,
                       ],
                     ] as const
                   ).map(([label, val, setter, minDate]) => (
@@ -1101,7 +1104,7 @@ const AdminReservas = () => {
                             selected={val as Date | undefined}
                             initialFocus
                             onSelect={(d) => (setter as any)(d)}
-                            disabled={(date) => date < (minDate as Date)}
+                            disabled={minDate ? (date) => date < (minDate as Date) : undefined}
                             className="p-3 pointer-events-auto"
                           />
                         </PopoverContent>
