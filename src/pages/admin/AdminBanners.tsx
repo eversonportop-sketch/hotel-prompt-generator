@@ -24,6 +24,7 @@ import {
   Loader2,
 } from "lucide-react";
 import { toast } from "sonner";
+import { compressImage } from "@/lib/imageCompression";
 import hotelLogo from "@/assets/hotel-sb-logo.png";
 
 const PAGE_OPTIONS = [
@@ -54,11 +55,12 @@ const EMPTY_FORM = {
 
 // ── Utilitário: faz upload para o bucket e retorna URL pública ─────────────────
 async function uploadImage(file: File): Promise<string> {
-  const ext = file.name.split(".").pop();
+  const compressed = await compressImage(file);
+  const ext = compressed.name.split(".").pop();
   const path = `banners/${Date.now()}-${Math.random().toString(36).slice(2)}.${ext}`;
   const { error } = await supabase.storage
     .from("hotel-images")
-    .upload(path, file, { upsert: false, contentType: file.type });
+    .upload(path, compressed, { upsert: false, contentType: compressed.type });
   if (error) throw error;
   const { data } = supabase.storage.from("hotel-images").getPublicUrl(path);
   return data.publicUrl;
