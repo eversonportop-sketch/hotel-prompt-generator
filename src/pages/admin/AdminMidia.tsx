@@ -18,6 +18,7 @@ import {
   ZoomIn,
 } from "lucide-react";
 import { toast } from "sonner";
+import { compressImage } from "@/lib/imageCompression";
 import HeroVideoUpload from "@/components/admin/HeroVideoUpload";
 
 const CATEGORIES = [
@@ -43,13 +44,14 @@ interface UploadProgress {
 }
 
 async function uploadSingle(file: File, category: string): Promise<string> {
-  const ext = file.name.split(".").pop() || "jpg";
+  const compressed = await compressImage(file);
+  const ext = compressed.name.split(".").pop() || "jpg";
   const path = `${category}/${Date.now()}-${Math.random().toString(36).slice(2)}.${ext}`;
 
   // 1. Upload para o Storage
   const { error: storageError } = await supabase.storage
     .from("gallery")
-    .upload(path, file, { contentType: file.type, upsert: false });
+    .upload(path, compressed, { contentType: compressed.type, upsert: false });
 
   if (storageError) {
     console.error("Erro no upload do storage:", storageError);
@@ -61,7 +63,7 @@ async function uploadSingle(file: File, category: string): Promise<string> {
 
   // 3. Salvar no banco
   const { error: dbError } = await (supabase.from as any)("hotel_gallery").insert({
-    file_name: file.name,
+    file_name: compressed.name,
     file_path: path,
     public_url: data.publicUrl,
     category,
