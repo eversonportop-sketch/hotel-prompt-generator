@@ -2,6 +2,7 @@ import { useRef, useState } from "react";
 import { Link } from "react-router-dom";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
+import { compressImage } from "@/lib/imageCompression";
 import { motion, AnimatePresence } from "framer-motion";
 import {
   ArrowLeft,
@@ -61,11 +62,12 @@ const EMPTY_FORM = {
 };
 
 async function uploadRoomImage(file: File): Promise<string> {
-  const ext = file.name.split(".").pop() || "jpg";
+  const compressed = await compressImage(file);
+  const ext = compressed.name.split(".").pop() || "jpg";
   const path = `rooms/${Date.now()}-${Math.random().toString(36).slice(2)}.${ext}`;
   const { error } = await supabase.storage
     .from("hotel-images")
-    .upload(path, file, { upsert: false, contentType: file.type });
+    .upload(path, compressed, { upsert: false, contentType: compressed.type });
   if (error) throw new Error(`Upload falhou: ${error.message}`);
   const { data } = supabase.storage.from("hotel-images").getPublicUrl(path);
   return data.publicUrl;
