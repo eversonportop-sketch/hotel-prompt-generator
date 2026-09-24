@@ -1,7 +1,7 @@
 import { motion } from "framer-motion";
 import { Button } from "@/components/ui/button";
 import { Link } from "react-router-dom";
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { useQuery } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import { Calendar, Users, Search, Star, ChevronLeft, ChevronRight } from "lucide-react";
@@ -20,6 +20,7 @@ const HeroSection = () => {
         .from("banners")
         .select("id, image_url, title")
         .eq("active", true)
+        .eq("page", "home")
         .order("display_order");
       return data || [];
     },
@@ -60,6 +61,15 @@ const HeroSection = () => {
 
   const prevBanner = () => setBannerIdx((i) => (i - 1 + banners.length) % banners.length);
   const nextBanner = () => setBannerIdx((i) => (i + 1) % banners.length);
+
+  // Troca automática entre os banners (só quando não há vídeo e existe mais de 1 banner ativo)
+  useEffect(() => {
+    if (hasVideo || banners.length <= 1) return;
+    const timer = setInterval(() => {
+      setBannerIdx((i) => (i + 1) % banners.length);
+    }, 6000);
+    return () => clearInterval(timer);
+  }, [hasVideo, banners.length]);
 
   return (
     <section className="relative min-h-screen flex flex-col items-center justify-center overflow-hidden bg-charcoal">
