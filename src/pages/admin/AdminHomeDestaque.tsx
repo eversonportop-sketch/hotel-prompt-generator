@@ -3,6 +3,7 @@ import { supabase } from "@/integrations/supabase/client";
 
 const fromHomeSections = () => supabase.from("home_sections" as any);
 import { toast } from "sonner";
+import { compressImage } from "@/lib/imageCompression";
 import { Save, Plus, Trash2, Eye, EyeOff, ArrowUp, ArrowDown, Loader2, Upload } from "lucide-react";
 
 interface HomeSection {
@@ -65,11 +66,12 @@ const SectionForm = ({
     }
     setUploading(true);
     try {
-      const ext = file.name.split(".").pop();
+      const compressed = await compressImage(file);
+      const ext = compressed.name.split(".").pop();
       const path = `home-sections/${Date.now()}-${Math.random().toString(36).slice(2)}.${ext}`;
       const { error } = await supabase.storage
         .from("hotel-images")
-        .upload(path, file, { upsert: false, contentType: file.type });
+        .upload(path, compressed, { upsert: false, contentType: compressed.type });
       if (error) throw error;
       const { data } = supabase.storage.from("hotel-images").getPublicUrl(path);
       setForm({ ...form, image_url: data.publicUrl });
