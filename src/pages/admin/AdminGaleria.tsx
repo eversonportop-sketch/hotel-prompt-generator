@@ -16,6 +16,7 @@ import {
   Play,
 } from "lucide-react";
 import { toast } from "sonner";
+import { compressImage } from "@/lib/imageCompression";
 
 const CATEGORIES = [
   { key: "gallery_quartos", label: "Quartos", icon: BedDouble },
@@ -40,12 +41,13 @@ function isVideo(name: string) {
 }
 
 async function uploadSingle(file: File, category: string): Promise<string> {
-  const ext = file.name.split(".").pop() || "jpg";
+  const compressed = await compressImage(file);
+  const ext = compressed.name.split(".").pop() || "jpg";
   const path = `${category}/${Date.now()}-${Math.random().toString(36).slice(2)}.${ext}`;
 
   const { error: storageError } = await supabase.storage
     .from("hotel-images")
-    .upload(path, file, { contentType: file.type, upsert: false });
+    .upload(path, compressed, { contentType: compressed.type, upsert: false });
 
   if (storageError) throw new Error(`Storage: ${storageError.message}`);
 
@@ -55,7 +57,7 @@ async function uploadSingle(file: File, category: string): Promise<string> {
   const mediaType = isVideo(file.name) ? "video" : "image";
 
   const { error: dbError } = await supabase.from("hotel_media").insert({
-    file_name: file.name,
+    file_name: compressed.name,
     file_path: path,
     public_url: publicUrl,
     category,
