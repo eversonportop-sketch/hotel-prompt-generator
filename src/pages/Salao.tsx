@@ -65,8 +65,8 @@ const INCLUDED = [
 
 const Salao = () => {
   const { data: s = {} } = useSettings();
-  const { data: bannerUrl } = usePageBanner("salao");
-  const heroImage = bannerUrl || hallImage;
+  const { data: bannerUrl, isLoading: bannerLoading } = usePageBanner("salao");
+  const heroImage = bannerLoading ? null : bannerUrl || hallImage;
   const whatsapp = s.whatsapp || s.phone || "";
   const waNum = whatsapp.replace(/\D/g, "");
   const waMsg = encodeURIComponent("Olá! Gostaria de solicitar um orçamento para o Salão de Festas do Hotel SB.");
@@ -76,7 +76,14 @@ const Salao = () => {
     <Layout>
       {/* Hero */}
       <section className="relative h-[65vh] min-h-[500px] flex items-end overflow-hidden">
-        <img src={heroImage} alt="Salão de Festas SB Hotel" className="absolute inset-0 w-full h-full object-cover" />
+        {heroImage && (
+          <img
+            key={heroImage}
+            src={heroImage}
+            alt="Salão de Festas SB Hotel"
+            className="absolute inset-0 w-full h-full object-cover animate-fade-in-slow"
+          />
+        )}
         <div className="absolute inset-0 bg-gradient-to-t from-charcoal via-charcoal/50 to-charcoal/10" />
         <div
           className="absolute inset-0 opacity-20"
