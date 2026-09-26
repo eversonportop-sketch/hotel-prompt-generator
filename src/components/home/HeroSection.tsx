@@ -13,7 +13,7 @@ const HeroSection = () => {
   const [guests, setGuests] = useState(2);
   const [bannerIdx, setBannerIdx] = useState(0);
 
-  const { data: banners = [] } = useQuery({
+  const { data: banners = [], isLoading: bannersLoading } = useQuery({
     queryKey: ["hero-banners"],
     queryFn: async () => {
       const { data } = await supabase
@@ -27,7 +27,7 @@ const HeroSection = () => {
   });
 
   // Busca vídeo desktop (arquivos que NÃO começam com "mobile-")
-  const { data: heroVideoUrl } = useQuery({
+  const { data: heroVideoUrl, isLoading: videoLoading } = useQuery({
     queryKey: ["hero-video"],
     queryFn: async () => {
       const { data, error } = await supabase.storage
@@ -42,7 +42,7 @@ const HeroSection = () => {
   });
 
   // Busca vídeo mobile (arquivos que começam com "mobile-")
-  const { data: heroVideoMobileUrl } = useQuery({
+  const { data: heroVideoMobileUrl, isLoading: videoMobileLoading } = useQuery({
     queryKey: ["hero-video-mobile"],
     queryFn: async () => {
       const { data, error } = await supabase.storage
@@ -55,6 +55,11 @@ const HeroSection = () => {
       return urlData.publicUrl;
     },
   });
+
+  // Só decide o que mostrar (vídeo / banner / imagem padrão) depois que TODAS as buscas
+  // terminarem. Enquanto isso, fica só o fundo escuro — evita mostrar a imagem errada
+  // por um instante e depois trocar pra imagem certa (efeito de "pisca").
+  const isReady = !bannersLoading && !videoLoading && !videoMobileLoading;
 
   const currentBanner = banners[bannerIdx];
   const hasVideo = !!heroVideoUrl || !!heroVideoMobileUrl;
@@ -75,8 +80,10 @@ const HeroSection = () => {
     <section className="relative min-h-screen flex flex-col items-center justify-center overflow-hidden bg-charcoal">
       {/* Fundo escuro permanente para evitar flash branco/claro durante carregamento */}
       <div className="absolute inset-0 bg-charcoal z-0" />
-      {/* Fundo: vídeo (prioridade) > banner do admin > gradiente padrão */}
-      {hasVideo ? (
+      {/* Fundo: vídeo (prioridade) > banner do admin > gradiente padrão.
+          Só renderiza depois que isReady (todas as buscas terminaram), pra nunca
+          mostrar uma imagem errada e trocar em seguida. */}
+      {isReady && hasVideo ? (
         <>
           {/* Vídeo Desktop — oculto em mobile se tiver vídeo mobile */}
           {heroVideoUrl && (
@@ -119,7 +126,7 @@ const HeroSection = () => {
           )}
           <div className="absolute inset-0 bg-charcoal/70 z-[1]" />
         </>
-      ) : currentBanner?.image_url ? (
+      ) : isReady && currentBanner?.image_url ? (
         <>
           {/* Desktop */}
           <motion.div
@@ -167,7 +174,7 @@ const HeroSection = () => {
             </>
           )}
         </>
-      ) : (
+      ) : isReady ? (
         <>
           <div className="absolute inset-0 overflow-hidden">
             <motion.div
@@ -197,7 +204,7 @@ const HeroSection = () => {
             style={{ background: "radial-gradient(ellipse at 20% 50%, rgba(201,168,76,0.2) 0%, transparent 60%)" }}
           />
         </>
-      )}
+      ) : null}
 
       {/* Partículas douradas animadas */}
       {[...Array(12)].map((_, i) => (
