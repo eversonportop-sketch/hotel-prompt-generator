@@ -90,8 +90,8 @@ const AMENITIES = [
 const Piscina = () => {
   const { data: s = {} } = useSettings();
   const { data: poolConfig } = usePoolConfig();
-  const { data: bannerUrl } = usePageBanner("piscina");
-  const heroImage = bannerUrl || poolImage;
+  const { data: bannerUrl, isLoading: bannerLoading } = usePageBanner("piscina");
+  const heroImage = bannerLoading ? null : bannerUrl || poolImage;
 
   // Horário: prioriza pool_config (fonte do admin), fallback para hotel_settings
   const openTime = poolConfig?.open_time ?? null;
@@ -115,7 +115,14 @@ const Piscina = () => {
     <Layout>
       {/* Hero */}
       <section className="relative h-[65vh] min-h-[500px] flex items-end overflow-hidden">
-        <img src={heroImage} alt="Piscina SB Hotel" className="absolute inset-0 w-full h-full object-cover" />
+        {heroImage && (
+          <img
+            key={heroImage}
+            src={heroImage}
+            alt="Piscina SB Hotel"
+            className="absolute inset-0 w-full h-full object-cover animate-fade-in-slow"
+          />
+        )}
         <div className="absolute inset-0 bg-gradient-to-t from-charcoal via-charcoal/40 to-charcoal/10" />
         <div
           className="absolute inset-0 opacity-20"
