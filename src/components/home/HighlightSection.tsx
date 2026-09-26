@@ -57,7 +57,7 @@ function useFirstImage(category: string, fallback: string) {
 }
 
 function HighlightCard({ item, index }: { item: (typeof highlights)[0]; index: number }) {
-  const { data: image } = useFirstImage(item.storageKey, item.fallback);
+  const { data: image, isLoading } = useFirstImage(item.storageKey, item.fallback);
 
   return (
     <motion.div
@@ -70,15 +70,19 @@ function HighlightCard({ item, index }: { item: (typeof highlights)[0]; index: n
         to={item.link}
         className="group block relative overflow-hidden rounded-2xl bg-charcoal-light border border-white/5 hover:border-gold/25 transition-all duration-500 hover:shadow-[0_8px_40px_rgba(201,168,76,0.1)]"
       >
-        {/* Imagem */}
+        {/* Imagem — só renderiza depois que sabe qual é a foto certa (real da Galeria ou
+            a padrão), pra não mostrar uma e trocar pela outra em seguida */}
         <div className="aspect-[4/3] overflow-hidden relative bg-charcoal-light">
-          <img
-            src={image || item.fallback}
-            alt={item.title}
-            loading="eager"
-            decoding="async"
-            className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-700"
-          />
+          {!isLoading && (
+            <img
+              key={image || item.fallback}
+              src={image || item.fallback}
+              alt={item.title}
+              loading="eager"
+              decoding="async"
+              className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-700 animate-fade-in-slow"
+            />
+          )}
           <div className="absolute inset-0 bg-gradient-to-t from-charcoal/80 via-transparent to-transparent pointer-events-none" />
 
           {/* Tag sobre a imagem */}
