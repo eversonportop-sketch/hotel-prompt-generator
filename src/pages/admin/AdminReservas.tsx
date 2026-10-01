@@ -313,6 +313,27 @@ const AdminReservas = () => {
     },
   });
 
+  // Quartos com reserva conflitante no PERÍODO que está sendo editado (exclui a própria reserva).
+  // Mesma regra de sobreposição e mesmos status usados em NewReservationDrawer.
+  const editCheckInStr = editCheckIn ? format(editCheckIn, "yyyy-MM-dd") : null;
+  const editCheckOutStr = editCheckOut ? format(editCheckOut, "yyyy-MM-dd") : null;
+  const { data: editConflictRoomIds = [] } = useQuery({
+    queryKey: ["rooms-conflicts-edit", editRes?.id, editCheckInStr, editCheckOutStr],
+    enabled: !!editRes && !!editCheckInStr && !!editCheckOutStr && editCheckOutStr > editCheckInStr,
+    staleTime: 0,
+    queryFn: async () => {
+      const { data, error } = await supabase
+        .from("reservations")
+        .select("room_id")
+        .in("status", ["confirmed", "checked_in"])
+        .neq("id", editRes!.id)
+        .lt("check_in", editCheckOutStr!)
+        .gt("check_out", editCheckInStr!);
+      if (error) throw error;
+      return [...new Set((data || []).map((r: any) => r.room_id as string))];
+    },
+  });
+
   // ─── Mutations ─────────────────────────────────────────────────────────────
   const cancelReservation = useMutation({
     mutationFn: async (id: string) => {
@@ -438,6 +459,9 @@ const AdminReservas = () => {
     if (!editRes || !editCheckIn || !editCheckOut) return;
     const n2 = nights(format(editCheckIn, "yyyy-MM-dd"), format(editCheckOut, "yyyy-MM-dd"));
     if (n2 < 1) return toast.error("Check-out deve ser após o check-in.");
+    if (editConflictRoomIds.includes(editRoomId)) {
+      return toast.error("Este quarto já possui reserva no período selecionado.");
+    }
     const room = (rooms as any[]).find((r) => r.id === editRoomId);
     const basePrice = Number(room?.price || 0);
     const extraPerPerson = room?.promotional_price ? Number(room.promotional_price) : 0;
@@ -484,6 +508,7 @@ const AdminReservas = () => {
       if (error) throw error;
       toast.success("Reserva atualizada!");
       qc.invalidateQueries({ queryKey: ["reservas-lista"] });
+      qc.invalidateQueries({ queryKey: ["rooms-conflicts-edit"] });
       setEditRes(null);
     } catch (e: any) {
       toast.error(e.message || "Erro.");
@@ -1035,12 +1060,12 @@ const AdminReservas = () => {
                     {(rooms as any[]).map((room) => (
                       <button
                         key={room.id}
-                        disabled={room.occupied && editRoomId !== room.id}
+                        disabled={editConflictRoomIds.includes(room.id) && editRoomId !== room.id}
                         onClick={() => setEditRoomId(room.id)}
                         className={`w-full text-left px-4 py-3 rounded-xl border transition-all ${
                           editRoomId === room.id
                             ? "border-primary/50 bg-primary/8"
-                            : room.occupied
+                            : editConflictRoomIds.includes(room.id)
                               ? "opacity-50 cursor-not-allowed border-red-500/20 bg-red-500/5"
                               : "border-white/8 bg-[#1a1a1f] hover:border-white/18"
                         }`}
@@ -1049,7 +1074,7 @@ const AdminReservas = () => {
                           <div>
                             <div className="flex items-center gap-2">
                               <p className="text-cream text-sm font-body font-medium">{room.name}</p>
-                              {room.occupied && editRoomId !== room.id && (
+                              {editConflictRoomIds.includes(room.id) && (
                                 <span className="text-[10px] px-1.5 py-0.5 rounded bg-red-500/20 text-red-400 border border-red-500/30 font-body">
                                   Ocupado
                                 </span>
