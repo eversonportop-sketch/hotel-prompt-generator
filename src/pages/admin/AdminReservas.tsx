@@ -317,9 +317,11 @@ const AdminReservas = () => {
   // Mesma regra de sobreposição e mesmos status usados em NewReservationDrawer.
   const editCheckInStr = editCheckIn ? format(editCheckIn, "yyyy-MM-dd") : null;
   const editCheckOutStr = editCheckOut ? format(editCheckOut, "yyyy-MM-dd") : null;
-  const { data: editConflictRoomIds = [] } = useQuery({
+  const editConflictEnabled =
+    !!editRes && !!editCheckInStr && !!editCheckOutStr && editCheckOutStr > editCheckInStr;
+  const editConflictQuery = useQuery({
     queryKey: ["rooms-conflicts-edit", editRes?.id, editCheckInStr, editCheckOutStr],
-    enabled: !!editRes && !!editCheckInStr && !!editCheckOutStr && editCheckOutStr > editCheckInStr,
+    enabled: editConflictEnabled,
     staleTime: 0,
     queryFn: async () => {
       const { data, error } = await supabase
@@ -333,6 +335,14 @@ const AdminReservas = () => {
       return [...new Set((data || []).map((r: any) => r.room_id as string))];
     },
   });
+  const editConflictRoomIds: string[] = editConflictQuery.data ?? [];
+  // [] só significa "nenhum conflito" quando a consulta terminou sem erro.
+  // Enquanto carrega (ou se falhou), a disponibilidade é DESCONHECIDA, não "tudo livre".
+  const editAvailabilityChecking =
+    editConflictEnabled && (editConflictQuery.isPending || editConflictQuery.isFetching);
+  const editAvailabilityError =
+    editConflictEnabled && editConflictQuery.isError && !editConflictQuery.isFetching;
+  const editAvailabilityUnknown = editAvailabilityChecking || editAvailabilityError;
 
   // ─── Mutations ─────────────────────────────────────────────────────────────
   const cancelReservation = useMutation({
@@ -459,9 +469,6 @@ const AdminReservas = () => {
     if (!editRes || !editCheckIn || !editCheckOut) return;
     const n2 = nights(format(editCheckIn, "yyyy-MM-dd"), format(editCheckOut, "yyyy-MM-dd"));
     if (n2 < 1) return toast.error("Check-out deve ser após o check-in.");
-    if (editConflictRoomIds.includes(editRoomId)) {
-      return toast.error("Este quarto já possui reserva no período selecionado.");
-    }
     const room = (rooms as any[]).find((r) => r.id === editRoomId);
     const basePrice = Number(room?.price || 0);
     const extraPerPerson = room?.promotional_price ? Number(room.promotional_price) : 0;
@@ -501,6 +508,28 @@ const AdminReservas = () => {
       if (newCheckedInAt !== undefined) {
         updatePayload.checked_in_at = newCheckedInAt;
       }
+      // Verificação de disponibilidade NO MOMENTO de salvar (não depende da lista em cache).
+      // Mesma regra do trigger validate_reservation(): confirmed/checked_in, exclui a própria reserva,
+      // check_in < fim e check_out > início. O trigger continua sendo a proteção final contra corrida.
+      const { data: conflicts, error: conflictError } = await supabase
+        .from("reservations")
+        .select("id")
+        .eq("room_id", editRoomId)
+        .neq("id", editRes.id)
+        .in("status", ["confirmed", "checked_in"])
+        .lt("check_in", updatePayload.check_out)
+        .gt("check_out", updatePayload.check_in)
+        .limit(1);
+      if (conflictError) {
+        toast.error("Não foi possível verificar a disponibilidade do quarto. Tente novamente.");
+        return;
+      }
+      if (conflicts && conflicts.length > 0) {
+        toast.error("Este quarto já possui reserva no período selecionado.");
+        qc.invalidateQueries({ queryKey: ["rooms-conflicts-edit"] });
+        return;
+      }
+
       const { error } = await supabase
         .from("reservations")
         .update(updatePayload)
@@ -1060,14 +1089,16 @@ const AdminReservas = () => {
                     {(rooms as any[]).map((room) => (
                       <button
                         key={room.id}
-                        disabled={editConflictRoomIds.includes(room.id) && editRoomId !== room.id}
+                        disabled={(editConflictRoomIds.includes(room.id) || editAvailabilityUnknown) && editRoomId !== room.id}
                         onClick={() => setEditRoomId(room.id)}
                         className={`w-full text-left px-4 py-3 rounded-xl border transition-all ${
                           editRoomId === room.id
                             ? "border-primary/50 bg-primary/8"
                             : editConflictRoomIds.includes(room.id)
                               ? "opacity-50 cursor-not-allowed border-red-500/20 bg-red-500/5"
-                              : "border-white/8 bg-[#1a1a1f] hover:border-white/18"
+                              : editAvailabilityUnknown
+                                ? "opacity-50 cursor-not-allowed border-white/8 bg-[#1a1a1f]"
+                                : "border-white/8 bg-[#1a1a1f] hover:border-white/18"
                         }`}
                       >
                         <div className="flex items-center justify-between">
@@ -1092,6 +1123,17 @@ const AdminReservas = () => {
                       </button>
                     ))}
                   </div>
+                  {editAvailabilityChecking && (
+                    <p className="text-[11px] text-white/40 font-body mt-2">Verificando disponibilidade dos quartos...</p>
+                  )}
+                  {editAvailabilityError && (
+                    <p className="text-[11px] text-red-400 font-body mt-2">
+                      Não foi possível verificar a disponibilidade.{" "}
+                      <button type="button" onClick={() => editConflictQuery.refetch()} className="underline">
+                        Tentar novamente
+                      </button>
+                    </p>
+                  )}
                 </div>
                 <div className="grid grid-cols-2 gap-3">
                   {(
@@ -1313,12 +1355,12 @@ const AdminReservas = () => {
                 </button>
                 <button
                   onClick={handleEditSave}
-                  disabled={editSaving}
+                  disabled={editSaving || editAvailabilityUnknown}
                   className="flex items-center gap-2 px-5 py-2.5 rounded-lg text-black text-sm font-semibold hover:brightness-110 transition-all disabled:opacity-50"
                   style={goldBg}
                 >
                   {editSaving ? <Loader2 className="w-4 h-4 animate-spin" /> : <CheckCircle2 className="w-4 h-4" />}
-                  {editSaving ? "Salvando..." : "Salvar Alterações"}
+                  {editSaving ? "Salvando..." : editAvailabilityChecking ? "Verificando disponibilidade..." : "Salvar Alterações"}
                 </button>
               </div>
             </div>
