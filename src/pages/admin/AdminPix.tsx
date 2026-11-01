@@ -20,6 +20,7 @@ import {
 } from "lucide-react";
 import { format } from "date-fns";
 import { ptBR } from "date-fns/locale";
+import { waNumber } from "@/lib/phone";
 
 const statusConfig: Record<string, { label: string; bg: string; text: string; dot: string }> = {
   pending_payment: {
@@ -331,7 +332,7 @@ Em caso de dúvidas, entre em contato conosco. Até breve! 🏨`
                           </div>
                           {guestPhone ? (
                             <a
-                              href={`https://api.whatsapp.com/send?phone=55${guestPhone.replace(/\D/g, "")}&text=${buildMsgConfirmacao(guestName)}`}
+                              href={`https://api.whatsapp.com/send?phone=${waNumber(guestPhone)}&text=${buildMsgConfirmacao(guestName)}`}
                               target="_blank"
                               rel="noopener noreferrer"
                               className="flex items-center gap-2 px-3 py-1.5 rounded-lg bg-[#25D366]/10 border border-[#25D366]/20 text-[#25D366] text-xs font-semibold font-body hover:bg-[#25D366]/20 transition-all"
@@ -347,7 +348,7 @@ Em caso de dúvidas, entre em contato conosco. Até breve! 🏨`
 
                       {guestPhone ? (
                         <a
-                          href={`https://api.whatsapp.com/send?phone=55${guestPhone.replace(/\D/g, "")}&text=${encodeURIComponent(`Olá ${guestName}! Precisamos confirmar seu pagamento PIX para a reserva do ${r.rooms?.name}. Você já realizou o pagamento?`)}`}
+                          href={`https://api.whatsapp.com/send?phone=${waNumber(guestPhone)}&text=${encodeURIComponent(`Olá ${guestName}! Precisamos confirmar seu pagamento PIX para a reserva do ${r.rooms?.name}. Você já realizou o pagamento?`)}`}
                           target="_blank"
                           rel="noopener noreferrer"
                           className="flex items-center gap-2 px-4 py-2 rounded-lg bg-[#25D366]/10 border border-[#25D366]/20 text-[#25D366] text-xs font-semibold font-body hover:bg-[#25D366]/20 transition-all"
