@@ -5,6 +5,7 @@ import { LogIn, Search, BedDouble, Users, CalendarDays, Loader2, CheckCircle2, X
 import { format, differenceInDays } from "date-fns";
 import { ptBR } from "date-fns/locale";
 import { toast } from "sonner";
+import { waNumber } from "@/lib/phone";
 
 // ─── Tipos ────────────────────────────────────────────────────────────────────
 interface Reservation {
@@ -194,7 +195,7 @@ const AdminCheckin = () => {
                       <p className="text-cream font-body font-medium text-sm">{r.guestName}</p>
                       {r.guestPhone && (
                         <a
-                          href={`https://wa.me/55${r.guestPhone.replace(/\D/g, "")}`}
+                          href={`https://wa.me/${waNumber(r.guestPhone)}`}
                           target="_blank"
                           rel="noopener noreferrer"
                           title="Abrir no WhatsApp"
