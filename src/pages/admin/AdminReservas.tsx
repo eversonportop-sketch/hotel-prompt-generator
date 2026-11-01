@@ -28,6 +28,7 @@ import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover
 import { cn } from "@/lib/utils";
 import { toast } from "sonner";
 import NewReservationDrawer from "@/components/admin/NewReservationDrawer";
+import { waNumber } from "@/lib/phone";
 
 // ── PIN de supervisor ────────────────────────────────────────────────────────
 const SUPERVISOR_PIN = "Andre1982ok";
@@ -955,7 +956,7 @@ const AdminReservas = () => {
                           <span className="text-cream/80 text-sm font-body">{r.guestName}</span>
                           {r.guestPhone && (
                             <a
-                              href={`https://api.whatsapp.com/send?phone=55${r.guestPhone.replace(/\D/g, "")}`}
+                              href={`https://api.whatsapp.com/send?phone=${waNumber(r.guestPhone)}`}
                               target="_blank"
                               rel="noopener noreferrer"
                               title="Abrir no WhatsApp"
