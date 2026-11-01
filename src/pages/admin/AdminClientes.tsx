@@ -22,6 +22,8 @@ import {
 import { format } from "date-fns";
 import { ptBR } from "date-fns/locale";
 import { toast } from "sonner";
+import PhoneField from "@/components/admin/PhoneField";
+import { waNumber } from "@/lib/phone";
 
 interface Cliente {
   id: string;
@@ -476,7 +478,7 @@ const AdminClientes = () => {
                       )}
                       {c.phone && (
                         <a
-                          href={`https://wa.me/55${c.phone.replace(/\D/g, "")}`}
+                          href={`https://wa.me/${waNumber(c.phone)}`}
                           target="_blank"
                           rel="noopener noreferrer"
                           title="Abrir no WhatsApp"
@@ -684,11 +686,11 @@ const AdminClientes = () => {
                   />
                 </div>
                 <div className="grid grid-cols-2 gap-3">
-                  <Field
+                  <PhoneField
                     label="Telefone"
-                    placeholder="(51) 99999-0000"
                     value={newData.phone}
-                    onChange={(v) => setNewData((d) => ({ ...d, phone: maskPhone(v) }))}
+                    onChange={(v) => setNewData((d) => ({ ...d, phone: v }))}
+                    maskBR={maskPhone}
                   />
                   <Field
                     label="E-mail"
@@ -809,11 +811,11 @@ const AdminClientes = () => {
                   )}
                 </div>
                 <div className="grid grid-cols-2 gap-3">
-                  <Field
+                  <PhoneField
                     label="Telefone"
-                    placeholder="(51) 99999-0000"
                     value={editData.phone}
-                    onChange={(v) => setEditData((d) => ({ ...d, phone: maskPhone(v) }))}
+                    onChange={(v) => setEditData((d) => ({ ...d, phone: v }))}
+                    maskBR={maskPhone}
                   />
                   {editCliente.source === "guest" && (
                     <Field
