@@ -25,6 +25,7 @@ import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover
 import { cn } from "@/lib/utils";
 import { toast } from "sonner";
 import { motion, AnimatePresence } from "framer-motion";
+import PhoneField from "./PhoneField";
 
 interface Guest {
   id: string;
@@ -678,12 +679,11 @@ const NewReservationDrawer = ({ open, onClose }: Props) => {
                           <Phone className="w-3 h-3" /> Contato
                         </p>
                         <div className="grid grid-cols-2 gap-3">
-                          <Field
+                          <PhoneField
                             label="Telefone"
-                            placeholder="(51) 99999-0000"
                             value={guestData.phone}
                             onChange={(v) => setGuestData((d) => ({ ...d, phone: v }))}
-                            mask="phone"
+                            maskBR={maskPhone}
                           />
                           <Field
                             label="E-mail"
